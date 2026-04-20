@@ -1,0 +1,396 @@
+# Aeron 后端框架 — 总体目标文档
+
+> 基于 Bun 运行时的成熟后端开发框架，目标是成为 Bun 生态中最完整、最工程化的全栈后端框架。
+
+---
+
+## 设计原则
+
+1. **约定优于配置** — 提供合理默认值，同时保留逃生舱口
+2. **模块化按需加载** — 核心精简，功能可插拔，减少运行时开销
+3. **类型安全** — 全链路 TypeScript，从路由到数据库
+4. **生产就绪** — 每个模块都为生产环境设计，不区分"开发版"和"生产版"
+5. **AI 原生** — 内置 Tool/Command 抽象与权限沙箱，为 Agent 时代做好准备
+6. **开发者体验** — CLI 脚手架、热重载、自动文档生成，开箱即用
+
+---
+
+## 一、核心基础层
+
+### 1.1 应用生命周期管理
+- [ ] 启动/关闭 hooks（`beforeStart` / `afterStart` / `beforeStop`）
+- [ ] 优雅关闭（Graceful Shutdown）
+- [ ] 等待存量请求完成后再退出
+- [ ] 连接池释放
+- [ ] 多实例协调（配合 k8s readiness / liveness）
+
+### 1.2 路由系统
+- [ ] 静态路由 / 动态路由（`:id`、`*wildcard`）
+- [ ] 路由分组与嵌套（`/api/v1/users`）
+- [ ] RESTful 路由快捷注册（GET/POST/PUT/PATCH/DELETE）
+- [ ] 路由命名与反向生成 URL
+- [ ] 路由参数类型约束与正则匹配
+- [ ] 路由冲突检测与优先级排序
+- [ ] 支持 WebSocket / SSE 路由
+
+### 1.3 中间件系统
+- [ ] 全局中间件 / 路由级中间件 / 分组中间件
+- [ ] 洋葱模型（`before → handler → after`）
+- [ ] 内置常用中间件：CORS、限流、压缩、日志、鉴权、超时控制
+- [ ] 中间件链的中断与跳过机制
+
+### 1.4 请求/响应封装
+- [ ] 统一 `Context` 对象（Request + Response + 元数据）
+- [ ] Query / Path / Header / Body / Form / File 参数解析
+- [ ] 自动绑定（JSON / Form → Struct）
+- [ ] 参数验证（必填、类型、范围、正则、自定义规则）
+- [ ] 响应统一封装（code/message/data 结构）
+- [ ] 流式响应、文件下载、重定向
+- [ ] 内容协商（`Accept` 头自动选择序列化格式）
+
+### 1.5 请求处理管线
+- [ ] Middleware / Interceptor / Filter 三层模型
+- [ ] 支持横切关注点：logging、auth、rate limit、tracing
+- [ ] 全局异常统一处理（Global Exception Handler）
+
+### 1.6 多协议支持
+- [ ] HTTP（REST）
+- [ ] gRPC（强类型）
+- [ ] WebSocket（实时）
+- [ ] 内部 RPC（service-to-service）
+
+---
+
+## 二、配置系统
+
+### 2.1 多来源配置
+- [ ] 环境变量（`.env`）
+- [ ] 配置文件（YAML）
+- [ ] 命令行参数
+
+### 2.2 环境管理
+- [ ] 分环境配置（dev / test / staging / prod）
+- [ ] 配置优先级覆盖（配置文件 < 环境变量 < 命令行参数）
+- [ ] 动态热更新（watch + callback，不重启生效）
+
+### 2.3 安全与类型
+- [ ] 类型安全（Schema + Validation）
+- [ ] 敏感信息管理（Secret / Vault 集成）
+- [ ] 敏感配置加密存储
+
+---
+
+## 三、模块化系统
+
+### 3.1 模块架构
+- [ ] 模块隔离
+- [ ] 模块依赖图
+- [ ] 插件化加载（Plugin System）
+- [ ] 按需加载（Feature Toggle）
+
+---
+
+## 四、数据访问层
+
+### 4.1 ORM / 数据库抽象
+- [ ] 链式查询构造器（Where / Select / Join / Group / Having / Order / Limit）
+- [ ] CRUD 基础操作封装
+- [ ] 事务支持（嵌套事务 / Savepoint）
+- [ ] 批量插入 / 更新
+- [ ] 软删除
+- [ ] 乐观锁（版本号/时间戳）
+- [ ] 关联关系：一对一、一对多、多对多、Eager Loading / Lazy Loading
+- [ ] 原生 SQL 支持与防注入
+- [ ] 多数据库类型驱动（MySQL / PostgreSQL / SQLite / MSSQL）
+- [ ] 读写分离 / 多数据源切换
+- [ ] 连接池管理（最大连接数、空闲连接、超时回收）
+
+### 4.2 数据库迁移
+- [ ] 版本化 Migration 文件（`up` / `down`）
+- [ ] 自动检测 Schema 差异
+- [ ] Seed 数据填充
+- [ ] 迁移状态记录与回滚
+
+### 4.3 缓存系统
+- [ ] 统一缓存接口（Redis）
+- [ ] 设置 TTL / 永久缓存
+- [ ] 标签缓存（按 tag 批量失效）
+- [ ] 缓存穿透防护（singleflight / 空值缓存）
+- [ ] 缓存雪崩防护（随机 TTL 抖动）
+- [ ] 分布式锁（基于 Redis `SET NX EX`）
+- [ ] 二级缓存（本地 L1 + 远端 L2）
+- [ ] Cache Aside / Write Through 策略
+- [ ] 分布式一致性（避免 cache stampede）
+
+### 4.4 事务管理
+- [ ] 本地事务（DB Transaction）
+- [ ] 分布式事务（Saga / TCC）
+- [ ] 自动回滚机制
+
+---
+
+## 五、安全体系
+
+### 5.1 认证（Authentication）
+- [ ] Session / Cookie 认证
+- [ ] JWT 生成、解析、刷新、黑名单吊销
+- [ ] OAuth2.0 / OIDC 集成（第三方登录）
+- [ ] API Key 认证
+- [ ] 多因素认证（TOTP / SMS）
+- [ ] 多端登录支持
+
+### 5.2 授权（Authorization）
+- [ ] RBAC（角色-权限-资源）
+- [ ] ABAC（基于属性的访问控制）
+- [ ] 策略引擎（Casbin 等）
+- [ ] 资源级权限细控（数据行过滤）
+
+### 5.3 安全防护
+- [ ] SQL 注入防护（参数化查询）
+- [ ] XSS 过滤
+- [ ] CSRF Token 验证
+- [ ] 请求签名验证（HMAC）
+- [ ] 敏感数据加密（AES / RSA / bcrypt 密码哈希）
+- [ ] 请求频率限制（IP / 用户 / 接口维度，Token Bucket / Leaky Bucket）
+- [ ] IP 黑白名单
+- [ ] HTTPS 强制与 HSTS
+- [ ] 输入校验（强制）
+
+---
+
+## 六、异步与任务系统
+
+### 6.1 消息队列支持（低优先级）
+- [ ] Kafka / RabbitMQ / NATS / RocketMQ 适配
+- [ ] Producer / Consumer 抽象
+- [ ] Retry / Dead Letter Queue
+- [ ] 消息幂等性支持
+- [ ] 可靠投递（持久化 + ACK 确认）
+- [ ] 优先级队列
+
+### 6.2 后台任务系统
+- [ ] Cron Job（Cron 表达式支持）
+- [ ] 延迟队列
+- [ ] 分布式任务调度（防重复执行，抢锁机制）
+- [ ] 任务可观测（状态 / retry / logs）
+- [ ] 任务超时与重试策略
+- [ ] 优雅停止（正在执行的任务不被强杀）
+
+### 6.3 事件系统
+- [ ] 同步 / 异步事件分发
+- [ ] 监听器注册（支持多监听者）
+- [ ] 事件队列化处理
+- [ ] 领域事件（Domain Events）
+- [ ] 事件溯源支持
+
+---
+
+## 七、可观测性
+
+### 7.1 日志系统
+- [ ] 分级日志（DEBUG / INFO / WARN / ERROR / FATAL）
+- [ ] 结构化日志（JSON 格式）
+- [ ] TraceID / SpanID 自动注入
+- [ ] 日志文件轮转（按大小 / 日期）
+- [ ] 异步写入（避免阻塞业务）
+- [ ] 敏感字段脱敏（手机号、身份证、密码）
+- [ ] 多输出目标（控制台 + 文件 + 远程）
+- [ ] Log Hook（发送到victoria-logs）
+
+### 7.2 链路追踪
+- [ ] 集成 OpenTelemetry（分布式 Trace）
+- [ ] 自动注入 TraceContext 到日志
+- [ ] 跨服务 Context 传播（W3C TraceContext / B3）
+- [ ] 接入 Jaeger / Zipkin / SkyWalking / Tempo
+
+### 7.3 指标监控
+- [ ] 暴露 `/metrics` 接口（Prometheus 格式）
+- [ ] 内置指标：QPS、响应时延（P50/P95/P99）、错误率、连接池状态
+- [ ] 自定义业务指标注册
+- [ ] 与 Grafana Dashboard 集成
+
+### 7.4 健康检查
+- [ ] `/health/live`（存活探针）
+- [ ] `/health/ready`（就绪探针）
+- [ ] 各依赖项状态检查（DB / Redis / MQ）
+- [ ] 对接 Kubernetes 探针
+
+---
+
+## 八、接口与文档
+
+### 8.1 API 文档
+- [ ] 注解/装饰器自动生成 OpenAPI 3.0 文档
+- [ ] 在线调试界面（Swagger UI / Redoc）
+- [ ] 文档版本管理
+- [ ] 接口变更 Diff
+
+### 8.2 API 版本管理
+- [ ] URL 版本（`/api/v1/`）
+- [ ] Header 版本（`Accept: application/vnd.api+json;version=2`）
+- [ ] 旧版本兼容与废弃通知
+- [ ] 向后兼容策略
+
+---
+
+## 九、性能与稳定性
+
+### 9.1 高并发能力
+- [ ] 异步 IO（基于 Bun 原生能力）
+- [ ] Worker Pool（Bun Worker Threads）
+- [ ] Backpressure（背压机制）
+
+### 9.2 限流与熔断
+- [ ] Rate Limiter（Token Bucket / Leaky Bucket）
+- [ ] Circuit Breaker（熔断）
+- [ ] Fallback 机制
+
+### 9.3 资源管理
+- [ ] 连接池（DB / HTTP）
+- [ ] 内存控制
+- [ ] GC 优化（Bun 运行时相关调优）
+
+---
+
+## 十、工程化能力
+
+### 10.1 错误处理
+- [ ] 全局统一异常捕获（Panic Recovery）
+- [ ] 自定义业务错误码体系
+- [ ] 错误链（Wrapping / Unwrapping）
+- [ ] 区分 4xx（客户端错误）与 5xx（服务端错误）
+- [ ] 错误上报（Sentry / 钉钉告警）
+
+### 10.2 多租户（Multi-tenancy）
+- [ ] Tenant Isolation
+- [ ] Tenant-aware Context
+- [ ] 数据隔离策略
+
+### 10.3 审计日志（Audit Log）
+- [ ] 谁在什么时候做了什么操作
+- [ ] 不可篡改
+- [ ] 查询与导出
+
+---
+
+## 十一、测试能力
+
+### 11.1 测试工具链
+- [ ] 单元测试：Mock 注入（接口替换），不依赖外部服务
+- [ ] 集成测试：内置测试服务器（不需真实启动进程）
+- [ ] 接口测试：HTTP Client 封装，断言响应
+- [ ] 数据库测试：事务回滚隔离，测试结束自动清理
+- [ ] Test Container（数据库隔离）
+- [ ] 工厂模式造数据（Fixture / Factory）
+- [ ] 覆盖率报告生成
+
+---
+
+## 十二、部署与运维
+
+### 12.1 优雅启停
+- [ ] 启动前依赖检查（DB 连通、配置完整性）
+- [ ] 接收 `SIGTERM` 信号后停止接收新请求
+- [ ] 等待存量请求处理完毕再退出（可配超时）
+- [ ] 热重启（不中断连接升级进程）
+
+### 12.2 容器化支持
+- [ ] 官方提供最小化 Dockerfile
+- [ ] 多阶段构建减小镜像体积
+- [ ] 支持非 root 用户运行
+- [ ] 环境变量配置驱动（12-Factor）
+- [ ] 健康检查接口标准化
+
+### 12.3 Kubernetes 集成
+- [ ] 自动配置探针（readiness / liveness）
+- [ ] Graceful Shutdown 配合 Pod 终止
+- [ ] 配置注入（ConfigMap / Secret）
+
+### 12.4 灰度发布 / Feature Flag
+- [ ] 按用户 / 流量切换
+- [ ] 动态开关功能
+- [ ] A/B Testing 支持
+
+---
+
+## 十三、开发体验（DX）
+
+### 13.1 CLI 工具
+- [ ] 项目初始化（scaffold）
+- [ ] 生成用户密码
+- [ ] 代码生成（module / controller / service / migration）
+- [ ] 数据库迁移命令（migrate up/down/status）
+- [ ] 构建、测试、部署命令封装
+
+### 13.2 热重载
+- [ ] 文件变更自动 reload
+- [ ] 保留状态（可选）
+
+---
+
+## 十四、扩展生态
+
+### 14.1 插件系统
+- [ ] 生命周期 Hooks
+- [ ] 插件注册机制
+- [ ] 插件隔离（避免污染）
+- [ ] 官方插件市场或注册表
+- [ ] 第三方插件统一接入规范
+
+### 14.2 Hook / Event 机制
+- [ ] beforeRequest / afterResponse
+- [ ] 领域事件（Domain Events）
+- [ ] 自定义 Hook 点暴露
+
+---
+
+## 十五、AI / Agent 能力（核心差异化）
+
+### 15.1 Tool / Command 抽象
+- [ ] 标准化操作：read / write / exec / query
+- [ ] Schema 描述（给 LLM 用）
+- [ ] Tool 注册与发现
+
+### 15.2 权限沙箱
+- [ ] 限制 AI 可执行的操作
+- [ ] Command Allowlist
+- [ ] 操作审计与审批流
+
+### 15.3 上下文系统
+- [ ] Request Context
+- [ ] User Context
+- [ ] Memory（短期 / 长期）
+- [ ] 多轮对话状态管理
+
+### 15.4 RAG
+- [ ] 知识库管理：多格式文档解析/embedding/thunk
+- [ ] Agent管理：配置系统提示词，入参定义，记忆
+
+---
+
+## 实施阶段规划
+
+### Phase 1 — 核心基石
+> 路由、中间件、配置、生命周期、CLI 脚手架
+
+### Phase 2 — 数据层
+> ORM、数据库迁移、缓存、事务管理
+
+### Phase 3 — 安全体系
+> 认证、授权、安全防护
+
+### Phase 4 — 异步与可观测
+> 消息队列、定时任务、日志、链路追踪、指标监控
+
+### Phase 5 — 微服务与工程化
+> 服务注册、负载均衡、RPC、API 文档、多租户、审计日志
+
+### Phase 6 — AI 与扩展
+> Tool 抽象、权限沙箱、上下文系统、插件市场
+
+### Phase 7 — 生产就绪
+> 容器化、K8s 集成、灰度发布、性能调优、全链路测试
+
+---
+
+> **核心原则**：以上功能不必全部自研，但框架必须提供**清晰的扩展点**和**官方推荐集成方案**，让开发者能以最低成本接入。缺失的功能比设计不良的功能危害更小。
