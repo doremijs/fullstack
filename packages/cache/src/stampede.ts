@@ -16,21 +16,13 @@ export interface StampedeProtection {
    * 获取缓存值，防止 stampede
    * 使用互斥锁确保只有一个请求去加载数据，其他请求等待
    */
-  getOrLoad<T>(
-    key: string,
-    loader: () => Promise<T>,
-    ttl: number,
-  ): Promise<T>;
+  getOrLoad<T>(key: string, loader: () => Promise<T>, ttl: number): Promise<T>;
 
   /**
    * 概率性提前刷新（XFetch 算法）
    * 在缓存即将过期时，以一定概率提前刷新
    */
-  getOrLoadXFetch<T>(
-    key: string,
-    loader: () => Promise<T>,
-    ttl: number,
-  ): Promise<T>;
+  getOrLoadXFetch<T>(key: string, loader: () => Promise<T>, ttl: number): Promise<T>;
 }
 
 interface CacheEntry<T> {
@@ -105,9 +97,7 @@ export function createStampedeProtection(
         if (result !== null) {
           try {
             return JSON.parse(result) as T;
-          } catch {
-            continue;
-          }
+          } catch {}
         }
       }
 

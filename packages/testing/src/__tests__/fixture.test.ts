@@ -25,9 +25,7 @@ describe("createFixtureManager", () => {
   test("register throws for duplicate name", () => {
     const manager = createFixtureManager();
     manager.register("dup", 1);
-    expect(() => manager.register("dup", 2)).toThrow(
-      'Fixture "dup" is already registered',
-    );
+    expect(() => manager.register("dup", 2)).toThrow('Fixture "dup" is already registered');
   });
 
   test("reset clears all fixtures", () => {
@@ -55,9 +53,9 @@ describe("createFixtureManager", () => {
 
   test("loadJSON throws for missing file", async () => {
     const manager = createFixtureManager();
-    await expect(
-      manager.loadJSON("missing", "/nonexistent/path.json"),
-    ).rejects.toThrow("Fixture file not found");
+    await expect(manager.loadJSON("missing", "/nonexistent/path.json")).rejects.toThrow(
+      "Fixture file not found",
+    );
   });
 
   test("loadJSON overwrites existing fixture with same name", async () => {

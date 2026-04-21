@@ -1,13 +1,11 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createGrafanaDashboard, createHttpDashboard } from "../grafana";
 
 describe("createGrafanaDashboard", () => {
   test("generate returns valid structure", () => {
     const dashboard = createGrafanaDashboard({
       title: "Test Dashboard",
-      panels: [
-        { title: "Panel 1", type: "graph", query: "up" },
-      ],
+      panels: [{ title: "Panel 1", type: "graph", query: "up" }],
     });
     const result = dashboard.generate();
     expect(result.dashboard).toBeDefined();
@@ -26,7 +24,9 @@ describe("createGrafanaDashboard", () => {
       ],
     });
     const result = dashboard.generate();
-    const panels = (result.dashboard as Record<string, unknown>).panels as Array<Record<string, unknown>>;
+    const panels = (result.dashboard as Record<string, unknown>).panels as Array<
+      Record<string, unknown>
+    >;
     expect(panels[0].gridPos).toBeDefined();
     expect(panels[1].gridPos).toBeDefined();
   });
@@ -50,7 +50,9 @@ describe("createGrafanaDashboard", () => {
         { title: "P1", type: "stat", query: "q1", thresholds: [{ value: 80, color: "red" }] },
       ],
     });
-    const panels = (dashboard.generate().dashboard as Record<string, unknown>).panels as Array<Record<string, unknown>>;
+    const panels = (dashboard.generate().dashboard as Record<string, unknown>).panels as Array<
+      Record<string, unknown>
+    >;
     const fc = panels[0].fieldConfig as Record<string, Record<string, Record<string, unknown>>>;
     expect(fc.defaults.thresholds).toBeDefined();
   });

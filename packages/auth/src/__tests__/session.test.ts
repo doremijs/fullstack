@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-import { createSessionManager, createMemorySessionStore } from "../session";
+import { describe, expect, test } from "bun:test";
+import { createMemorySessionStore, createSessionManager } from "../session";
 
 describe("createSessionManager", () => {
   function setup(options = {}) {
@@ -12,9 +12,7 @@ describe("createSessionManager", () => {
     test("creates a session with a UUID id", async () => {
       const { manager } = setup();
       const session = await manager.create();
-      expect(session.id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-      );
+      expect(session.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     });
 
     test("creates a session with data", async () => {

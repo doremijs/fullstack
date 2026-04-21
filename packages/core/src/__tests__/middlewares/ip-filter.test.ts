@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { ipFilter } from "../../middlewares/ip-filter";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../../context";
+import { ipFilter } from "../../middlewares/ip-filter";
 
 describe("ipFilter", () => {
   function makeReq(ip?: string): Request {

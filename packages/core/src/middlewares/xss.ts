@@ -59,7 +59,7 @@ export function xssProtection(options: XSSOptions = {}): Middleware {
     frameOptions = "DENY",
   } = options;
 
-  return async (ctx, next) => {
+  return async (_ctx, next) => {
     const response = await next();
 
     // 克隆 response 以添加 headers

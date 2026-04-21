@@ -1,7 +1,7 @@
 // @aeron/core - 自动绑定（JSON / Form → Struct）
 
 import type { Context } from "./context";
-import type { Schema, ValidationResult } from "./validator";
+import type { Schema } from "./validator";
 import { validate } from "./validator";
 
 export interface BindOptions {
@@ -45,7 +45,7 @@ export async function bindJSON<T = Record<string, unknown>>(
   }
 
   const contentLength = ctx.headers.get("content-length");
-  if (contentLength && parseInt(contentLength, 10) > maxSize) {
+  if (contentLength && Number.parseInt(contentLength, 10) > maxSize) {
     return { data: {} as T, errors: [`Body exceeds max size of ${maxSize} bytes`] };
   }
 

@@ -1,11 +1,13 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createStampedeProtection } from "../stampede";
 
 function mockCacheStore() {
   const store = new Map<string, string>();
   return {
     getter: async (key: string) => store.get(key) ?? null,
-    setter: async (key: string, value: string) => { store.set(key, value); },
+    setter: async (key: string, value: string) => {
+      store.set(key, value);
+    },
     store,
   };
 }
@@ -16,7 +18,14 @@ describe("createStampedeProtection", () => {
       const { getter, setter } = mockCacheStore();
       const sp = createStampedeProtection(getter, setter);
       let called = 0;
-      const val = await sp.getOrLoad("key", async () => { called++; return 42; }, 5000);
+      const val = await sp.getOrLoad(
+        "key",
+        async () => {
+          called++;
+          return 42;
+        },
+        5000,
+      );
       expect(val).toBe(42);
       expect(called).toBe(1);
     });
@@ -26,14 +35,24 @@ describe("createStampedeProtection", () => {
       store.set("key", JSON.stringify(99));
       const sp = createStampedeProtection(getter, setter);
       let called = 0;
-      const val = await sp.getOrLoad("key", async () => { called++; return 42; }, 5000);
+      const val = await sp.getOrLoad(
+        "key",
+        async () => {
+          called++;
+          return 42;
+        },
+        5000,
+      );
       expect(val).toBe(99);
       expect(called).toBe(0);
     });
 
     test("concurrent loads use lock", async () => {
       const { getter, setter } = mockCacheStore();
-      const sp = createStampedeProtection(getter, setter, { waitInterval: 10, maxWaitAttempts: 50 });
+      const sp = createStampedeProtection(getter, setter, {
+        waitInterval: 10,
+        maxWaitAttempts: 50,
+      });
       let loadCount = 0;
       const loader = async () => {
         loadCount++;

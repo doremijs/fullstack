@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { diffSchemas, generateMigrationSQL } from "../schema-diff";
 
 describe("diffSchemas", () => {
@@ -16,7 +16,15 @@ describe("diffSchemas", () => {
 
   test("detects added columns", () => {
     const current = [{ name: "users", columns: [{ name: "id", type: "int" }] }];
-    const target = [{ name: "users", columns: [{ name: "id", type: "int" }, { name: "name", type: "varchar" }] }];
+    const target = [
+      {
+        name: "users",
+        columns: [
+          { name: "id", type: "int" },
+          { name: "name", type: "varchar" },
+        ],
+      },
+    ];
     const diff = diffSchemas(current, target);
     expect(diff.modifiedTables).toHaveLength(1);
     expect(diff.modifiedTables[0].addedColumns).toHaveLength(1);
@@ -24,7 +32,15 @@ describe("diffSchemas", () => {
   });
 
   test("detects removed columns", () => {
-    const current = [{ name: "users", columns: [{ name: "id", type: "int" }, { name: "name", type: "varchar" }] }];
+    const current = [
+      {
+        name: "users",
+        columns: [
+          { name: "id", type: "int" },
+          { name: "name", type: "varchar" },
+        ],
+      },
+    ];
     const target = [{ name: "users", columns: [{ name: "id", type: "int" }] }];
     const diff = diffSchemas(current, target);
     expect(diff.modifiedTables[0].removedColumns).toEqual(["name"]);
@@ -39,8 +55,12 @@ describe("diffSchemas", () => {
   });
 
   test("detects nullable changes", () => {
-    const current = [{ name: "users", columns: [{ name: "name", type: "varchar", nullable: true }] }];
-    const target = [{ name: "users", columns: [{ name: "name", type: "varchar", nullable: false }] }];
+    const current = [
+      { name: "users", columns: [{ name: "name", type: "varchar", nullable: true }] },
+    ];
+    const target = [
+      { name: "users", columns: [{ name: "name", type: "varchar", nullable: false }] },
+    ];
     const diff = diffSchemas(current, target);
     expect(diff.modifiedTables[0].modifiedColumns[0].changes).toContain("nullable");
   });
@@ -64,7 +84,15 @@ describe("generateMigrationSQL", () => {
 
   test("generates add column SQL", () => {
     const current = [{ name: "users", columns: [{ name: "id", type: "int" }] }];
-    const target = [{ name: "users", columns: [{ name: "id", type: "int" }, { name: "email", type: "varchar", nullable: false }] }];
+    const target = [
+      {
+        name: "users",
+        columns: [
+          { name: "id", type: "int" },
+          { name: "email", type: "varchar", nullable: false },
+        ],
+      },
+    ];
     const diff = diffSchemas(current, target);
     const { up, down } = generateMigrationSQL(diff);
     expect(up[0]).toContain("ADD COLUMN email varchar NOT NULL");

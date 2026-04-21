@@ -132,21 +132,17 @@ function toYAMLValue(value: unknown, depth: number): string {
           lines.push(`${prefix}- {}`);
         } else {
           const [firstKey, firstVal] = entries[0]!;
-          lines.push(
-            `${prefix}- ${firstKey}: ${toYAMLValue(firstVal, depth + 2)}`,
-          );
+          lines.push(`${prefix}- ${firstKey}: ${toYAMLValue(firstVal, depth + 2)}`);
           for (let i = 1; i < entries.length; i++) {
             const [k, v] = entries[i]!;
-            lines.push(
-              `${prefix}  ${k}: ${toYAMLValue(v, depth + 2)}`,
-            );
+            lines.push(`${prefix}  ${k}: ${toYAMLValue(v, depth + 2)}`);
           }
         }
       } else {
         lines.push(`${prefix}- ${toYAMLValue(item, depth + 1)}`);
       }
     }
-    return "\n" + lines.join("\n");
+    return `\n${lines.join("\n")}`;
   }
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
@@ -165,7 +161,7 @@ function toYAMLValue(value: unknown, depth: number): string {
         lines.push(`${prefix}${key}: ${rendered}`);
       }
     }
-    return "\n" + lines.join("\n");
+    return `\n${lines.join("\n")}`;
   }
   return String(value);
 }
@@ -185,7 +181,7 @@ export function toYAML(obj: unknown): string {
       lines.push(`${key}: ${rendered}`);
     }
   }
-  return lines.join("\n") + "\n";
+  return `${lines.join("\n")}\n`;
 }
 
 // ---- Factory ----

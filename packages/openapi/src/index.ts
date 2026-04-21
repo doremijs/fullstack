@@ -42,13 +42,17 @@ export type {
 } from "./generator";
 
 // Route metadata
-export { defineRouteDoc, routesToOpenAPI } from "./decorators";
+export { defineRouteDoc, routesToOpenAPI, syncRouterToOpenAPI } from "./decorators";
 
 export type { RouteMetadata } from "./decorators";
 
 // Swagger UI
-export { generateSwaggerUI, createSwaggerUIHandler } from "./swagger-ui";
+export { generateSwaggerUI, createSwaggerUIHandler, createSwaggerUIPlugin } from "./swagger-ui";
 export type { SwaggerUIOptions } from "./swagger-ui";
+
+// Scalar UI
+export { generateScalarUI, createScalarUIHandler, createScalarUIPlugin } from "./scalar-ui";
+export type { ScalarUIOptions } from "./scalar-ui";
 
 // API Version
 export { apiVersion, parseVersionFromAccept } from "./api-version";
@@ -63,5 +67,9 @@ export { computeAPIDiff, generateDiffReport } from "./api-diff";
 export type { APIDiffResult, APIDiffEntry } from "./api-diff";
 
 // Deprecation
-export { createDeprecationManager, createCompatibilityGuard, DEFAULT_COMPATIBILITY_POLICY } from "./deprecation";
+export {
+  createDeprecationManager,
+  createCompatibilityGuard,
+  DEFAULT_COMPATIBILITY_POLICY,
+} from "./deprecation";
 export type { DeprecationManager, DeprecationNotice, CompatibilityPolicy } from "./deprecation";

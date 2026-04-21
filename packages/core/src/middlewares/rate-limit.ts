@@ -61,9 +61,11 @@ export function createMemoryRateLimitStore(): RateLimitStore {
 }
 
 function defaultKeyFn(ctx: Context): string {
-  return ctx.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    ?? ctx.headers.get("x-real-ip")
-    ?? "unknown";
+  return (
+    ctx.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    ctx.headers.get("x-real-ip") ??
+    "unknown"
+  );
 }
 
 export function rateLimit(options: RateLimitOptions = {}): Middleware {

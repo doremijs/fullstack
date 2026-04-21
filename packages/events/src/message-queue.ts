@@ -11,9 +11,7 @@ export interface Message<T = unknown> {
   retryCount?: number;
 }
 
-export interface MessageHandler<T = unknown> {
-  (message: Message<T>): Promise<void>;
-}
+export type MessageHandler<T = unknown> = (message: Message<T>) => Promise<void>;
 
 export interface QueueOptions {
   /** Maximum retry attempts on handler failure. Default: 3 */
@@ -121,7 +119,11 @@ export function createMemoryQueue(): MessageQueue {
     }
   }
 
-  async function publish<T>(topic: string, payload: T, headers?: Record<string, string>): Promise<string> {
+  async function publish<T>(
+    topic: string,
+    payload: T,
+    headers?: Record<string, string>,
+  ): Promise<string> {
     const id = crypto.randomUUID();
     const message: Message<T> = {
       id,
@@ -139,7 +141,11 @@ export function createMemoryQueue(): MessageQueue {
     return id;
   }
 
-  function subscribe<T>(topic: string, handler: MessageHandler<T>, options?: QueueOptions): () => void {
+  function subscribe<T>(
+    topic: string,
+    handler: MessageHandler<T>,
+    options?: QueueOptions,
+  ): () => void {
     const state = getTopicState(topic) as TopicState<T>;
     const resolvedOptions: Required<QueueOptions> = {
       maxRetries: options?.maxRetries ?? 3,

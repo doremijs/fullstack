@@ -99,11 +99,9 @@ export function createABTestManager(): ABTestManager {
       if (!test.enabled) return null;
 
       const variant = assignVariant(test, userId);
-      return {
-        testName,
-        variant: variant.name,
-        config: variant.config,
-      };
+      const result: ABTestResult = { testName, variant: variant.name };
+      if (variant.config) result.config = variant.config;
+      return result;
     },
 
     isInVariant(testName: string, variantName: string, userId?: string): boolean {

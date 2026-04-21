@@ -1,6 +1,6 @@
-import { describe, test, expect, afterEach } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { createApp } from "../app";
-import { NotFoundError, ValidationError, AeronError } from "../errors";
+import { NotFoundError } from "../errors";
 import type { Middleware } from "../middleware";
 import type { Plugin } from "../plugin";
 
@@ -12,19 +12,6 @@ afterEach(async () => {
     appToClose = null;
   }
 });
-
-async function startApp(
-  setup: (app: ReturnType<typeof createApp>) => void,
-): Promise<{ app: ReturnType<typeof createApp>; baseUrl: string }> {
-  const app = createApp({ port: 0 });
-  setup(app);
-  await app.listen();
-  appToClose = app;
-  // Read the actual port from the server (we access internal state via a quick fetch)
-  // Since we use port 0, Bun assigns a random port. We need another way...
-  // Actually, we'll use a known port approach:
-  return { app, baseUrl: "" };
-}
 
 describe("createApp", () => {
   test("creates app with router and lifecycle", () => {
@@ -38,7 +25,7 @@ describe("createApp", () => {
 
   test("use() accepts middleware (function)", () => {
     const app = createApp();
-    const mw: Middleware = async (ctx, next) => await next();
+    const mw: Middleware = async (_ctx, next) => await next();
     const result = app.use(mw);
     expect(result).toBe(app); // chaining
   });
@@ -47,7 +34,7 @@ describe("createApp", () => {
     const installed: string[] = [];
     const plugin: Plugin = {
       name: "test-plugin",
-      install(app) {
+      install(_app) {
         installed.push("installed");
       },
     };
@@ -100,7 +87,7 @@ describe("App HTTP integration", () => {
 
   test("global middleware runs on requests", async () => {
     const app = createApp();
-    const headerMw: Middleware = async (ctx, next) => {
+    const headerMw: Middleware = async (_ctx, next) => {
       const res = await next();
       return new Response(res.body, {
         status: res.status,

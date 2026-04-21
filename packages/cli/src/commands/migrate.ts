@@ -1,7 +1,7 @@
 // @aeron/cli - Migrate Command
 
-import type { Command } from "../cli";
 import type { MigrationRunner } from "@aeron/database";
+import type { Command } from "../cli";
 
 export interface MigrateOptions {
   runner?: MigrationRunner;

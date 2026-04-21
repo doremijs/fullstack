@@ -1,20 +1,20 @@
-import { describe, test, expect } from "bun:test";
-import { csrf } from "../middlewares/csrf";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
+import { csrf } from "../middlewares/csrf";
 
-function makeCtx(
-  method: string,
-  headers?: Record<string, string>,
-) {
+function makeCtx(method: string, headers?: Record<string, string>) {
   const h = new Headers(headers);
   const request = new Request("http://localhost/api/test", { method, headers: h });
   return createContext(request);
 }
 
-const okHandler = () => Promise.resolve(new Response(JSON.stringify({ ok: true }), {
-  status: 200,
-  headers: { "Content-Type": "application/json" },
-}));
+const okHandler = () =>
+  Promise.resolve(
+    new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
 
 describe("csrf", () => {
   test("safe methods (GET) pass through without token check", async () => {

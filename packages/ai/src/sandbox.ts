@@ -72,7 +72,7 @@ export function createSandbox(permissions: SandboxPermissions): Sandbox {
     }
     const resolved = resolve(filePath);
     const workDir = resolve(effectivePermissions.workingDirectory);
-    return resolved.startsWith(workDir + "/") || resolved === workDir;
+    return resolved.startsWith(`${workDir}/`) || resolved === workDir;
   }
 
   async function wrapExecution<T>(toolName: string, fn: () => Promise<T>): Promise<T> {
@@ -85,7 +85,10 @@ export function createSandbox(permissions: SandboxPermissions): Sandbox {
     return Promise.race([
       fn(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Sandbox execution timed out after ${timeout}ms`)), timeout),
+        setTimeout(
+          () => reject(new Error(`Sandbox execution timed out after ${timeout}ms`)),
+          timeout,
+        ),
       ),
     ]);
   }

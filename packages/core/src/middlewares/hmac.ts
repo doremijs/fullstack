@@ -105,9 +105,7 @@ export function createHMACSigner(options: HMACOptions): {
     return { signature, timestamp: ts, nonce: n };
   }
 
-  async function verify(
-    request: Request,
-  ): Promise<{ valid: boolean; reason?: string }> {
+  async function verify(request: Request): Promise<{ valid: boolean; reason?: string }> {
     const sig = request.headers.get(headerName);
     if (!sig) {
       return { valid: false, reason: "Missing signature header" };
@@ -123,7 +121,7 @@ export function createHMACSigner(options: HMACOptions): {
       return { valid: false, reason: "Missing nonce header" };
     }
 
-    const ts = parseInt(tsStr, 10);
+    const ts = Number.parseInt(tsStr, 10);
     if (Number.isNaN(ts)) {
       return { valid: false, reason: "Invalid timestamp" };
     }
@@ -142,13 +140,7 @@ export function createHMACSigner(options: HMACOptions): {
     const url = new URL(request.url);
     const body = await request.clone().text();
 
-    const expected = await computeSignature(
-      request.method,
-      url.pathname,
-      body,
-      ts,
-      nonceVal,
-    );
+    const expected = await computeSignature(request.method, url.pathname, body, ts, nonceVal);
 
     if (!constantTimeEqual(sig, expected)) {
       return { valid: false, reason: "Signature mismatch" };
@@ -164,13 +156,10 @@ export function createHMACSigner(options: HMACOptions): {
     return async (_ctx: Context, next) => {
       const result = await verify(_ctx.request);
       if (!result.valid) {
-        return new Response(
-          JSON.stringify({ error: result.reason }),
-          {
-            status: 401,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
+        return new Response(JSON.stringify({ error: result.reason }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       return next();
     };

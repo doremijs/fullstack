@@ -1,4 +1,4 @@
-import { describe, test, expect, mock } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { createTraceExporter } from "../trace-exporter";
 
 describe("createTraceExporter", () => {
@@ -26,7 +26,7 @@ describe("createTraceExporter", () => {
       });
       await exporter.export([testSpan]);
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      const body = JSON.parse((fetchMock.mock.calls[0] as unknown[])[1]?.body as string ?? "[]");
+      const body = JSON.parse(((fetchMock.mock.calls[0] as unknown[])[1]?.body as string) ?? "[]");
       expect(body[0].traceId).toBe(testSpan.traceId);
       expect(body[0].kind).toBe("SERVER");
     } finally {
@@ -46,7 +46,7 @@ describe("createTraceExporter", () => {
       });
       await exporter.export([testSpan]);
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      const body = JSON.parse((fetchMock.mock.calls[0] as unknown[])[1]?.body as string ?? "{}");
+      const body = JSON.parse(((fetchMock.mock.calls[0] as unknown[])[1]?.body as string) ?? "{}");
       expect(body.resourceSpans).toBeDefined();
     } finally {
       globalThis.fetch = origFetch;

@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createTOTP } from "../totp";
 
 describe("createTOTP", () => {
@@ -88,8 +88,8 @@ describe("createTOTP", () => {
     const secret1 = totp.generateSecret();
     const secret2 = totp.generateSecret();
     const time = 1000000000;
-    const code1 = await totp.generate(secret1, time);
-    const code2 = await totp.generate(secret2, time);
+    const _code1 = await totp.generate(secret1, time);
+    const _code2 = await totp.generate(secret2, time);
     // Extremely unlikely to be the same
     expect(secret1).not.toBe(secret2);
     // We can't guarantee codes differ but secrets should differ

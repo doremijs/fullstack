@@ -33,19 +33,9 @@ const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
   fatal: 4,
 };
 
-const DEFAULT_SENSITIVE_FIELDS = [
-  "password",
-  "token",
-  "secret",
-  "key",
-  "cookie",
-  "authorization",
-];
+const DEFAULT_SENSITIVE_FIELDS = ["password", "token", "secret", "key", "cookie", "authorization"];
 
-function redactValue(
-  value: unknown,
-  sensitiveFields: string[],
-): unknown {
+function redactValue(value: unknown, sensitiveFields: string[]): unknown {
   if (value === null || value === undefined) return value;
   if (Array.isArray(value)) {
     return value.map((item) => redactValue(item, sensitiveFields));
@@ -87,11 +77,13 @@ export function createLogger(options?: LoggerOptions): Logger {
   if (!enabled) return noopLogger;
 
   const minLevel = options?.level ?? "info";
-  const output = options?.output ?? ((entry: LogEntry) => {
-    console.log(JSON.stringify(entry));
-  });
-  const sensitiveFields = (options?.sensitiveFields ?? DEFAULT_SENSITIVE_FIELDS).map(
-    (f) => f.toLowerCase(),
+  const output =
+    options?.output ??
+    ((entry: LogEntry) => {
+      console.log(JSON.stringify(entry));
+    });
+  const sensitiveFields = (options?.sensitiveFields ?? DEFAULT_SENSITIVE_FIELDS).map((f) =>
+    f.toLowerCase(),
   );
 
   return buildLogger(minLevel, output, sensitiveFields, {});
@@ -120,11 +112,21 @@ function buildLogger(
   }
 
   return {
-    debug(message, meta) { log("debug", message, meta); },
-    info(message, meta) { log("info", message, meta); },
-    warn(message, meta) { log("warn", message, meta); },
-    error(message, meta) { log("error", message, meta); },
-    fatal(message, meta) { log("fatal", message, meta); },
+    debug(message, meta) {
+      log("debug", message, meta);
+    },
+    info(message, meta) {
+      log("info", message, meta);
+    },
+    warn(message, meta) {
+      log("warn", message, meta);
+    },
+    error(message, meta) {
+      log("error", message, meta);
+    },
+    fatal(message, meta) {
+      log("fatal", message, meta);
+    },
     child(defaultMeta) {
       return buildLogger(minLevel, output, sensitiveFields, {
         ...baseMeta,

@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { compose, type Middleware } from "../middleware";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
+import { type Middleware, compose } from "../middleware";
 
 function makeCtx() {
   return createContext(new Request("http://localhost:3000/"));
@@ -9,9 +9,7 @@ function makeCtx() {
 describe("compose", () => {
   test("with no middleware, calls final handler", async () => {
     const ctx = makeCtx();
-    const result = await compose([])(ctx, () =>
-      Promise.resolve(ctx.json({ ok: true })),
-    );
+    const result = await compose([])(ctx, () => Promise.resolve(ctx.json({ ok: true })));
     expect(result.status).toBe(200);
     expect(await result.json()).toEqual({ ok: true });
   });
@@ -20,7 +18,7 @@ describe("compose", () => {
     const ctx = makeCtx();
     const calls: string[] = [];
 
-    const mw: Middleware = async (c, next) => {
+    const mw: Middleware = async (_c, next) => {
       calls.push("before");
       const res = await next();
       calls.push("after");
@@ -39,14 +37,14 @@ describe("compose", () => {
     const ctx = makeCtx();
     const calls: string[] = [];
 
-    const mw1: Middleware = async (c, next) => {
+    const mw1: Middleware = async (_c, next) => {
       calls.push("mw1-before");
       const res = await next();
       calls.push("mw1-after");
       return res;
     };
 
-    const mw2: Middleware = async (c, next) => {
+    const mw2: Middleware = async (_c, next) => {
       calls.push("mw2-before");
       const res = await next();
       calls.push("mw2-after");
@@ -58,26 +56,20 @@ describe("compose", () => {
       return Promise.resolve(ctx.text("ok"));
     });
 
-    expect(calls).toEqual([
-      "mw1-before",
-      "mw2-before",
-      "handler",
-      "mw2-after",
-      "mw1-after",
-    ]);
+    expect(calls).toEqual(["mw1-before", "mw2-before", "handler", "mw2-after", "mw1-after"]);
   });
 
   test("next() called multiple times throws", async () => {
     const ctx = makeCtx();
 
-    const mw: Middleware = async (c, next) => {
+    const mw: Middleware = async (_c, next) => {
       await next();
       return await next(); // second call should throw
     };
 
-    await expect(
-      compose([mw])(ctx, () => Promise.resolve(ctx.text("ok"))),
-    ).rejects.toThrow("next() called multiple times");
+    await expect(compose([mw])(ctx, () => Promise.resolve(ctx.text("ok")))).rejects.toThrow(
+      "next() called multiple times",
+    );
   });
 
   test("error in middleware propagates", async () => {
@@ -87,15 +79,15 @@ describe("compose", () => {
       throw new Error("middleware error");
     };
 
-    await expect(
-      compose([mw])(ctx, () => Promise.resolve(ctx.text("ok"))),
-    ).rejects.toThrow("middleware error");
+    await expect(compose([mw])(ctx, () => Promise.resolve(ctx.text("ok")))).rejects.toThrow(
+      "middleware error",
+    );
   });
 
   test("error in handler propagates through middleware", async () => {
     const ctx = makeCtx();
 
-    const mw: Middleware = async (c, next) => {
+    const mw: Middleware = async (_c, next) => {
       return await next();
     };
 
@@ -109,7 +101,7 @@ describe("compose", () => {
   test("middleware can modify response", async () => {
     const ctx = makeCtx();
 
-    const mw: Middleware = async (c, next) => {
+    const mw: Middleware = async (_c, next) => {
       const res = await next();
       return new Response(res.body, {
         status: res.status,
@@ -120,9 +112,7 @@ describe("compose", () => {
       });
     };
 
-    const result = await compose([mw])(ctx, () =>
-      Promise.resolve(ctx.text("ok")),
-    );
+    const result = await compose([mw])(ctx, () => Promise.resolve(ctx.text("ok")));
     expect(result.headers.get("X-Added")).toBe("by-middleware");
   });
 
@@ -135,7 +125,7 @@ describe("compose", () => {
       return c.json({ error: "unauthorized" }, 401);
     };
 
-    const neverReached: Middleware = async (c, next) => {
+    const neverReached: Middleware = async (_c, next) => {
       calls.push("never");
       return await next();
     };

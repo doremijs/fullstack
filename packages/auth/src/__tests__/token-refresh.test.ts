@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { createTokenRefresh } from "../token-refresh";
+import { describe, expect, test } from "bun:test";
 import { createJWT } from "../jwt";
+import { createTokenRefresh } from "../token-refresh";
 
 const SECRET = "a]3Kf9$mPqR7wXyZ!bNcDe2GhJkLs5Tv"; // 32+ bytes
 const REFRESH_SECRET = "x9Y!kLm2NpQr3StUvWxYz4AbCdEfGhJk"; // separate 32+ bytes
@@ -49,9 +49,7 @@ describe("createTokenRefresh", () => {
   test("refresh rejects access token (wrong iss)", async () => {
     const manager = createTokenRefresh(jwt);
     const pair = await manager.generatePair({ sub: "user1" }, SECRET);
-    await expect(manager.refresh(pair.accessToken, SECRET)).rejects.toThrow(
-      "Invalid token type",
-    );
+    await expect(manager.refresh(pair.accessToken, SECRET)).rejects.toThrow("Invalid token type");
   });
 
   test("revoke and isRevoked work correctly", async () => {

@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createHMACSigner } from "../middlewares/hmac";
 
 const TEST_SECRET = "test-secret-key-at-least-32-chars!";
@@ -33,11 +33,16 @@ describe("createHMACSigner", () => {
       "/api/data",
       '{"key":"value"}',
     );
-    const req = makeSignedRequest("POST", "/api/data", {
-      "x-signature": signature,
-      "x-timestamp": String(timestamp),
-      "x-nonce": nonce,
-    }, '{"key":"value"}');
+    const req = makeSignedRequest(
+      "POST",
+      "/api/data",
+      {
+        "x-signature": signature,
+        "x-timestamp": String(timestamp),
+        "x-nonce": nonce,
+      },
+      '{"key":"value"}',
+    );
     const result = await signer.verify(req);
     expect(result.valid).toBe(true);
   });
@@ -53,12 +58,7 @@ describe("createHMACSigner", () => {
   test("verify rejects expired timestamp", async () => {
     const signer = createHMACSigner({ secret: TEST_SECRET, maxAge: 1000 });
     const oldTimestamp = Date.now() - 60_000; // 60 seconds ago
-    const { signature, nonce } = await signer.sign(
-      "POST",
-      "/api/test",
-      "",
-      oldTimestamp,
-    );
+    const { signature, nonce } = await signer.sign("POST", "/api/test", "", oldTimestamp);
     const req = makeSignedRequest("POST", "/api/test", {
       "x-signature": signature,
       "x-timestamp": String(oldTimestamp),
@@ -71,11 +71,7 @@ describe("createHMACSigner", () => {
 
   test("verify rejects duplicate nonce", async () => {
     const signer = createHMACSigner({ secret: TEST_SECRET });
-    const { signature, timestamp, nonce } = await signer.sign(
-      "POST",
-      "/api/test",
-      "body",
-    );
+    const { signature, timestamp, nonce } = await signer.sign("POST", "/api/test", "body");
     const headers = {
       "x-signature": signature,
       "x-timestamp": String(timestamp),
@@ -96,16 +92,17 @@ describe("createHMACSigner", () => {
 
   test("verify rejects tampered body", async () => {
     const signer = createHMACSigner({ secret: TEST_SECRET });
-    const { signature, timestamp, nonce } = await signer.sign(
+    const { signature, timestamp, nonce } = await signer.sign("POST", "/api/test", "original");
+    const req = makeSignedRequest(
       "POST",
       "/api/test",
-      "original",
+      {
+        "x-signature": signature,
+        "x-timestamp": String(timestamp),
+        "x-nonce": nonce,
+      },
+      "tampered",
     );
-    const req = makeSignedRequest("POST", "/api/test", {
-      "x-signature": signature,
-      "x-timestamp": String(timestamp),
-      "x-nonce": nonce,
-    }, "tampered");
     const result = await signer.verify(req);
     expect(result.valid).toBe(false);
     expect(result.reason).toContain("mismatch");
@@ -113,11 +110,7 @@ describe("createHMACSigner", () => {
 
   test("verify rejects tampered path", async () => {
     const signer = createHMACSigner({ secret: TEST_SECRET });
-    const { signature, timestamp, nonce } = await signer.sign(
-      "GET",
-      "/api/safe",
-      "",
-    );
+    const { signature, timestamp, nonce } = await signer.sign("GET", "/api/safe", "");
     const req = makeSignedRequest("GET", "/api/admin", {
       "x-signature": signature,
       "x-timestamp": String(timestamp),
@@ -133,9 +126,7 @@ describe("createHMACSigner", () => {
     const { createContext } = await import("../context");
     const req = new Request("http://localhost/api/test", { method: "GET" });
     const ctx = createContext(req);
-    const response = await mw(ctx, () =>
-      Promise.resolve(new Response("ok", { status: 200 })),
-    );
+    const response = await mw(ctx, () => Promise.resolve(new Response("ok", { status: 200 })));
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body.error).toBeTruthy();
@@ -144,11 +135,7 @@ describe("createHMACSigner", () => {
   test("middleware passes valid request through", async () => {
     const signer = createHMACSigner({ secret: TEST_SECRET });
     const mw = signer.middleware();
-    const { signature, timestamp, nonce } = await signer.sign(
-      "POST",
-      "/api/test",
-      "data",
-    );
+    const { signature, timestamp, nonce } = await signer.sign("POST", "/api/test", "data");
     const { createContext } = await import("../context");
     const req = new Request("http://localhost/api/test", {
       method: "POST",
@@ -160,9 +147,7 @@ describe("createHMACSigner", () => {
       body: "data",
     });
     const ctx = createContext(req);
-    const response = await mw(ctx, () =>
-      Promise.resolve(new Response("ok", { status: 200 })),
-    );
+    const response = await mw(ctx, () => Promise.resolve(new Response("ok", { status: 200 })));
     expect(response.status).toBe(200);
   });
 

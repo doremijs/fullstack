@@ -40,7 +40,7 @@ export function createReliableDelivery(
   options?: ReliableDeliveryOptions,
 ): ReliableDelivery {
   const maxAttempts = options?.maxAttempts ?? 3;
-  const ackTimeout = options?.ackTimeout ?? 30000;
+  const _ackTimeout = options?.ackTimeout ?? 30000;
   const messages = new Map<string, ReliableMessage>();
 
   return {
@@ -81,7 +81,7 @@ export function createReliableDelivery(
       const msg = messages.get(messageId);
       if (!msg) return false;
       msg.status = "failed";
-      msg.error = error;
+      if (error) msg.error = error;
       return true;
     },
 
@@ -111,7 +111,9 @@ export function createReliableDelivery(
     },
 
     getPending(): ReliableMessage[] {
-      return Array.from(messages.values()).filter((m) => m.status === "pending" || m.status === "sent");
+      return Array.from(messages.values()).filter(
+        (m) => m.status === "pending" || m.status === "sent",
+      );
     },
 
     getFailed(): ReliableMessage[] {

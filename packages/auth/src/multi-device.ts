@@ -23,7 +23,10 @@ export interface MultiDeviceOptions {
 }
 
 export interface MultiDeviceManager {
-  login(userId: string, device: Omit<DeviceSession, "createdAt" | "lastActiveAt">): Promise<{ allowed: boolean; kicked?: string[] }>;
+  login(
+    userId: string,
+    device: Omit<DeviceSession, "createdAt" | "lastActiveAt">,
+  ): Promise<{ allowed: boolean; kicked?: string[] }>;
   logout(userId: string, sessionId: string): void;
   logoutAll(userId: string): void;
   getSessions(userId: string): DeviceSession[];
@@ -53,7 +56,10 @@ export function createMultiDeviceManager(options?: MultiDeviceOptions): MultiDev
   }
 
   return {
-    async login(userId: string, device: Omit<DeviceSession, "createdAt" | "lastActiveAt">): Promise<{ allowed: boolean; kicked?: string[] }> {
+    async login(
+      userId: string,
+      device: Omit<DeviceSession, "createdAt" | "lastActiveAt">,
+    ): Promise<{ allowed: boolean; kicked?: string[] }> {
       const sessions = getOrCreateUserMap(userId);
       const kicked: string[] = [];
 
@@ -97,7 +103,9 @@ export function createMultiDeviceManager(options?: MultiDeviceOptions): MultiDev
         lastActiveAt: now,
       });
 
-      return { allowed: true, kicked: kicked.length > 0 ? kicked : undefined };
+      const result: { allowed: true; kicked?: string[] } = { allowed: true };
+      if (kicked.length > 0) result.kicked = kicked;
+      return result;
     },
 
     logout(userId: string, sessionId: string): void {

@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createMetrics } from "../metrics";
 
 describe("createMetrics", () => {
@@ -73,9 +73,9 @@ describe("createMetrics", () => {
       const h = metrics.histogram("test", undefined, [0.1, 0.5, 1.0]);
 
       h.observe(0.05); // <= 0.1, 0.5, 1.0
-      h.observe(0.3);  // <= 0.5, 1.0
-      h.observe(0.8);  // <= 1.0
-      h.observe(2.0);  // > all
+      h.observe(0.3); // <= 0.5, 1.0
+      h.observe(0.8); // <= 1.0
+      h.observe(2.0); // > all
 
       const snap = h.get();
       expect(snap.count).toBe(4);

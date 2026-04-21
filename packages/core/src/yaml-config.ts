@@ -7,7 +7,12 @@
 export function parseYAML(text: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   const lines = text.split("\n");
-  const stack: { indent: number; obj: Record<string, unknown>; parentObj?: Record<string, unknown>; parentKey?: string }[] = [{ indent: -1, obj: result }];
+  const stack: {
+    indent: number;
+    obj: Record<string, unknown>;
+    parentObj?: Record<string, unknown>;
+    parentKey?: string;
+  }[] = [{ indent: -1, obj: result }];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;

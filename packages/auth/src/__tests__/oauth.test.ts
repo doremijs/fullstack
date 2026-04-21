@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { createOAuth } from "../oauth";
 import type { OAuthProvider } from "../oauth";
 
@@ -24,13 +24,9 @@ describe("createOAuth", () => {
   test("getAuthorizationURL builds correct URL with all params", () => {
     const url = oauth.getAuthorizationURL(testProvider, "state-abc");
     const parsed = new URL(url);
-    expect(parsed.origin + parsed.pathname).toBe(
-      "https://auth.example.com/authorize",
-    );
+    expect(parsed.origin + parsed.pathname).toBe("https://auth.example.com/authorize");
     expect(parsed.searchParams.get("client_id")).toBe("client-123");
-    expect(parsed.searchParams.get("redirect_uri")).toBe(
-      "https://app.example.com/callback",
-    );
+    expect(parsed.searchParams.get("redirect_uri")).toBe("https://app.example.com/callback");
     expect(parsed.searchParams.get("response_type")).toBe("code");
     expect(parsed.searchParams.get("state")).toBe("state-abc");
     expect(parsed.searchParams.get("scope")).toBe("openid email");
@@ -72,9 +68,9 @@ describe("createOAuth", () => {
       Promise.resolve(new Response("Bad Request", { status: 400, statusText: "Bad Request" })),
     ) as typeof fetch;
 
-    await expect(
-      oauth.exchangeCode(testProvider, "bad-code"),
-    ).rejects.toThrow("OAuth token exchange failed");
+    await expect(oauth.exchangeCode(testProvider, "bad-code")).rejects.toThrow(
+      "OAuth token exchange failed",
+    );
   });
 
   test("getUserInfo returns parsed user info", async () => {
@@ -112,9 +108,9 @@ describe("createOAuth", () => {
       Promise.resolve(new Response("Unauthorized", { status: 401, statusText: "Unauthorized" })),
     ) as typeof fetch;
 
-    await expect(
-      oauth.getUserInfo(testProvider, "bad-token"),
-    ).rejects.toThrow("OAuth user info request failed");
+    await expect(oauth.getUserInfo(testProvider, "bad-token")).rejects.toThrow(
+      "OAuth user info request failed",
+    );
   });
 
   test("github returns correctly configured provider", () => {

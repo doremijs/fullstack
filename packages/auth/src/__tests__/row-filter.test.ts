@@ -1,16 +1,28 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createRowFilter } from "../row-filter";
 
 describe("createRowFilter", () => {
   test("addRule and getRules", () => {
     const rf = createRowFilter();
-    rf.addRule({ resource: "users", field: "tenant_id", operator: "eq", valueFrom: "tenant", value: "tenant_id" });
+    rf.addRule({
+      resource: "users",
+      field: "tenant_id",
+      operator: "eq",
+      valueFrom: "tenant",
+      value: "tenant_id",
+    });
     expect(rf.getRules()).toHaveLength(1);
   });
 
   test("getFilters for matching resource", () => {
     const rf = createRowFilter();
-    rf.addRule({ resource: "users", field: "tenant_id", operator: "eq", valueFrom: "tenant", value: "tenant_id" });
+    rf.addRule({
+      resource: "users",
+      field: "tenant_id",
+      operator: "eq",
+      valueFrom: "tenant",
+      value: "tenant_id",
+    });
     const filters = rf.getFilters("users", { tenantId: "t1" });
     expect(filters).toHaveLength(1);
     expect(filters[0].field).toBe("tenant_id");
@@ -20,28 +32,52 @@ describe("createRowFilter", () => {
 
   test("getFilters for wildcard resource", () => {
     const rf = createRowFilter();
-    rf.addRule({ resource: "*", field: "tenant_id", operator: "eq", valueFrom: "tenant", value: "tenant_id" });
+    rf.addRule({
+      resource: "*",
+      field: "tenant_id",
+      operator: "eq",
+      valueFrom: "tenant",
+      value: "tenant_id",
+    });
     const filters = rf.getFilters("anything", { tenantId: "t1" });
     expect(filters).toHaveLength(1);
   });
 
   test("getFilters for non-matching resource", () => {
     const rf = createRowFilter();
-    rf.addRule({ resource: "orders", field: "tenant_id", operator: "eq", valueFrom: "tenant", value: "tenant_id" });
+    rf.addRule({
+      resource: "orders",
+      field: "tenant_id",
+      operator: "eq",
+      valueFrom: "tenant",
+      value: "tenant_id",
+    });
     const filters = rf.getFilters("users", { tenantId: "t1" });
     expect(filters).toHaveLength(0);
   });
 
   test("valueFrom user", () => {
     const rf = createRowFilter();
-    rf.addRule({ resource: "posts", field: "user_id", operator: "eq", valueFrom: "user", value: "user_id" });
+    rf.addRule({
+      resource: "posts",
+      field: "user_id",
+      operator: "eq",
+      valueFrom: "user",
+      value: "user_id",
+    });
     const filters = rf.getFilters("posts", { userId: "u1" });
     expect(filters[0].value).toBe("u1");
   });
 
   test("valueFrom static", () => {
     const rf = createRowFilter();
-    rf.addRule({ resource: "posts", field: "status", operator: "eq", valueFrom: "static", value: "active" });
+    rf.addRule({
+      resource: "posts",
+      field: "status",
+      operator: "eq",
+      valueFrom: "static",
+      value: "active",
+    });
     const filters = rf.getFilters("posts", {});
     expect(filters[0].value).toBe("active");
   });
@@ -59,14 +95,26 @@ describe("createRowFilter", () => {
 
   test("buildWhereClause", () => {
     const rf = createRowFilter();
-    rf.addRule({ resource: "users", field: "tenant_id", operator: "eq", valueFrom: "tenant", value: "tenant_id" });
+    rf.addRule({
+      resource: "users",
+      field: "tenant_id",
+      operator: "eq",
+      valueFrom: "tenant",
+      value: "tenant_id",
+    });
     const clause = rf.buildWhereClause("users", { tenantId: "t1" });
     expect(clause).toBe("WHERE tenant_id = 't1'");
   });
 
   test("buildWhereClause with IN operator", () => {
     const rf = createRowFilter();
-    rf.addRule({ resource: "users", field: "role", operator: "in", valueFrom: "static", value: "admin" });
+    rf.addRule({
+      resource: "users",
+      field: "role",
+      operator: "in",
+      valueFrom: "static",
+      value: "admin",
+    });
     const clause = rf.buildWhereClause("users", {});
     expect(clause).toContain("IN");
     expect(clause).toContain("admin");

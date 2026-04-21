@@ -1,5 +1,5 @@
-import { describe, test, expect, afterAll, beforeAll } from "bun:test";
-import { createTestClient, type TestClient } from "../test-client";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { type TestClient, createTestClient } from "../test-client";
 
 let mockServer: ReturnType<typeof Bun.serve>;
 let client: TestClient;
@@ -25,10 +25,9 @@ beforeAll(() => {
       if (url.pathname === "/echo-headers") {
         const authorization = req.headers.get("authorization") ?? "";
         const custom = req.headers.get("x-custom") ?? "";
-        return new Response(
-          JSON.stringify({ authorization, custom }),
-          { headers: { "content-type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ authorization, custom }), {
+          headers: { "content-type": "application/json" },
+        });
       }
 
       if (url.pathname === "/echo-query") {
@@ -44,10 +43,9 @@ beforeAll(() => {
       if (url.pathname === "/echo-body") {
         const body = await req.text();
         const contentType = req.headers.get("content-type") ?? "";
-        return new Response(
-          JSON.stringify({ body, contentType, method: req.method }),
-          { headers: { "content-type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ body, contentType, method: req.method }), {
+          headers: { "content-type": "application/json" },
+        });
       }
 
       if (url.pathname === "/status/201") {
@@ -162,9 +160,7 @@ describe("createTestClient", () => {
       const res = await client.get("/echo-headers", {
         headers: { authorization: "Bearer token123" },
       });
-      expect(res.json<{ authorization: string }>().authorization).toBe(
-        "Bearer token123",
-      );
+      expect(res.json<{ authorization: string }>().authorization).toBe("Bearer token123");
     });
 
     test("reads response headers", async () => {
@@ -179,9 +175,7 @@ describe("createTestClient", () => {
       c.setHeader("authorization", "Bearer default");
 
       const res = await c.get("/echo-headers");
-      expect(res.json<{ authorization: string }>().authorization).toBe(
-        "Bearer default",
-      );
+      expect(res.json<{ authorization: string }>().authorization).toBe("Bearer default");
     });
 
     test("setHeaders sets multiple persistent headers", async () => {
@@ -204,9 +198,7 @@ describe("createTestClient", () => {
       const res = await c.get("/echo-headers", {
         headers: { authorization: "Bearer override" },
       });
-      expect(res.json<{ authorization: string }>().authorization).toBe(
-        "Bearer override",
-      );
+      expect(res.json<{ authorization: string }>().authorization).toBe("Bearer override");
     });
 
     test("setHeader returns client for chaining", async () => {

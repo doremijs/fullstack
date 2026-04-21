@@ -1,22 +1,29 @@
 // @aeron/core - 应用入口
 
 import { AeronError } from "./errors";
-import { createLifecycle, type Lifecycle, type LifecycleHook } from "./lifecycle";
+import { type Lifecycle, createLifecycle } from "./lifecycle";
 import type { Middleware } from "./middleware";
 import type { Plugin } from "./plugin";
-import { createRouter, type Router, type CompiledRoutes } from "./router";
+import { type CompiledRoutes, type Router, createRouter } from "./router";
 
 export interface AppConfig {
   port?: number;
   hostname?: string;
 }
 
+export interface AppUrl {
+  label: string;
+  path: string;
+}
+
 export interface AeronApp {
   readonly router: Router;
   readonly lifecycle: Lifecycle;
+  readonly urls: ReadonlyArray<AppUrl>;
   use(item: Plugin | Middleware): AeronApp;
   listen(port?: number): Promise<void>;
   close(): Promise<void>;
+  addUrl(label: string, path: string): void;
 }
 
 export function createApp(config?: AppConfig): AeronApp {
@@ -24,6 +31,7 @@ export function createApp(config?: AppConfig): AeronApp {
   const lifecycle = createLifecycle();
   const globalMiddleware: Middleware[] = [];
   const plugins: Plugin[] = [];
+  const urls: AppUrl[] = [];
 
   let server: ReturnType<typeof Bun.serve> | null = null;
   let activeRequests = 0;
@@ -32,13 +40,10 @@ export function createApp(config?: AppConfig): AeronApp {
 
   function defaultErrorHandler(error: unknown): Response {
     if (error instanceof AeronError) {
-      return new Response(
-        JSON.stringify({ error: error.errorCode, message: error.message }),
-        {
-          status: error.code,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: error.errorCode, message: error.message }), {
+        status: error.code,
+        headers: { "Content-Type": "application/json" },
+      });
     }
     // 生产环境不暴露内部错误细节
     return new Response(
@@ -90,19 +95,21 @@ export function createApp(config?: AppConfig): AeronApp {
   const app: AeronApp = {
     router,
     lifecycle,
+    get urls() {
+      return urls;
+    },
 
     use(item: Plugin | Middleware): AeronApp {
       if (typeof item === "function") {
         globalMiddleware.push(item);
-      } else if (
-        typeof item === "object" &&
-        item !== null &&
-        "name" in item &&
-        "install" in item
-      ) {
+      } else if (typeof item === "object" && item !== null && "name" in item && "install" in item) {
         plugins.push(item);
       }
       return app;
+    },
+
+    addUrl(label: string, path: string): void {
+      urls.push({ label, path });
     },
 
     async listen(port?: number): Promise<void> {
@@ -124,15 +131,23 @@ export function createApp(config?: AppConfig): AeronApp {
         hostname,
         routes: wrapped,
         fetch() {
-          return new Response(
-            JSON.stringify({ error: "NOT_FOUND", message: "Not Found" }),
-            {
-              status: 404,
-              headers: { "Content-Type": "application/json" },
-            },
-          );
+          return new Response(JSON.stringify({ error: "NOT_FOUND", message: "Not Found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
         },
       });
+
+      // 打印可访问地址
+      const displayHost = hostname === "0.0.0.0" ? "localhost" : hostname;
+      const baseUrl = `http://${displayHost}:${listenPort}`;
+      // eslint-disable-next-line no-console
+      console.log(`\n  ➜  Local:   ${baseUrl}`);
+      for (const url of urls) {
+        // eslint-disable-next-line no-console
+        console.log(`  ➜  ${url.label}: ${baseUrl}${url.path}`);
+      }
+      console.log();
 
       // SIGTERM 优雅关闭
       sigTermHandler = () => {

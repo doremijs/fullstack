@@ -1,4 +1,4 @@
-import { describe, test, expect, mock } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createLifecycle } from "../lifecycle";
 
 describe("createLifecycle", () => {
@@ -81,9 +81,7 @@ describe("createLifecycle", () => {
       throw new Error("async hook failed");
     });
 
-    await expect(lifecycle.runBeforeStart()).rejects.toThrow(
-      "async hook failed",
-    );
+    await expect(lifecycle.runBeforeStart()).rejects.toThrow("async hook failed");
   });
 
   test("no hooks registered runs without error", async () => {

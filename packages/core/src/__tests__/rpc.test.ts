@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createRPCRouter } from "../rpc";
 
 describe("createRPCRouter", () => {
@@ -29,7 +29,9 @@ describe("createRPCRouter", () => {
 
   test("handler error propagates", async () => {
     const router = createRPCRouter();
-    router.register("fail", async () => { throw new Error("boom"); });
+    router.register("fail", async () => {
+      throw new Error("boom");
+    });
     await expect(router.call("fail", {})).rejects.toThrow("boom");
   });
 });

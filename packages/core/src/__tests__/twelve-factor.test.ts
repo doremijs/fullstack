@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { loadTwelveFactorConfig, validateEnvVars } from "../twelve-factor";
 
 describe("loadTwelveFactorConfig", () => {
@@ -31,19 +31,16 @@ describe("loadTwelveFactorConfig", () => {
 
 describe("validateEnvVars", () => {
   test("valid when all present", () => {
-    const { valid, missing } = validateEnvVars(
-      ["PORT", "HOST"],
-      { PORT: "3000", HOST: "localhost" }
-    );
+    const { valid, missing } = validateEnvVars(["PORT", "HOST"], {
+      PORT: "3000",
+      HOST: "localhost",
+    });
     expect(valid).toBe(true);
     expect(missing).toEqual([]);
   });
 
   test("invalid when some missing", () => {
-    const { valid, missing } = validateEnvVars(
-      ["PORT", "SECRET_KEY", "HOST"],
-      { PORT: "3000" }
-    );
+    const { valid, missing } = validateEnvVars(["PORT", "SECRET_KEY", "HOST"], { PORT: "3000" });
     expect(valid).toBe(false);
     expect(missing).toEqual(["SECRET_KEY", "HOST"]);
   });

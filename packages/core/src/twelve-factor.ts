@@ -26,21 +26,23 @@ export interface TwelveFactorResult {
  * 从环境变量加载 12-Factor 标准配置
  * 遵循 12-Factor App 的配置规范：所有配置从环境变量读取
  */
-export function loadTwelveFactorConfig(env?: Record<string, string | undefined>): TwelveFactorResult {
+export function loadTwelveFactorConfig(
+  env?: Record<string, string | undefined>,
+): TwelveFactorResult {
   const e = env ?? (typeof process !== "undefined" ? process.env : {});
   const warnings: string[] = [];
 
-  const port = parseInt(e["PORT"] ?? "3000", 10);
+  const port = Number.parseInt(e.PORT ?? "3000", 10);
   if (Number.isNaN(port)) {
     warnings.push("PORT is not a valid number, defaulting to 3000");
   }
 
-  const appEnv = e["NODE_ENV"] ?? e["BUN_ENV"] ?? "development";
+  const appEnv = e.NODE_ENV ?? e.BUN_ENV ?? "development";
   if (!["development", "test", "staging", "production"].includes(appEnv)) {
     warnings.push(`Unknown environment: ${appEnv}`);
   }
 
-  if (!e["DATABASE_URL"] && appEnv === "production") {
+  if (!e.DATABASE_URL && appEnv === "production") {
     warnings.push("DATABASE_URL not set in production");
   }
 
@@ -52,18 +54,17 @@ export function loadTwelveFactorConfig(env?: Record<string, string | undefined>)
     }
   }
 
-  return {
-    config: {
-      appName: e["APP_NAME"] ?? "aeron-app",
-      port: Number.isNaN(port) ? 3000 : port,
-      env: appEnv,
-      logLevel: e["LOG_LEVEL"] ?? "info",
-      databaseUrl: e["DATABASE_URL"],
-      redisUrl: e["REDIS_URL"],
-      extra,
-    },
-    warnings,
+  const config: TwelveFactorConfig = {
+    appName: e.APP_NAME ?? "aeron-app",
+    port: Number.isNaN(port) ? 3000 : port,
+    env: appEnv,
+    logLevel: e.LOG_LEVEL ?? "info",
+    extra,
   };
+  if (e.DATABASE_URL) config.databaseUrl = e.DATABASE_URL;
+  if (e.REDIS_URL) config.redisUrl = e.REDIS_URL;
+
+  return { config, warnings };
 }
 
 /**

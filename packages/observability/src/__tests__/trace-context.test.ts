@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-import { createW3CTraceContextPropagator, createB3Propagator } from "../trace-context";
+import { describe, expect, test } from "bun:test";
+import { createB3Propagator, createW3CTraceContextPropagator } from "../trace-context";
 
 describe("W3C TraceContext Propagator", () => {
   const propagator = createW3CTraceContextPropagator();
@@ -49,10 +49,7 @@ describe("W3C TraceContext Propagator", () => {
 
   test("injects tracestate header", () => {
     const headers = new Headers();
-    propagator.inject(
-      { traceId: "abc", spanId: "def" },
-      headers,
-    );
+    propagator.inject({ traceId: "abc", spanId: "def" }, headers);
     expect(headers.get("tracestate")).toContain("aeron=def");
   });
 

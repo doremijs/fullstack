@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createABAC } from "../abac";
 
 describe("createABAC", () => {
@@ -45,10 +45,7 @@ describe("createABAC", () => {
       effect: "deny",
       condition: (_s, resource) => resource.classification === "secret",
     });
-    const result = abac.evaluate(
-      { role: "user" },
-      { type: "doc", classification: "secret" },
-    );
+    const result = abac.evaluate({ role: "user" }, { type: "doc", classification: "secret" });
     expect(result.allowed).toBe(false);
     expect(result.matchedPolicies).toContain("allow-users");
     expect(result.matchedPolicies).toContain("deny-sensitive");

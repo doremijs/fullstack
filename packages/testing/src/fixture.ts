@@ -4,7 +4,7 @@ export interface FixtureManager {
   register<T>(name: string, data: T): void;
   get<T>(name: string): T;
   has(name: string): boolean;
-  loadJSON<T>(name: string, filePath: string): Promise<void>;
+  loadJSON<_T>(name: string, filePath: string): Promise<void>;
   reset(): void;
 }
 

@@ -1,7 +1,3 @@
-// @aeron/database - 多数据库类型驱动
-
-import type { SqlExecutor } from "./database";
-
 export type DatabaseDriver = "postgresql" | "mysql" | "sqlite" | "mssql";
 
 export interface DriverConfig {
@@ -42,7 +38,10 @@ function createPostgresAdapter(): DriverAdapter {
     returning: (fields) => `RETURNING ${fields.join(", ")}`,
     now: () => "NOW()",
     upsert: (table, fields, conflict) =>
-      `INSERT INTO ${table} (${fields.join(", ")}) VALUES (${fields.map((_, i) => `$${i + 1}`).join(", ")}) ON CONFLICT (${conflict.join(", ")}) DO UPDATE SET ${fields.filter((f) => !conflict.includes(f)).map((f) => `${f} = EXCLUDED.${f}`).join(", ")}`,
+      `INSERT INTO ${table} (${fields.join(", ")}) VALUES (${fields.map((_, i) => `$${i + 1}`).join(", ")}) ON CONFLICT (${conflict.join(", ")}) DO UPDATE SET ${fields
+        .filter((f) => !conflict.includes(f))
+        .map((f) => `${f} = EXCLUDED.${f}`)
+        .join(", ")}`,
     boolean: (v) => (v ? "TRUE" : "FALSE"),
   };
 }
@@ -70,7 +69,10 @@ function createSqliteAdapter(): DriverAdapter {
     returning: (fields) => `RETURNING ${fields.join(", ")}`,
     now: () => "datetime('now')",
     upsert: (table, fields, conflict) =>
-      `INSERT INTO ${table} (${fields.join(", ")}) VALUES (${fields.map(() => "?").join(", ")}) ON CONFLICT (${conflict.join(", ")}) DO UPDATE SET ${fields.filter((f) => !conflict.includes(f)).map((f) => `${f} = EXCLUDED.${f}`).join(", ")}`,
+      `INSERT INTO ${table} (${fields.join(", ")}) VALUES (${fields.map(() => "?").join(", ")}) ON CONFLICT (${conflict.join(", ")}) DO UPDATE SET ${fields
+        .filter((f) => !conflict.includes(f))
+        .map((f) => `${f} = EXCLUDED.${f}`)
+        .join(", ")}`,
     boolean: (v) => (v ? "1" : "0"),
   };
 }
@@ -84,7 +86,12 @@ function createMssqlAdapter(): DriverAdapter {
     returning: (fields) => `OUTPUT ${fields.map((f) => `INSERTED.${f}`).join(", ")}`,
     now: () => "GETDATE()",
     upsert: (table, fields, conflict) =>
-      `MERGE ${table} AS target USING (SELECT ${fields.map((_, i) => `@p${i + 1} AS ${fields[i]}`).join(", ")}) AS source ON (${conflict.map((f) => `target.${f} = source.${f}`).join(" AND ")}) WHEN MATCHED THEN UPDATE SET ${fields.filter((f) => !conflict.includes(f)).map((f) => `${f} = source.${f}`).join(", ")} WHEN NOT MATCHED THEN INSERT (${fields.join(", ")}) VALUES (${fields.map((f) => `source.${f}`).join(", ")});`,
+      `MERGE ${table} AS target USING (SELECT ${fields.map((_, i) => `@p${i + 1} AS ${fields[i]}`).join(", ")}) AS source ON (${conflict.map((f) => `target.${f} = source.${f}`).join(" AND ")}) WHEN MATCHED THEN UPDATE SET ${fields
+        .filter((f) => !conflict.includes(f))
+        .map((f) => `${f} = source.${f}`)
+        .join(
+          ", ",
+        )} WHEN NOT MATCHED THEN INSERT (${fields.join(", ")}) VALUES (${fields.map((f) => `source.${f}`).join(", ")});`,
     boolean: (v) => (v ? "1" : "0"),
   };
 }

@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { requestId } from "../middlewares/request-id";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
+import { requestId } from "../middlewares/request-id";
 
 function makeCtx(headers?: Record<string, string>) {
   const request = new Request("http://localhost/", {

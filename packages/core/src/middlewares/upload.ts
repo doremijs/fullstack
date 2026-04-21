@@ -23,9 +23,21 @@ export interface UploadResult {
 }
 
 const DANGEROUS_EXTENSIONS = new Set([
-  "php", "phtml", "php3", "php4", "php5",
-  "exe", "bat", "cmd", "sh", "bash",
-  "jsp", "asp", "aspx", "cgi", "pl",
+  "php",
+  "phtml",
+  "php3",
+  "php4",
+  "php5",
+  "exe",
+  "bat",
+  "cmd",
+  "sh",
+  "bash",
+  "jsp",
+  "asp",
+  "aspx",
+  "cgi",
+  "pl",
 ]);
 
 export function sanitizeFilename(name: string): string {
@@ -34,12 +46,17 @@ export function sanitizeFilename(name: string): string {
   // 移除路径分隔符
   cleaned = cleaned.replace(/[/\\]/g, "");
   // 移除控制字符（0x00-0x1F, 0x7F）
-  cleaned = cleaned.replace(/[\x00-\x1F\x7F]/g, "");
+  cleaned = Array.from(cleaned)
+    .filter((c) => {
+      const code = c.charCodeAt(0);
+      return code > 0x1f && code !== 0x7f;
+    })
+    .join("");
   // 只保留字母数字和 .-_
   cleaned = cleaned.replace(/[^a-zA-Z0-9.\-_]/g, "_");
   // 防止以 . 开头（隐藏文件）
   if (cleaned.startsWith(".")) {
-    cleaned = "_" + cleaned.slice(1);
+    cleaned = `_${cleaned.slice(1)}`;
   }
   return cleaned || "unnamed";
 }
@@ -68,9 +85,7 @@ export function createUploadValidator(options: UploadOptions = {}): {
 } {
   const maxFileSize = options.maxFileSize ?? 5 * 1024 * 1024; // 5MB
   const maxFiles = options.maxFiles ?? 10;
-  const allowedMimeTypes = options.allowedMimeTypes
-    ? new Set(options.allowedMimeTypes)
-    : null;
+  const allowedMimeTypes = options.allowedMimeTypes ? new Set(options.allowedMimeTypes) : null;
   const allowedExtensions = options.allowedExtensions
     ? new Set(options.allowedExtensions.map((e) => e.toLowerCase()))
     : null;
@@ -83,13 +98,13 @@ export function createUploadValidator(options: UploadOptions = {}): {
 
     let formData: FormData;
     try {
-      formData = await request.formData();
+      formData = (await request.formData()) as FormData;
     } catch {
       return { valid: false, errors: ["Failed to parse form data"], files: [] };
     }
 
     const fileEntries: File[] = [];
-    for (const [, value] of formData) {
+    for (const value of Array.from(formData.values() as Iterable<unknown>)) {
       if (value instanceof File) {
         fileEntries.push(value);
       }
@@ -117,9 +132,7 @@ export function createUploadValidator(options: UploadOptions = {}): {
 
       // 大小检查
       if (file.size > maxFileSize) {
-        errors.push(
-          `File too large: ${originalName} (${file.size} bytes, max: ${maxFileSize})`,
-        );
+        errors.push(`File too large: ${originalName} (${file.size} bytes, max: ${maxFileSize})`);
         continue;
       }
 

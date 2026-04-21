@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createHotRestart } from "../hot-restart";
 
 describe("createHotRestart", () => {
@@ -19,8 +19,12 @@ describe("createHotRestart", () => {
     const calls: string[] = [];
     const hr = createHotRestart({
       gracefulTimeout: 10,
-      onBeforeRestart: () => { calls.push("before"); },
-      onAfterRestart: () => { calls.push("after"); },
+      onBeforeRestart: () => {
+        calls.push("before");
+      },
+      onAfterRestart: () => {
+        calls.push("after");
+      },
     });
     await hr.restart();
     expect(calls).toEqual(["before", "after"]);

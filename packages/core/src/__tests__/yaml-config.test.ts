@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { parseYAML, stringifyYAML } from "../yaml-config";
 
 describe("parseYAML", () => {
@@ -21,7 +21,7 @@ describe("parseYAML", () => {
   });
 
   test("parses quoted strings", () => {
-    const result = parseYAML('name: "hello world"\nother: \'single\'');
+    const result = parseYAML("name: \"hello world\"\nother: 'single'");
     expect(result.name).toBe("hello world");
     expect(result.other).toBe("single");
   });

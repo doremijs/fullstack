@@ -38,15 +38,16 @@ export function defineRelation(
     }
   }
 
-  return {
+  const def: RelationDefinition = {
     type,
     model,
     foreignKey: options.foreignKey,
     localKey: options.localKey ?? "id",
-    pivotTable: options.pivotTable,
-    pivotForeignKey: options.pivotForeignKey,
-    pivotRelatedKey: options.pivotRelatedKey,
   };
+  if (options.pivotTable) def.pivotTable = options.pivotTable;
+  if (options.pivotForeignKey) def.pivotForeignKey = options.pivotForeignKey;
+  if (options.pivotRelatedKey) def.pivotRelatedKey = options.pivotRelatedKey;
+  return def;
 }
 
 export function buildJoinSQL(
@@ -82,7 +83,7 @@ export function buildJoinSQL(
 }
 
 export function buildEagerLoadSQL(
-  baseTable: string,
+  _baseTable: string,
   relation: RelationDefinition,
   parentIds: unknown[],
 ): { text: string; params: unknown[] } {

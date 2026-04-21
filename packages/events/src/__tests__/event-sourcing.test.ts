@@ -5,10 +5,15 @@ describe("createMemoryEventStore", () => {
   test("append stores events with incrementing versions", async () => {
     const store = createMemoryEventStore();
 
-    const events = await store.append("agg-1", "Order", [
-      { eventType: "OrderCreated", payload: { total: 100 } },
-      { eventType: "ItemAdded", payload: { item: "widget" } },
-    ], 0);
+    const events = await store.append(
+      "agg-1",
+      "Order",
+      [
+        { eventType: "OrderCreated", payload: { total: 100 } },
+        { eventType: "ItemAdded", payload: { item: "widget" } },
+      ],
+      0,
+    );
 
     expect(events).toHaveLength(2);
     expect(events[0]!.version).toBe(1);
@@ -23,14 +28,10 @@ describe("createMemoryEventStore", () => {
   test("append throws on version conflict (optimistic concurrency)", async () => {
     const store = createMemoryEventStore();
 
-    await store.append("agg-1", "Order", [
-      { eventType: "Created", payload: {} },
-    ], 0);
+    await store.append("agg-1", "Order", [{ eventType: "Created", payload: {} }], 0);
 
     try {
-      await store.append("agg-1", "Order", [
-        { eventType: "Updated", payload: {} },
-      ], 0); // wrong expected version — should be 1
+      await store.append("agg-1", "Order", [{ eventType: "Updated", payload: {} }], 0); // wrong expected version — should be 1
       expect.unreachable("should have thrown");
     } catch (err) {
       expect((err as Error).message).toContain("Concurrency conflict");
@@ -54,11 +55,16 @@ describe("createMemoryEventStore", () => {
   test("getEvents with fromVersion filters events", async () => {
     const store = createMemoryEventStore();
 
-    await store.append("a1", "T", [
-      { eventType: "E1", payload: "v1" },
-      { eventType: "E2", payload: "v2" },
-      { eventType: "E3", payload: "v3" },
-    ], 0);
+    await store.append(
+      "a1",
+      "T",
+      [
+        { eventType: "E1", payload: "v1" },
+        { eventType: "E2", payload: "v2" },
+        { eventType: "E3", payload: "v3" },
+      ],
+      0,
+    );
 
     const events = await store.getEvents("a1", 2);
     expect(events).toHaveLength(2);
@@ -80,10 +86,15 @@ describe("createMemoryEventStore", () => {
     await store.append("a1", "T", [{ eventType: "E", payload: {} }], 0);
     expect(await store.getLatestVersion("a1")).toBe(1);
 
-    await store.append("a1", "T", [
-      { eventType: "E", payload: {} },
-      { eventType: "E", payload: {} },
-    ], 1);
+    await store.append(
+      "a1",
+      "T",
+      [
+        { eventType: "E", payload: {} },
+        { eventType: "E", payload: {} },
+      ],
+      1,
+    );
     expect(await store.getLatestVersion("a1")).toBe(3);
   });
 
@@ -114,9 +125,12 @@ describe("createMemoryEventStore", () => {
   test("append stores metadata when provided", async () => {
     const store = createMemoryEventStore();
 
-    const events = await store.append("a1", "T", [
-      { eventType: "E1", payload: {}, metadata: { userId: "u1", source: "api" } },
-    ], 0);
+    const events = await store.append(
+      "a1",
+      "T",
+      [{ eventType: "E1", payload: {}, metadata: { userId: "u1", source: "api" } }],
+      0,
+    );
 
     expect(events[0]!.metadata).toEqual({ userId: "u1", source: "api" });
   });

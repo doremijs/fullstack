@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { httpsEnforce } from "../../middlewares/https";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../../context";
+import { httpsEnforce } from "../../middlewares/https";
 
 describe("httpsEnforce", () => {
   test("redirects HTTP to HTTPS", async () => {

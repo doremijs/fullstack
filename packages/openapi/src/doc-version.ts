@@ -44,12 +44,15 @@ export function createDocVersionManager(): DocVersionManager {
 
   return {
     addVersion(version: string, spec: Record<string, unknown>, description?: string): void {
-      versions.push({
+      const entry: DocVersion = {
         version,
         date: new Date().toISOString(),
-        description,
         spec,
-      });
+      };
+      if (description) {
+        entry.description = description;
+      }
+      versions.push(entry);
     },
 
     getVersion(version: string): DocVersion | undefined {
@@ -85,12 +88,15 @@ export function createDocVersionManager(): DocVersionManager {
       // 简单变更检测：在两边都存在的路径，比较 JSON
       for (const p of paths1) {
         if (paths2.has(p)) {
-          const [method, path] = p.split(" ", 2);
-          const spec1Paths = (doc1.spec as { paths: Record<string, Record<string, unknown>> }).paths;
-          const spec2Paths = (doc2.spec as { paths: Record<string, Record<string, unknown>> }).paths;
+          const [method = "", path = ""] = p.split(" ", 2);
+          const spec1Paths = (doc1.spec as { paths: Record<string, Record<string, unknown>> })
+            .paths;
+          const spec2Paths = (doc2.spec as { paths: Record<string, Record<string, unknown>> })
+            .paths;
           const m = method.toLowerCase();
           if (
-            spec1Paths[path] && spec2Paths[path] &&
+            spec1Paths[path] &&
+            spec2Paths[path] &&
             JSON.stringify(spec1Paths[path][m]) !== JSON.stringify(spec2Paths[path][m])
           ) {
             modified.push(p);

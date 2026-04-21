@@ -43,7 +43,7 @@ export function parseCronToInterval(cron: string): number {
   const [minute, hour] = parts;
 
   // Every N minutes: `*/N * * * *`
-  if (minute !== undefined && minute.startsWith("*/")) {
+  if (minute?.startsWith("*/")) {
     const n = Number.parseInt(minute.slice(2), 10);
     if (n > 0) return n * 60_000;
   }

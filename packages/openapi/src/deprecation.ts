@@ -28,9 +28,7 @@ export function createDeprecationManager(): DeprecationManager {
   const notices: DeprecationNotice[] = [];
 
   function find(method: string, path: string): DeprecationNotice | undefined {
-    return notices.find(
-      (n) => n.method.toUpperCase() === method.toUpperCase() && n.path === path,
-    );
+    return notices.find((n) => n.method.toUpperCase() === method.toUpperCase() && n.path === path);
   }
 
   return {
@@ -61,11 +59,11 @@ export function createDeprecationManager(): DeprecationManager {
       };
 
       if (notice.sunsetDate) {
-        headers["Sunset"] = new Date(notice.sunsetDate).toUTCString();
+        headers.Sunset = new Date(notice.sunsetDate).toUTCString();
       }
 
       if (notice.replacement) {
-        headers["Link"] = `<${notice.replacement}>; rel="successor-version"`;
+        headers.Link = `<${notice.replacement}>; rel="successor-version"`;
       }
 
       return headers;
@@ -126,7 +124,10 @@ export function createCompatibilityGuard(
   deprecationManager: DeprecationManager,
   policy: Partial<CompatibilityPolicy> = {},
 ): {
-  check(method: string, path: string): { allowed: boolean; headers: Record<string, string>; warning?: string };
+  check(
+    method: string,
+    path: string,
+  ): { allowed: boolean; headers: Record<string, string>; warning?: string };
 } {
   const p = { ...DEFAULT_COMPATIBILITY_POLICY, ...policy };
 

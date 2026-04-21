@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { createAuditExporter } from "../audit-export";
+import { describe, expect, test } from "bun:test";
 import { createAuditLog } from "../audit";
+import { createAuditExporter } from "../audit-export";
 
 describe("createAuditExporter", () => {
   const exporter = createAuditExporter();
@@ -8,7 +8,13 @@ describe("createAuditExporter", () => {
   test("toCSV generates valid CSV", async () => {
     const store = createAuditLog();
     await store.append({ actor: "user1", action: "create", resource: "post", result: "success" });
-    await store.append({ actor: "user2", action: "delete", resource: "post", resourceId: "123", result: "denied" });
+    await store.append({
+      actor: "user2",
+      action: "delete",
+      resource: "post",
+      resourceId: "123",
+      result: "denied",
+    });
     const entries = await store.query({});
     const csv = exporter.toCSV(entries);
     const lines = csv.split("\n");

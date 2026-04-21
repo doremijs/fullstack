@@ -1,13 +1,16 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createABTestManager } from "../ab-testing";
 
-const makeVariants = (names: string[], weight = 50) =>
-  names.map((name) => ({ name, weight }));
+const makeVariants = (names: string[], weight = 50) => names.map((name) => ({ name, weight }));
 
 describe("createABTestManager", () => {
   test("define a test", () => {
     const mgr = createABTestManager();
-    mgr.define({ name: "homepage", enabled: true, variants: makeVariants(["control", "variant-a"]) });
+    mgr.define({
+      name: "homepage",
+      enabled: true,
+      variants: makeVariants(["control", "variant-a"]),
+    });
     const list = mgr.list();
     expect(list).toHaveLength(1);
     expect(list[0].name).toBe("homepage");
@@ -66,7 +69,9 @@ describe("createABTestManager", () => {
   test("define duplicate throws", () => {
     const mgr = createABTestManager();
     mgr.define({ name: "test", enabled: true, variants: makeVariants(["a", "b"]) });
-    expect(() => mgr.define({ name: "test", enabled: true, variants: makeVariants(["a", "b"]) })).toThrow("already defined");
+    expect(() =>
+      mgr.define({ name: "test", enabled: true, variants: makeVariants(["a", "b"]) }),
+    ).toThrow("already defined");
   });
 
   test("assign on undefined test throws", () => {

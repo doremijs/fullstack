@@ -4,7 +4,13 @@ export type { Database, DatabaseConfig, QueryExecutor, SqlExecutor } from "./dat
 export { defineModel, column } from "./model";
 export type { ModelDefinition, ColumnDef, ColumnOptions, ModelOptions } from "./model";
 export { createQueryBuilder } from "./query-builder";
-export type { QueryBuilder, WhereCondition, OrderByClause, HavingCondition, VersionClause } from "./query-builder";
+export type {
+  QueryBuilder,
+  WhereCondition,
+  OrderByClause,
+  HavingCondition,
+  VersionClause,
+} from "./query-builder";
 export { createMigrationRunner } from "./migration";
 export type { Migration, MigrationRunner, MigrationStatus } from "./migration";
 export { defineRelation, buildJoinSQL, buildEagerLoadSQL } from "./relation";
@@ -13,16 +19,20 @@ export { createSeedRunner } from "./seed";
 export type { Seed, SeedRunner } from "./seed";
 
 export { createTransactionManager } from "./transaction";
-export type { TransactionManager, TransactionOptions, Savepoint } from "./transaction";
+export type { TransactionManager, TransactionOptions } from "./transaction";
 
-export { createDatabaseDriver, createDriverFactory } from "./driver";
-export type { DatabaseDriver, DriverConfig, DriverFactory } from "./driver";
+export { createDriverAdapter } from "./driver";
+export type { DatabaseDriver, DriverConfig, DriverAdapter } from "./driver";
 
-export { createReadWriteSplitter } from "./read-write-split";
-export type { ReadWriteSplitter, ReadWriteConfig } from "./read-write-split";
+export { createReadWriteSplit } from "./read-write-split";
+export type {
+  ReadWriteSplitOptions,
+  ReadWriteSplitExecutor,
+  MultiDataSourceOptions,
+  MultiDataSource,
+} from "./read-write-split";
 
 export { createConnectionPool } from "./connection-pool";
-export type { ConnectionPool, ConnectionPoolConfig, PooledConnection } from "./connection-pool";
+export type { ConnectionPool, ConnectionPoolOptions, PoolStats } from "./connection-pool";
 
-export { createSchemaDiff } from "./schema-diff";
-export type { SchemaDiff, SchemaDiffResult, TableDiff } from "./schema-diff";
+export type { SchemaDiff, TableDiff, ColumnSchema, TableSchema, ColumnDiff } from "./schema-diff";

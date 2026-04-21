@@ -1,7 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { cors } from "../middlewares/cors";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
-import type { Middleware } from "../middleware";
+import { cors } from "../middlewares/cors";
 
 function makeCtx(method: string, headers?: Record<string, string>) {
   const h = new Headers(headers);
@@ -9,8 +8,8 @@ function makeCtx(method: string, headers?: Record<string, string>) {
   return createContext(request);
 }
 
-const okHandler = (ctx: ReturnType<typeof createContext>) =>
-  () => Promise.resolve(ctx.json({ ok: true }));
+const okHandler = (ctx: ReturnType<typeof createContext>) => () =>
+  Promise.resolve(ctx.json({ ok: true }));
 
 describe("cors", () => {
   test("no origin header -> passes through without CORS headers", async () => {
@@ -87,7 +86,9 @@ describe("cors", () => {
     });
     const response = await mw(ctx, okHandler(ctx));
     expect(response.status).toBe(204);
-    expect(response.headers.get("Access-Control-Allow-Headers")).toBe("Authorization, Content-Type");
+    expect(response.headers.get("Access-Control-Allow-Headers")).toBe(
+      "Authorization, Content-Type",
+    );
   });
 
   test("OPTIONS with disallowed origin returns 403", async () => {

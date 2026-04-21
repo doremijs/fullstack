@@ -1,8 +1,8 @@
-import { describe, test, expect, afterEach } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { createApp } from "@aeron/core";
+import type { Context } from "@aeron/core";
 import { createTestApp } from "../test-app";
 import { createTestClient } from "../test-client";
-import type { Context } from "@aeron/core";
 
 let cleanup: (() => Promise<void>) | null = null;
 

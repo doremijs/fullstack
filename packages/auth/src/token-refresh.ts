@@ -17,10 +17,7 @@ export interface TokenRefreshOptions {
 }
 
 export interface TokenRefreshManager {
-  generatePair(
-    payload: Record<string, unknown>,
-    secret: string,
-  ): Promise<TokenPair>;
+  generatePair(payload: Record<string, unknown>, secret: string): Promise<TokenPair>;
   refresh(refreshToken: string, secret: string): Promise<TokenPair>;
   revoke(jti: string): Promise<void>;
   isRevoked(jti: string): Promise<boolean>;
@@ -67,10 +64,7 @@ export function createTokenRefresh(
   }
 
   return {
-    async generatePair(
-      payload: Record<string, unknown>,
-      secret: string,
-    ): Promise<TokenPair> {
+    async generatePair(payload: Record<string, unknown>, secret: string): Promise<TokenPair> {
       return generatePairFromPayload(payload, secret);
     },
 

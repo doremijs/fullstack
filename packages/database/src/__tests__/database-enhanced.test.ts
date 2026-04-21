@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { column, defineModel } from "../model";
 import { createDatabase } from "../database";
+import { column, defineModel } from "../model";
 
 const UserModel = defineModel("users", {
   id: column.bigint({ primary: true, autoIncrement: true }),
@@ -137,14 +137,15 @@ describe("QueryExecutor.batchInsert", () => {
     const { executor, calls } = createMockExecutor();
 
     const db = createDatabase({ executor });
-    await db.query(UserModel).batchInsert([
-      { name: "Alice", email: "alice@test.com" },
-      { name: "Bob", email: "bob@test.com" },
-    ], ["name", "email"]);
-
-    expect(calls[0]!.text).toBe(
-      "INSERT INTO users (name, email) VALUES ($1, $2), ($3, $4)",
+    await db.query(UserModel).batchInsert(
+      [
+        { name: "Alice", email: "alice@test.com" },
+        { name: "Bob", email: "bob@test.com" },
+      ],
+      ["name", "email"],
     );
+
+    expect(calls[0]!.text).toBe("INSERT INTO users (name, email) VALUES ($1, $2), ($3, $4)");
     expect(calls[0]!.params).toEqual(["Alice", "alice@test.com", "Bob", "bob@test.com"]);
   });
 
@@ -157,9 +158,7 @@ describe("QueryExecutor.batchInsert", () => {
       { name: "Bob", email: "bob@test.com" },
     ]);
 
-    expect(calls[0]!.text).toBe(
-      "INSERT INTO users (name, email) VALUES ($1, $2), ($3, $4)",
-    );
+    expect(calls[0]!.text).toBe("INSERT INTO users (name, email) VALUES ($1, $2), ($3, $4)");
   });
 
   test("empty rows does nothing", async () => {
@@ -242,10 +241,7 @@ describe("QueryExecutor.orWhere", () => {
     const { executor, calls } = createMockExecutor();
 
     const db = createDatabase({ executor });
-    await db.query(UserModel)
-      .where("name", "=", "Alice")
-      .orWhere("name", "=", "Bob")
-      .list();
+    await db.query(UserModel).where("name", "=", "Alice").orWhere("name", "=", "Bob").list();
 
     expect(calls[0]!.text).toBe("SELECT * FROM users WHERE name = $1 OR name = $2");
     expect(calls[0]!.params).toEqual(["Alice", "Bob"]);
@@ -257,7 +253,8 @@ describe("QueryExecutor.groupBy and having", () => {
     const { executor, calls } = createMockExecutor();
 
     const db = createDatabase({ executor });
-    await db.query(UserModel)
+    await db
+      .query(UserModel)
       .select("age", "COUNT(*) as count")
       .groupBy("age")
       .having("COUNT(*)", ">", 1)

@@ -1,10 +1,14 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createAsyncWriter } from "../async-writer";
 
 describe("createAsyncWriter", () => {
   test("push adds entries", () => {
     const written: string[][] = [];
-    const writer = createAsyncWriter({ write: async (entries) => { written.push(entries); } });
+    const writer = createAsyncWriter({
+      write: async (entries) => {
+        written.push(entries);
+      },
+    });
     writer.push("log1");
     writer.push("log2");
     expect(writer.pending()).toBe(2);
@@ -12,7 +16,11 @@ describe("createAsyncWriter", () => {
 
   test("flush writes all pending entries", async () => {
     const written: string[][] = [];
-    const writer = createAsyncWriter({ write: async (entries) => { written.push(entries); } });
+    const writer = createAsyncWriter({
+      write: async (entries) => {
+        written.push(entries);
+      },
+    });
     writer.push("log1");
     writer.push("log2");
     await writer.flush();
@@ -23,7 +31,11 @@ describe("createAsyncWriter", () => {
 
   test("flush does nothing when empty", async () => {
     const written: string[][] = [];
-    const writer = createAsyncWriter({ write: async (entries) => { written.push(entries); } });
+    const writer = createAsyncWriter({
+      write: async (entries) => {
+        written.push(entries);
+      },
+    });
     await writer.flush();
     expect(written).toHaveLength(0);
   });
@@ -32,7 +44,9 @@ describe("createAsyncWriter", () => {
     const written: string[][] = [];
     const writer = createAsyncWriter({
       bufferSize: 2,
-      write: async (entries) => { written.push(entries); },
+      write: async (entries) => {
+        written.push(entries);
+      },
     });
     writer.push("log1");
     writer.push("log2"); // triggers auto-flush
@@ -44,7 +58,9 @@ describe("createAsyncWriter", () => {
     const written: string[][] = [];
     const writer = createAsyncWriter({
       flushInterval: 50,
-      write: async (entries) => { written.push(entries); },
+      write: async (entries) => {
+        written.push(entries);
+      },
     });
     writer.start();
     writer.push("log1");
@@ -57,7 +73,9 @@ describe("createAsyncWriter", () => {
     const written: string[][] = [];
     const writer = createAsyncWriter({
       flushInterval: 100000,
-      write: async (entries) => { written.push(entries); },
+      write: async (entries) => {
+        written.push(entries);
+      },
     });
     writer.start();
     writer.push("log1");
@@ -68,7 +86,9 @@ describe("createAsyncWriter", () => {
   test("write failure puts entries back", async () => {
     let fail = true;
     const writer = createAsyncWriter({
-      write: async () => { if (fail) throw new Error("write error"); },
+      write: async () => {
+        if (fail) throw new Error("write error");
+      },
     });
     writer.push("log1");
     await writer.flush();

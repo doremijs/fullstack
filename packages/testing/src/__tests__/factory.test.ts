@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { defineFactory, sequence, oneOf, uuid } from "../factory";
+import { defineFactory, oneOf, sequence, uuid } from "../factory";
 
 interface User {
   id: string;
@@ -100,9 +100,7 @@ describe("uuid", () => {
   test("returns valid UUID strings", () => {
     const gen = uuid();
     const id = gen();
-    expect(id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   });
 
   test("returns unique values", () => {

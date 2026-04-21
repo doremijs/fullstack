@@ -1,5 +1,9 @@
-import { describe, test, expect } from "bun:test";
-import { createDeprecationManager, createCompatibilityGuard, DEFAULT_COMPATIBILITY_POLICY } from "../deprecation";
+import { describe, expect, test } from "bun:test";
+import {
+  DEFAULT_COMPATIBILITY_POLICY,
+  createCompatibilityGuard,
+  createDeprecationManager,
+} from "../deprecation";
 
 describe("createDeprecationManager", () => {
   test("deprecate and isDeprecated", () => {

@@ -12,10 +12,7 @@ export interface CorsOptions {
   maxAge?: number;
 }
 
-function isOriginAllowed(
-  requestOrigin: string,
-  option: CorsOptions["origin"],
-): boolean {
+function isOriginAllowed(requestOrigin: string, option: CorsOptions["origin"]): boolean {
   if (option === undefined) {
     return false; // 默认 deny
   }

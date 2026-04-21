@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { column, defineModel } from "../model";
-import { defineRelation, buildJoinSQL, buildEagerLoadSQL } from "../relation";
+import { buildEagerLoadSQL, buildJoinSQL, defineRelation } from "../relation";
 
 const UserModel = defineModel("users", {
   id: column.bigint({ primary: true, autoIncrement: true }),

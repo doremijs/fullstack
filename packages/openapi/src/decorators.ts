@@ -3,6 +3,7 @@
 // 函数式路由元数据定义与 OpenAPI 转换
 // ============================================================
 
+import type { Router } from "@aeron/core";
 import type {
   OpenAPIGenerator,
   OpenAPIOperation,
@@ -36,10 +37,7 @@ export function defineRouteDoc(metadata: RouteMetadata): RouteMetadata {
 /**
  * 将一组路由元数据批量注入到 OpenAPIGenerator 中。
  */
-export function routesToOpenAPI(
-  routes: RouteMetadata[],
-  generator: OpenAPIGenerator,
-): void {
+export function routesToOpenAPI(routes: RouteMetadata[], generator: OpenAPIGenerator): void {
   for (const route of routes) {
     const operation: OpenAPIOperation = {
       responses: route.responses ?? {
@@ -55,6 +53,33 @@ export function routesToOpenAPI(
     if (route.requestBody !== undefined) operation.requestBody = route.requestBody;
     if (route.security !== undefined) operation.security = route.security;
     if (route.deprecated !== undefined) operation.deprecated = route.deprecated;
+
+    generator.addPath(route.path, route.method, operation);
+  }
+}
+
+/**
+ * 自动将 Router 中已注册的所有路由同步到 OpenAPIGenerator。
+ * 会读取每条路由的 metadata?.openapi 作为详细文档；
+ * 如果没有声明 openapi 元数据，则生成一个仅含默认 200 响应的基础 operation。
+ */
+export function syncRouterToOpenAPI(router: Router, generator: OpenAPIGenerator): void {
+  for (const route of router.routes()) {
+    const openapiMeta = route.metadata?.openapi as Partial<OpenAPIOperation> | undefined;
+    const operation: OpenAPIOperation = {
+      responses: openapiMeta?.responses ?? {
+        "200": { description: "Success" },
+      },
+    };
+
+    if (openapiMeta?.summary !== undefined) operation.summary = openapiMeta.summary;
+    if (openapiMeta?.description !== undefined) operation.description = openapiMeta.description;
+    if (openapiMeta?.tags !== undefined) operation.tags = openapiMeta.tags;
+    if (openapiMeta?.operationId !== undefined) operation.operationId = openapiMeta.operationId;
+    if (openapiMeta?.parameters !== undefined) operation.parameters = openapiMeta.parameters;
+    if (openapiMeta?.requestBody !== undefined) operation.requestBody = openapiMeta.requestBody;
+    if (openapiMeta?.security !== undefined) operation.security = openapiMeta.security;
+    if (openapiMeta?.deprecated !== undefined) operation.deprecated = openapiMeta.deprecated;
 
     generator.addPath(route.path, route.method, operation);
   }

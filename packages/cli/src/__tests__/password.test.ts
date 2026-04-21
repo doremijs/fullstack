@@ -1,5 +1,5 @@
 // @aeron/cli - Password Command Tests
-import { describe, test, expect, spyOn, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { createPasswordCommand } from "../commands/password";
 
 describe("createPasswordCommand", () => {

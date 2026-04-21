@@ -27,7 +27,14 @@ export interface SpanExporter {
 }
 
 export interface Tracer {
-  startSpan(name: string, options?: { kind?: OTelSpan["kind"]; parent?: OTelSpan; attributes?: Record<string, string | number | boolean> }): OTelSpan;
+  startSpan(
+    name: string,
+    options?: {
+      kind?: OTelSpan["kind"];
+      parent?: OTelSpan;
+      attributes?: Record<string, string | number | boolean>;
+    },
+  ): OTelSpan;
   endSpan(span: OTelSpan, status?: OTelSpan["status"]): void;
   addEvent(span: OTelSpan, name: string, attributes?: Record<string, unknown>): void;
   flush(): Promise<void>;
@@ -71,7 +78,6 @@ export function createTracer(config: OTelConfig): Tracer {
       const span: OTelSpan = {
         traceId: options?.parent?.traceId ?? generateId(16),
         spanId: generateId(8),
-        parentSpanId: options?.parent?.spanId,
         name,
         kind: options?.kind ?? "internal",
         startTime: Date.now(),
@@ -83,6 +89,9 @@ export function createTracer(config: OTelConfig): Tracer {
         },
         events: [],
       };
+      if (options?.parent) {
+        span.parentSpanId = options.parent.spanId;
+      }
 
       activeSpans.add(span);
       return span;
@@ -96,7 +105,14 @@ export function createTracer(config: OTelConfig): Tracer {
     },
 
     addEvent(span, name, attributes) {
-      span.events.push({ name, timestamp: Date.now(), attributes });
+      const event: { name: string; timestamp: number; attributes?: Record<string, unknown> } = {
+        name,
+        timestamp: Date.now(),
+      };
+      if (attributes) {
+        event.attributes = attributes;
+      }
+      span.events.push(event);
     },
 
     async flush(): Promise<void> {

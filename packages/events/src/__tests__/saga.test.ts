@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createSaga, createTCC } from "../saga";
 
 describe("createSaga", () => {
@@ -35,7 +35,9 @@ describe("createSaga", () => {
     });
     saga.addStep({
       name: "step3",
-      execute: async () => { throw new Error("boom"); },
+      execute: async () => {
+        throw new Error("boom");
+      },
       compensate: async (ctx) => ctx,
     });
 
@@ -61,11 +63,15 @@ describe("createSaga", () => {
     saga.addStep({
       name: "step1",
       execute: async (ctx) => ({ value: ctx.value + 1 }),
-      compensate: async () => { throw new Error("comp fail"); },
+      compensate: async () => {
+        throw new Error("comp fail");
+      },
     });
     saga.addStep({
       name: "step2",
-      execute: async () => { throw new Error("exec fail"); },
+      execute: async () => {
+        throw new Error("exec fail");
+      },
       compensate: async (ctx) => ctx,
     });
 
@@ -114,7 +120,9 @@ describe("createTCC", () => {
     });
     tcc.addStep({
       name: "step2",
-      try: async () => { throw new Error("try fail"); },
+      try: async () => {
+        throw new Error("try fail");
+      },
       confirm: async (ctx) => ctx,
       cancel: async (ctx) => ctx,
     });
@@ -130,7 +138,9 @@ describe("createTCC", () => {
     tcc.addStep({
       name: "step1",
       try: async (ctx) => ({ value: ctx.value + 1 }),
-      confirm: async () => { throw new Error("confirm fail"); },
+      confirm: async () => {
+        throw new Error("confirm fail");
+      },
       cancel: async (ctx) => ctx,
     });
 

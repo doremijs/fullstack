@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { jitterTTL, withJitter } from "../jitter";
+import { describe, expect, test } from "bun:test";
 import type { CacheAdapter } from "../cache";
+import { jitterTTL, withJitter } from "../jitter";
 
 describe("jitterTTL", () => {
   test("returns value within jitter range", () => {
@@ -34,12 +34,20 @@ describe("withJitter", () => {
   test("wraps adapter with jittered TTL", async () => {
     let capturedTTL: number | undefined;
     const mockAdapter: CacheAdapter = {
-      async get() { return null; },
-      async set(_key, _val, ttl) { capturedTTL = ttl; },
+      async get() {
+        return null;
+      },
+      async set(_key, _val, ttl) {
+        capturedTTL = ttl;
+      },
       async del() {},
-      async has() { return false; },
+      async has() {
+        return false;
+      },
       async flush() {},
-      async keys() { return []; },
+      async keys() {
+        return [];
+      },
     };
 
     const jittered = withJitter(mockAdapter, { jitterPercent: 0.1 });
@@ -52,12 +60,27 @@ describe("withJitter", () => {
   test("passes through get/del/has/flush/keys", async () => {
     const calls: string[] = [];
     const mockAdapter: CacheAdapter = {
-      async get(key) { calls.push("get"); return "val"; },
-      async set() { calls.push("set"); },
-      async del() { calls.push("del"); },
-      async has() { calls.push("has"); return true; },
-      async flush() { calls.push("flush"); },
-      async keys() { calls.push("keys"); return []; },
+      async get(_key) {
+        calls.push("get");
+        return "val";
+      },
+      async set() {
+        calls.push("set");
+      },
+      async del() {
+        calls.push("del");
+      },
+      async has() {
+        calls.push("has");
+        return true;
+      },
+      async flush() {
+        calls.push("flush");
+      },
+      async keys() {
+        calls.push("keys");
+        return [];
+      },
     };
 
     const jittered = withJitter(mockAdapter);
@@ -72,12 +95,20 @@ describe("withJitter", () => {
   test("no jitter when no TTL", async () => {
     let capturedTTL: number | undefined = 999;
     const mockAdapter: CacheAdapter = {
-      async get() { return null; },
-      async set(_key, _val, ttl) { capturedTTL = ttl; },
+      async get() {
+        return null;
+      },
+      async set(_key, _val, ttl) {
+        capturedTTL = ttl;
+      },
       async del() {},
-      async has() { return false; },
+      async has() {
+        return false;
+      },
       async flush() {},
-      async keys() { return []; },
+      async keys() {
+        return [];
+      },
     };
 
     const jittered = withJitter(mockAdapter);

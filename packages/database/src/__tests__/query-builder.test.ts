@@ -50,9 +50,7 @@ describe("createQueryBuilder", () => {
     });
 
     test("where with comparison operators", () => {
-      const qb = createQueryBuilder(UserModel)
-        .where("age", ">=", 18)
-        .where("age", "<", 65);
+      const qb = createQueryBuilder(UserModel).where("age", ">=", 18).where("age", "<", 65);
       const { text, params } = qb.toSQL();
       expect(text).toBe("SELECT * FROM users WHERE age >= $1 AND age < $2");
       expect(params).toEqual([18, 65]);
@@ -87,9 +85,7 @@ describe("createQueryBuilder", () => {
     });
 
     test("multiple where conditions (AND)", () => {
-      const qb = createQueryBuilder(UserModel)
-        .where("name", "=", "john")
-        .where("age", ">", 20);
+      const qb = createQueryBuilder(UserModel).where("name", "=", "john").where("age", ">", 20);
       const { text, params } = qb.toSQL();
       expect(text).toBe("SELECT * FROM users WHERE name = $1 AND age > $2");
       expect(params).toEqual(["john", 20]);
@@ -110,9 +106,7 @@ describe("createQueryBuilder", () => {
     });
 
     test("multiple orderBy", () => {
-      const qb = createQueryBuilder(UserModel)
-        .orderBy("name", "asc")
-        .orderBy("id", "desc");
+      const qb = createQueryBuilder(UserModel).orderBy("name", "asc").orderBy("id", "desc");
       const { text, params } = qb.toSQL();
       expect(text).toBe("SELECT * FROM users ORDER BY name ASC, id DESC");
       expect(params).toEqual([]);
@@ -202,9 +196,7 @@ describe("createQueryBuilder", () => {
         .where("id", "=", 1)
         .updateData({ title: "New Title" });
       const { text, params } = qb.toSQL();
-      expect(text).toBe(
-        "UPDATE posts SET title = $1 WHERE id = $2 AND deleted_at IS NULL",
-      );
+      expect(text).toBe("UPDATE posts SET title = $1 WHERE id = $2 AND deleted_at IS NULL");
       expect(params).toEqual(["New Title", 1]);
     });
 
@@ -225,9 +217,7 @@ describe("createQueryBuilder", () => {
     test("soft delete generates UPDATE with NOW()", () => {
       const qb = createQueryBuilder(PostModel).where("id", "=", 1).deleteQuery();
       const { text, params } = qb.toSQL();
-      expect(text).toBe(
-        "UPDATE posts SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL",
-      );
+      expect(text).toBe("UPDATE posts SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL");
       expect(params).toEqual([1]);
     });
 
@@ -278,9 +268,7 @@ describe("createQueryBuilder", () => {
     });
 
     test("update with IS NULL condition", () => {
-      const qb = createQueryBuilder(UserModel)
-        .where("age", "IS NULL")
-        .updateData({ age: 25 });
+      const qb = createQueryBuilder(UserModel).where("age", "IS NULL").updateData({ age: 25 });
       const { text, params } = qb.toSQL();
       expect(text).toBe("UPDATE users SET age = $1 WHERE age IS NULL");
       expect(params).toEqual([25]);
@@ -298,36 +286,28 @@ describe("createQueryBuilder", () => {
 
   describe("DELETE with complex WHERE", () => {
     test("hard delete with IN condition", () => {
-      const qb = createQueryBuilder(UserModel)
-        .where("id", "IN", [1, 2])
-        .deleteQuery();
+      const qb = createQueryBuilder(UserModel).where("id", "IN", [1, 2]).deleteQuery();
       const { text, params } = qb.toSQL();
       expect(text).toBe("DELETE FROM users WHERE id IN ($1, $2)");
       expect(params).toEqual([1, 2]);
     });
 
     test("hard delete with IS NULL condition", () => {
-      const qb = createQueryBuilder(UserModel)
-        .where("age", "IS NULL")
-        .deleteQuery();
+      const qb = createQueryBuilder(UserModel).where("age", "IS NULL").deleteQuery();
       const { text, params } = qb.toSQL();
       expect(text).toBe("DELETE FROM users WHERE age IS NULL");
       expect(params).toEqual([]);
     });
 
     test("hard delete with IS NOT NULL condition", () => {
-      const qb = createQueryBuilder(UserModel)
-        .where("age", "IS NOT NULL")
-        .deleteQuery();
+      const qb = createQueryBuilder(UserModel).where("age", "IS NOT NULL").deleteQuery();
       const { text, params } = qb.toSQL();
       expect(text).toBe("DELETE FROM users WHERE age IS NOT NULL");
       expect(params).toEqual([]);
     });
 
     test("soft delete with IN condition", () => {
-      const qb = createQueryBuilder(PostModel)
-        .where("userId", "IN", [1, 2])
-        .deleteQuery();
+      const qb = createQueryBuilder(PostModel).where("userId", "IN", [1, 2]).deleteQuery();
       const { text, params } = qb.toSQL();
       expect(text).toBe(
         "UPDATE posts SET deleted_at = NOW() WHERE userId IN ($1, $2) AND deleted_at IS NULL",
@@ -336,9 +316,7 @@ describe("createQueryBuilder", () => {
     });
 
     test("soft delete with IS NOT NULL condition", () => {
-      const qb = createQueryBuilder(PostModel)
-        .where("title", "IS NOT NULL")
-        .deleteQuery();
+      const qb = createQueryBuilder(PostModel).where("title", "IS NOT NULL").deleteQuery();
       const { text, params } = qb.toSQL();
       expect(text).toBe(
         "UPDATE posts SET deleted_at = NOW() WHERE title IS NOT NULL AND deleted_at IS NULL",

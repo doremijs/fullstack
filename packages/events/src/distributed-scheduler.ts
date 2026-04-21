@@ -37,7 +37,9 @@ export interface DistributedScheduler {
  * 创建分布式任务调度器
  * 使用内存锁实现（生产环境应替换为 Redis 分布式锁）
  */
-export function createDistributedScheduler(options?: DistributedSchedulerOptions): DistributedScheduler {
+export function createDistributedScheduler(
+  options?: DistributedSchedulerOptions,
+): DistributedScheduler {
   const instanceId = options?.instanceId ?? crypto.randomUUID();
   const lockTimeout = options?.lockTimeout ?? 60000;
   const tasks = new Map<string, DistributedTask>();

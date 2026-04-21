@@ -13,9 +13,9 @@ export default defineConfig({
           lang: 'zh-CN'
         }
       },
-      social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/your-org/aeron' }
-      ],
+      social: {
+        github: 'https://github.com/your-org/aeron'
+      },
       sidebar: [
         {
           label: '入门指南',

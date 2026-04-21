@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createCache } from "../cache";
 import { createMemoryAdapter } from "../memory-adapter";
 
@@ -163,10 +163,7 @@ describe("createCache", () => {
         return "result";
       };
 
-      await Promise.all([
-        cache.singleflight("a", factory),
-        cache.singleflight("b", factory),
-      ]);
+      await Promise.all([cache.singleflight("a", factory), cache.singleflight("b", factory)]);
 
       expect(calls).toBe(2);
     });

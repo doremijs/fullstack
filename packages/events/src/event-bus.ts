@@ -68,7 +68,10 @@ export function createEventBus(): EventBus {
     }
 
     if (errors.length > 0) {
-      throw new AggregateError(errors, `${errors.length} handler(s) failed for event "${event.name}"`);
+      throw new AggregateError(
+        errors,
+        `${errors.length} handler(s) failed for event "${event.name}"`,
+      );
     }
   }
 

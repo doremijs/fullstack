@@ -22,9 +22,7 @@ const PostModel = defineModel(
 
 describe("groupBy", () => {
   test("single field", () => {
-    const qb = createQueryBuilder(UserModel)
-      .select("age", "COUNT(*) as count")
-      .groupBy("age");
+    const qb = createQueryBuilder(UserModel).select("age", "COUNT(*) as count").groupBy("age");
     const { text, params } = qb.toSQL();
     expect(text).toBe("SELECT age, COUNT(*) as count FROM users GROUP BY age");
     expect(params).toEqual([]);
@@ -45,9 +43,7 @@ describe("groupBy", () => {
       .select("age", "COUNT(*) as count")
       .groupBy("age");
     const { text, params } = qb.toSQL();
-    expect(text).toBe(
-      "SELECT age, COUNT(*) as count FROM users WHERE age >= $1 GROUP BY age",
-    );
+    expect(text).toBe("SELECT age, COUNT(*) as count FROM users WHERE age >= $1 GROUP BY age");
     expect(params).toEqual([18]);
   });
 });
@@ -59,9 +55,7 @@ describe("having", () => {
       .groupBy("age")
       .having("COUNT(*)", ">", 5);
     const { text, params } = qb.toSQL();
-    expect(text).toBe(
-      "SELECT age, COUNT(*) as count FROM users GROUP BY age HAVING COUNT(*) > $1",
-    );
+    expect(text).toBe("SELECT age, COUNT(*) as count FROM users GROUP BY age HAVING COUNT(*) > $1");
     expect(params).toEqual([5]);
   });
 
@@ -108,16 +102,12 @@ describe("orWhere", () => {
       .where("name", "=", "Alice")
       .orWhere("name", "=", "Bob");
     const { text, params } = qb.toSQL();
-    expect(text).toBe(
-      "SELECT * FROM users WHERE age >= $1 AND name = $2 OR name = $3",
-    );
+    expect(text).toBe("SELECT * FROM users WHERE age >= $1 AND name = $2 OR name = $3");
     expect(params).toEqual([18, "Alice", "Bob"]);
   });
 
   test("orWhere with IS NULL", () => {
-    const qb = createQueryBuilder(UserModel)
-      .where("name", "=", "Alice")
-      .orWhere("age", "IS NULL");
+    const qb = createQueryBuilder(UserModel).where("name", "=", "Alice").orWhere("age", "IS NULL");
     const { text, params } = qb.toSQL();
     expect(text).toBe("SELECT * FROM users WHERE name = $1 OR age IS NULL");
     expect(params).toEqual(["Alice"]);
@@ -143,9 +133,7 @@ describe("batchInsert", () => {
       ["name", "email"],
     );
     const { text, params } = qb.toSQL();
-    expect(text).toBe(
-      "INSERT INTO users (name, email) VALUES ($1, $2), ($3, $4)",
-    );
+    expect(text).toBe("INSERT INTO users (name, email) VALUES ($1, $2), ($3, $4)");
     expect(params).toEqual(["Alice", "alice@test.com", "Bob", "bob@test.com"]);
   });
 
@@ -166,10 +154,7 @@ describe("batchInsert", () => {
   });
 
   test("batch insert sets operation to insert", () => {
-    const qb = createQueryBuilder(UserModel).batchInsert(
-      [{ name: "Alice" }],
-      ["name"],
-    );
+    const qb = createQueryBuilder(UserModel).batchInsert([{ name: "Alice" }], ["name"]);
     expect(qb.getOperation()).toBe("insert");
   });
 });
@@ -255,9 +240,7 @@ describe("withDeleted", () => {
   });
 
   test("withDeleted with additional where", () => {
-    const qb = createQueryBuilder(PostModel)
-      .withDeleted()
-      .where("userId", "=", 1);
+    const qb = createQueryBuilder(PostModel).withDeleted().where("userId", "=", 1);
     const { text, params } = qb.toSQL();
     expect(text).toBe("SELECT * FROM posts WHERE userId = $1");
     expect(params).toEqual([1]);

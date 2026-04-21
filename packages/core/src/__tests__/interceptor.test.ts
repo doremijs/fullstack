@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { createPipeline } from "../interceptor";
+import { describe, expect, test } from "bun:test";
 import type { Context } from "../context";
+import { createPipeline } from "../interceptor";
 
 function mockContext(overrides?: Partial<Context>): Context {
   return {
@@ -89,11 +89,17 @@ describe("createPipeline", () => {
     const order: string[] = [];
     pipeline.addInterceptor({
       name: "first",
-      after: (_ctx, response) => { order.push("first"); return response; },
+      after: (_ctx, response) => {
+        order.push("first");
+        return response;
+      },
     });
     pipeline.addInterceptor({
       name: "second",
-      after: (_ctx, response) => { order.push("second"); return response; },
+      after: (_ctx, response) => {
+        order.push("second");
+        return response;
+      },
     });
     const mw = pipeline.toMiddleware();
     await mw(mockContext(), async () => new Response("ok"));
@@ -116,22 +122,42 @@ describe("createPipeline", () => {
       return r;
     });
     const mw = pipeline.toMiddleware();
-    await mw(mockContext(), async () => { order.push("handler"); return new Response("ok"); });
+    await mw(mockContext(), async () => {
+      order.push("handler");
+      return new Response("ok");
+    });
     expect(order).toEqual(["mw1-before", "mw2-before", "handler", "mw2-after", "mw1-after"]);
   });
 
   test("full pipeline: filter → interceptor → middleware → handler", async () => {
     const pipeline = createPipeline();
     const order: string[] = [];
-    pipeline.addFilter({ name: "f", apply: () => { order.push("filter"); return true; } });
+    pipeline.addFilter({
+      name: "f",
+      apply: () => {
+        order.push("filter");
+        return true;
+      },
+    });
     pipeline.addInterceptor({
       name: "i",
-      before: () => { order.push("before"); },
-      after: (_ctx, r) => { order.push("after"); return r; },
+      before: () => {
+        order.push("before");
+      },
+      after: (_ctx, r) => {
+        order.push("after");
+        return r;
+      },
     });
-    pipeline.addMiddleware(async (_ctx, next) => { order.push("mw"); return next(); });
+    pipeline.addMiddleware(async (_ctx, next) => {
+      order.push("mw");
+      return next();
+    });
     const mw = pipeline.toMiddleware();
-    await mw(mockContext(), async () => { order.push("handler"); return new Response("ok"); });
+    await mw(mockContext(), async () => {
+      order.push("handler");
+      return new Response("ok");
+    });
     expect(order).toEqual(["filter", "before", "mw", "handler", "after"]);
   });
 });

@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-import { generateSwaggerUI, createSwaggerUIHandler } from "../swagger-ui";
+import { describe, expect, test } from "bun:test";
+import { createSwaggerUIHandler, generateSwaggerUI } from "../swagger-ui";
 
 describe("generateSwaggerUI", () => {
   test("generates valid HTML", () => {

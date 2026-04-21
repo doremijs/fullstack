@@ -1,5 +1,7 @@
 // @aeron/core - 插件隔离
 
+import type { Plugin } from "./plugin";
+
 export interface PluginSandbox {
   /** 注册插件（隔离执行） */
   register(plugin: Plugin): void;
@@ -49,7 +51,7 @@ export function createPluginSandbox(): PluginSandbox {
         plugin,
         info: {
           name: plugin.name,
-          version: plugin.version,
+          ...(plugin.version ? { version: plugin.version } : {}),
           status: "registered",
         },
       });

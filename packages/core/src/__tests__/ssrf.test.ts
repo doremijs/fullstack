@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createSSRFGuard } from "../middlewares/ssrf";
 
 describe("createSSRFGuard", () => {
@@ -75,9 +75,7 @@ describe("createSSRFGuard", () => {
 
   test("safeFetch throws on blocked URL", async () => {
     const guard = createSSRFGuard();
-    expect(guard.safeFetch("http://127.0.0.1/admin")).rejects.toThrow(
-      "SSRF blocked",
-    );
+    expect(guard.safeFetch("http://127.0.0.1/admin")).rejects.toThrow("SSRF blocked");
   });
 
   test("custom blocked CIDRs", () => {

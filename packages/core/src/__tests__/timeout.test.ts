@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { timeout } from "../middlewares/timeout";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
+import { timeout } from "../middlewares/timeout";
 
 function makeCtx() {
   return createContext(new Request("http://localhost/"));
@@ -18,8 +18,9 @@ describe("timeout", () => {
   test("returns 408 when handler exceeds timeout", async () => {
     const mw = timeout({ ms: 50 });
     const ctx = makeCtx();
-    const response = await mw(ctx, () =>
-      new Promise((resolve) => setTimeout(() => resolve(ctx.json({ ok: true })), 200)),
+    const response = await mw(
+      ctx,
+      () => new Promise((resolve) => setTimeout(() => resolve(ctx.json({ ok: true })), 200)),
     );
     expect(response.status).toBe(408);
     const body = await response.json();
@@ -29,8 +30,9 @@ describe("timeout", () => {
   test("custom timeout message", async () => {
     const mw = timeout({ ms: 50, message: "Too slow" });
     const ctx = makeCtx();
-    const response = await mw(ctx, () =>
-      new Promise((resolve) => setTimeout(() => resolve(ctx.json({ ok: true })), 200)),
+    const response = await mw(
+      ctx,
+      () => new Promise((resolve) => setTimeout(() => resolve(ctx.json({ ok: true })), 200)),
     );
     expect(response.status).toBe(408);
     const body = await response.json();
@@ -40,9 +42,9 @@ describe("timeout", () => {
   test("re-throws non-timeout errors", async () => {
     const mw = timeout({ ms: 1000 });
     const ctx = makeCtx();
-    await expect(
-      mw(ctx, () => Promise.reject(new Error("handler error"))),
-    ).rejects.toThrow("handler error");
+    await expect(mw(ctx, () => Promise.reject(new Error("handler error")))).rejects.toThrow(
+      "handler error",
+    );
   });
 
   test("uses default 30s timeout", () => {

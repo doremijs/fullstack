@@ -36,7 +36,7 @@ export function create${name}Controller() {
 }
 
 function modelTemplate(name: string): string {
-  const tableName = name.toLowerCase() + "s";
+  const tableName = `${name.toLowerCase()}s`;
   return `// ${name} Model
 import { defineModel, column } from "@aeron/database";
 

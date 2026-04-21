@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createPluginSandbox } from "../plugin-sandbox";
 
 describe("createPluginSandbox", () => {
@@ -19,7 +19,12 @@ describe("createPluginSandbox", () => {
   test("initAll calls install on each plugin", async () => {
     const sb = createPluginSandbox();
     let installed = false;
-    sb.register({ name: "p1", install: () => { installed = true; } });
+    sb.register({
+      name: "p1",
+      install: () => {
+        installed = true;
+      },
+    });
     const results = await sb.initAll({});
     expect(installed).toBe(true);
     expect(results).toHaveLength(1);
@@ -31,7 +36,12 @@ describe("createPluginSandbox", () => {
   test("initAll isolates failures", async () => {
     const sb = createPluginSandbox();
     sb.register({ name: "good", install: () => {} });
-    sb.register({ name: "bad", install: () => { throw new Error("plugin error"); } });
+    sb.register({
+      name: "bad",
+      install: () => {
+        throw new Error("plugin error");
+      },
+    });
     const results = await sb.initAll({});
     expect(results).toHaveLength(2);
     expect(results[0].success).toBe(true);
@@ -43,7 +53,12 @@ describe("createPluginSandbox", () => {
   test("destroyAll calls destroy on plugins", async () => {
     const sb = createPluginSandbox();
     let destroyed = false;
-    sb.register({ name: "p1", destroy: () => { destroyed = true; } });
+    sb.register({
+      name: "p1",
+      destroy: () => {
+        destroyed = true;
+      },
+    });
     await sb.destroyAll();
     expect(destroyed).toBe(true);
     expect(sb.list()[0].status).toBe("destroyed");
@@ -51,7 +66,12 @@ describe("createPluginSandbox", () => {
 
   test("destroyAll handles destroy errors gracefully", async () => {
     const sb = createPluginSandbox();
-    sb.register({ name: "p1", destroy: () => { throw new Error("destroy error"); } });
+    sb.register({
+      name: "p1",
+      destroy: () => {
+        throw new Error("destroy error");
+      },
+    });
     await sb.destroyAll(); // should not throw
     expect(sb.list()[0].status).toBe("destroyed");
   });

@@ -37,8 +37,8 @@ export interface QueryExecutor<T> {
   avg(field: string): Promise<number>;
   min(field: string): Promise<number>;
   max(field: string): Promise<number>;
-  insert(data: Partial<T>, options?: { returning?: boolean }): Promise<T | void>;
-  update(data: Partial<T>, options?: { returning?: boolean }): Promise<T | void>;
+  insert(data: Partial<T>, options?: { returning?: boolean }): Promise<T | undefined>;
+  update(data: Partial<T>, options?: { returning?: boolean }): Promise<T | undefined>;
   delete(options?: { force?: boolean }): Promise<void>;
   batchInsert(rows: Partial<T>[], fields?: string[]): Promise<void>;
   hardDelete(): Promise<void>;
@@ -56,7 +56,7 @@ function createQueryExecutor<T>(
   model: ModelDefinition<T>,
   executor: SqlExecutor,
 ): QueryExecutor<T> {
-  let builder = createQueryBuilder<T>(model);
+  const builder = createQueryBuilder<T>(model);
 
   function wrap(nextBuilder: typeof builder): QueryExecutor<T> {
     const qe: QueryExecutor<T> = {
@@ -141,7 +141,7 @@ function createQueryExecutor<T>(
         return first?.result ?? 0;
       },
 
-      async insert(data: Partial<T>, options?: { returning?: boolean }): Promise<T | void> {
+      async insert(data: Partial<T>, options?: { returning?: boolean }): Promise<T | undefined> {
         const insertBuilder = nextBuilder.insertData(data as Record<string, unknown>);
         let { text, params } = insertBuilder.toSQL();
         if (options?.returning) {
@@ -153,7 +153,7 @@ function createQueryExecutor<T>(
         }
       },
 
-      async update(data: Partial<T>, options?: { returning?: boolean }): Promise<T | void> {
+      async update(data: Partial<T>, options?: { returning?: boolean }): Promise<T | undefined> {
         const updateBuilder = nextBuilder.updateData(data as Record<string, unknown>);
         let { text, params } = updateBuilder.toSQL();
         if (options?.returning) {
@@ -207,9 +207,13 @@ function createQueryExecutor<T>(
 }
 
 export function createDatabase(config: DatabaseConfig): Database {
-  const executor: SqlExecutor = config.executor ?? (() => {
-    throw new Error("No SQL executor configured. Provide config.executor or connect to a real database.");
-  });
+  const executor: SqlExecutor =
+    config.executor ??
+    (() => {
+      throw new Error(
+        "No SQL executor configured. Provide config.executor or connect to a real database.",
+      );
+    });
 
   let closed = false;
 

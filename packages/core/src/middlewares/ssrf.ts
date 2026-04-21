@@ -15,18 +15,12 @@ const DEFAULT_BLOCKED_V4 = [
   "0.0.0.0/8",
 ];
 
-const DEFAULT_BLOCKED_V6 = [
-  "::1/128",
-  "fc00::/7",
-  "fe80::/10",
-];
+const DEFAULT_BLOCKED_V6 = ["::1/128", "fc00::/7", "fe80::/10"];
 
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
 
 function ipv4ToNumber(ip: string): number {
-  return (
-    ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0
-  );
+  return ip.split(".").reduce((acc, octet) => (acc << 8) + Number.parseInt(octet, 10), 0) >>> 0;
 }
 
 function isIPv4(host: string): boolean {
@@ -36,7 +30,7 @@ function isIPv4(host: string): boolean {
 function isInCIDRv4(ip: string, cidr: string): boolean {
   const [network, bits] = cidr.split("/");
   if (!network || !bits) return false;
-  const mask = (~0 << (32 - parseInt(bits, 10))) >>> 0;
+  const mask = (~0 << (32 - Number.parseInt(bits, 10))) >>> 0;
   return (ipv4ToNumber(ip) & mask) === (ipv4ToNumber(network) & mask);
 }
 
@@ -60,7 +54,7 @@ function ipv6Expand(ip: string): string {
 function ipv6ToBigInt(ip: string): bigint {
   const expanded = ipv6Expand(ip);
   const hex = expanded.replace(/:/g, "");
-  return BigInt("0x" + hex);
+  return BigInt(`0x${hex}`);
 }
 
 function isIPv6(host: string): boolean {
@@ -70,16 +64,12 @@ function isIPv6(host: string): boolean {
 function isInCIDRv6(ip: string, cidr: string): boolean {
   const [network, bits] = cidr.split("/");
   if (!network || !bits) return false;
-  const prefixLen = parseInt(bits, 10);
+  const prefixLen = Number.parseInt(bits, 10);
   const mask = ((1n << 128n) - 1n) ^ ((1n << BigInt(128 - prefixLen)) - 1n);
   return (ipv6ToBigInt(ip) & mask) === (ipv6ToBigInt(network) & mask);
 }
 
-function isBlockedIP(
-  ip: string,
-  blockedV4: string[],
-  blockedV6: string[],
-): boolean {
+function isBlockedIP(ip: string, blockedV4: string[], blockedV6: string[]): boolean {
   if (isIPv4(ip)) {
     return blockedV4.some((cidr) => isInCIDRv4(ip, cidr));
   }

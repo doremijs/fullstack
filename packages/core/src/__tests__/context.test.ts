@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
 
 function makeRequest(url: string, method = "GET"): Request {
@@ -20,8 +20,8 @@ describe("createContext", () => {
     const req = makeRequest("http://localhost:3000/search?q=hello&limit=10");
     const ctx = createContext(req);
 
-    expect(ctx.query["q"]).toBe("hello");
-    expect(ctx.query["limit"]).toBe("10");
+    expect(ctx.query.q).toBe("hello");
+    expect(ctx.query.limit).toBe("10");
   });
 
   test("empty query when no params", () => {
@@ -33,7 +33,7 @@ describe("createContext", () => {
   test("uses provided params", () => {
     const req = makeRequest("http://localhost:3000/users/42");
     const ctx = createContext(req, { id: "42" });
-    expect(ctx.params["id"]).toBe("42");
+    expect(ctx.params.id).toBe("42");
   });
 
   test("defaults to empty params", () => {

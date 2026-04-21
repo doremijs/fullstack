@@ -32,13 +32,16 @@ export interface PolicyEngine {
 function matchesPattern(value: string, pattern: string): boolean {
   if (pattern === "*") return true;
   if (pattern.includes("*")) {
-    const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
+    const regex = new RegExp(`^${pattern.replace(/\*/g, ".*")}$`);
     return regex.test(value);
   }
   return value === pattern;
 }
 
-function evaluateCondition(condition: PolicyConditionDef, attributes: Record<string, unknown>): boolean {
+function evaluateCondition(
+  condition: PolicyConditionDef,
+  attributes: Record<string, unknown>,
+): boolean {
   const fieldValue = attributes[condition.field];
 
   switch (condition.operator) {
@@ -51,15 +54,35 @@ function evaluateCondition(condition: PolicyConditionDef, attributes: Record<str
     case "not_in":
       return Array.isArray(condition.value) && !condition.value.includes(fieldValue);
     case "gt":
-      return typeof fieldValue === "number" && typeof condition.value === "number" && fieldValue > condition.value;
+      return (
+        typeof fieldValue === "number" &&
+        typeof condition.value === "number" &&
+        fieldValue > condition.value
+      );
     case "lt":
-      return typeof fieldValue === "number" && typeof condition.value === "number" && fieldValue < condition.value;
+      return (
+        typeof fieldValue === "number" &&
+        typeof condition.value === "number" &&
+        fieldValue < condition.value
+      );
     case "gte":
-      return typeof fieldValue === "number" && typeof condition.value === "number" && fieldValue >= condition.value;
+      return (
+        typeof fieldValue === "number" &&
+        typeof condition.value === "number" &&
+        fieldValue >= condition.value
+      );
     case "lte":
-      return typeof fieldValue === "number" && typeof condition.value === "number" && fieldValue <= condition.value;
+      return (
+        typeof fieldValue === "number" &&
+        typeof condition.value === "number" &&
+        fieldValue <= condition.value
+      );
     case "matches":
-      return typeof fieldValue === "string" && typeof condition.value === "string" && new RegExp(condition.value).test(fieldValue);
+      return (
+        typeof fieldValue === "string" &&
+        typeof condition.value === "string" &&
+        new RegExp(condition.value).test(fieldValue)
+      );
     default:
       return false;
   }
@@ -103,7 +126,9 @@ export function createPolicyEngine(): PolicyEngine {
 
         // 匹配条件
         if (rule.conditions && ctx.attributes) {
-          const conditionsMatch = rule.conditions.every((c) => evaluateCondition(c, ctx.attributes!));
+          const conditionsMatch = rule.conditions.every((c) =>
+            evaluateCondition(c, ctx.attributes!),
+          );
           if (!conditionsMatch) continue;
         } else if (rule.conditions && !ctx.attributes) {
           continue;
@@ -120,7 +145,9 @@ export function createPolicyEngine(): PolicyEngine {
         }
       }
 
-      return { allowed, matchedRule };
+      const result: { allowed: boolean; matchedRule?: PolicyRule } = { allowed };
+      if (matchedRule) result.matchedRule = matchedRule;
+      return result;
     },
 
     getRules(): PolicyRule[] {

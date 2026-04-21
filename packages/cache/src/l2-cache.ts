@@ -96,7 +96,7 @@ export function createL2Cache(l2Adapter: CacheAdapter, options?: L2CacheOptions)
 
     async delete(key: string): Promise<void> {
       l1.delete(key);
-      await l2Adapter.delete(key);
+      await l2Adapter.del(key);
     },
 
     async clear(): Promise<void> {

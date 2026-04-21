@@ -43,7 +43,7 @@ export function computeAPIDiff(
           type: "added",
           path,
           method: method.toUpperCase(),
-          description: newOp.summary as string | undefined,
+          ...(newOp.summary ? { description: newOp.summary as string } : {}),
           breaking: false,
         });
       } else {
@@ -53,7 +53,7 @@ export function computeAPIDiff(
             type: "deprecated",
             path,
             method: method.toUpperCase(),
-            description: newOp.summary as string | undefined,
+            ...(newOp.summary ? { description: newOp.summary as string } : {}),
             breaking: false,
           });
         }
@@ -64,7 +64,7 @@ export function computeAPIDiff(
             type: "modified",
             path,
             method: method.toUpperCase(),
-            description: newOp.summary as string | undefined,
+            ...(newOp.summary ? { description: newOp.summary as string } : {}),
             breaking,
           });
         }
@@ -80,11 +80,12 @@ export function computeAPIDiff(
       if (!oldOp) continue;
       const newPathMethods = newPaths[path];
       if (!newPathMethods || !newPathMethods[method]) {
+        const summary = (oldOp as Record<string, unknown>).summary;
         entries.push({
           type: "removed",
           path,
           method: method.toUpperCase(),
-          description: (oldOp as Record<string, unknown>).summary as string | undefined,
+          ...(summary ? { description: summary as string } : {}),
           breaking: true,
         });
       }
@@ -106,7 +107,10 @@ export function computeAPIDiff(
 /**
  * 检测是否有破坏性变更
  */
-function hasBreakingChange(oldOp: Record<string, unknown>, newOp: Record<string, unknown>): boolean {
+function hasBreakingChange(
+  oldOp: Record<string, unknown>,
+  newOp: Record<string, unknown>,
+): boolean {
   // 新增必填参数是破坏性变更
   const oldParams = (oldOp.parameters ?? []) as Array<{ name: string; required?: boolean }>;
   const newParams = (newOp.parameters ?? []) as Array<{ name: string; required?: boolean }>;
@@ -141,7 +145,7 @@ export function generateDiffReport(diff: APIDiffResult): string {
     lines.push("⚠️ **Breaking changes detected!**\n");
   }
 
-  lines.push(`## Summary`);
+  lines.push("## Summary");
   lines.push(`- Added: ${diff.summary.added}`);
   lines.push(`- Removed: ${diff.summary.removed}`);
   lines.push(`- Modified: ${diff.summary.modified}`);

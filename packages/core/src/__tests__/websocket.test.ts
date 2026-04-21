@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createWebSocketRouter } from "../websocket";
 
 describe("createWebSocketRouter", () => {
@@ -20,9 +20,7 @@ describe("createWebSocketRouter", () => {
 
   test("supports chaining", () => {
     const router = createWebSocketRouter();
-    const result = router
-      .ws("/a", { message: () => {} })
-      .ws("/b", { message: () => {} });
+    const result = router.ws("/a", { message: () => {} }).ws("/b", { message: () => {} });
     expect(result).toBe(router);
     expect(router.routes()).toHaveLength(2);
   });
@@ -52,7 +50,7 @@ describe("createWebSocketRouter", () => {
     let upgraded = false;
     let upgradeData: unknown;
     const mockServer = {
-      upgrade(req: Request, opts?: { data?: unknown }) {
+      upgrade(_req: Request, opts?: { data?: unknown }) {
         upgraded = true;
         upgradeData = opts?.data;
         return true;
@@ -125,7 +123,7 @@ describe("createWebSocketRouter", () => {
     const router = createWebSocketRouter();
     router.ws("/chat", {
       message: () => {},
-      data: (req) => ({ userId: "123" }),
+      data: (_req) => ({ userId: "123" }),
     });
     const compiled = router.compile();
 

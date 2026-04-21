@@ -49,13 +49,17 @@ export function createConnectionPool<T>(
   options?: ConnectionPoolOptions,
 ): ConnectionPool<T> {
   const max = options?.max ?? 10;
-  const min = options?.min ?? 2;
+  const _min = options?.min ?? 2;
   const idleTimeout = options?.idleTimeout ?? 30000;
   const acquireTimeout = options?.acquireTimeout ?? 5000;
   const maxLifetime = options?.maxLifetime ?? 3600000;
 
   const connections: PooledConnection<T>[] = [];
-  const waitQueue: { resolve: (conn: T) => void; reject: (err: Error) => void; timer: ReturnType<typeof setTimeout> }[] = [];
+  const waitQueue: {
+    resolve: (conn: T) => void;
+    reject: (err: Error) => void;
+    timer: ReturnType<typeof setTimeout>;
+  }[] = [];
   let closed = false;
 
   function getIdleConnection(): PooledConnection<T> | undefined {

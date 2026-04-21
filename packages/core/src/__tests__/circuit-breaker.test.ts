@@ -1,6 +1,6 @@
 // @aeron/core - 熔断器测试
 
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { createCircuitBreaker, createCircuitOpenError } from "../circuit-breaker";
 
 describe("createCircuitBreaker", () => {

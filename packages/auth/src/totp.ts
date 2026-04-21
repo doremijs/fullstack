@@ -73,18 +73,15 @@ export function createTOTP(options: TOTPOptions = {}): TOTPManager {
   const algorithm = options.algorithm ?? "SHA-1";
   const window = options.window ?? 1;
 
-  async function hmacSign(
-    secret: Uint8Array,
-    data: Uint8Array,
-  ): Promise<Uint8Array> {
+  async function hmacSign(secret: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
     const key = await crypto.subtle.importKey(
       "raw",
-      secret,
+      secret as unknown as Uint8Array<ArrayBuffer>,
       { name: "HMAC", hash: ALGORITHM_MAP[algorithm]! },
       false,
       ["sign"],
     );
-    const sig = await crypto.subtle.sign("HMAC", key, data);
+    const sig = await crypto.subtle.sign("HMAC", key, data as unknown as Uint8Array<ArrayBuffer>);
     return new Uint8Array(sig);
   }
 
@@ -99,10 +96,7 @@ export function createTOTP(options: TOTPOptions = {}): TOTPManager {
     return bytes;
   }
 
-  async function generateOTP(
-    secret: Uint8Array,
-    counter: number,
-  ): Promise<string> {
+  async function generateOTP(secret: Uint8Array, counter: number): Promise<string> {
     const counterBytes = intToBytes(counter);
     const hash = await hmacSign(secret, counterBytes);
 
@@ -114,7 +108,7 @@ export function createTOTP(options: TOTPOptions = {}): TOTPManager {
       ((hash[offset + 2]! & 0xff) << 8) |
       (hash[offset + 3]! & 0xff);
 
-    const otp = code % Math.pow(10, digits);
+    const otp = code % 10 ** digits;
     return otp.toString().padStart(digits, "0");
   }
 
@@ -144,11 +138,7 @@ export function createTOTP(options: TOTPOptions = {}): TOTPManager {
       return generateOTP(secretBytes, counter);
     },
 
-    async verify(
-      secret: string,
-      token: string,
-      time?: number,
-    ): Promise<boolean> {
+    async verify(secret: string, token: string, time?: number): Promise<boolean> {
       const t = time ?? Math.floor(Date.now() / 1000);
       const counter = Math.floor(t / period);
       const secretBytes = base32Decode(secret);

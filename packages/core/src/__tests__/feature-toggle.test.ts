@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createFeatureToggle } from "../feature-toggle";
 
 describe("createFeatureToggle", () => {
@@ -46,9 +46,7 @@ describe("createFeatureToggle", () => {
   });
 
   test("initializes with features", () => {
-    const toggle = createFeatureToggle([
-      { name: "a", enabled: true },
-    ]);
+    const toggle = createFeatureToggle([{ name: "a", enabled: true }]);
     expect(toggle.isEnabled("a")).toBe(true);
   });
 

@@ -1,5 +1,5 @@
-import { describe, test, expect, mock } from "bun:test";
-import { defineModule, createModuleRegistry } from "../module";
+import { describe, expect, mock, test } from "bun:test";
+import { createModuleRegistry, defineModule } from "../module";
 import { createRouter } from "../router";
 
 describe("defineModule()", () => {
@@ -41,9 +41,9 @@ describe("createModuleRegistry()", () => {
     test("throws on duplicate module name", () => {
       const registry = createModuleRegistry();
       registry.register(defineModule({ name: "auth" }));
-      expect(() =>
-        registry.register(defineModule({ name: "auth" })),
-      ).toThrow('Module "auth" is already registered');
+      expect(() => registry.register(defineModule({ name: "auth" }))).toThrow(
+        'Module "auth" is already registered',
+      );
     });
   });
 
@@ -92,10 +92,20 @@ describe("createModuleRegistry()", () => {
       const order: string[] = [];
       const registry = createModuleRegistry();
       registry.register(
-        defineModule({ name: "a", onInit: () => { order.push("a"); } }),
+        defineModule({
+          name: "a",
+          onInit: () => {
+            order.push("a");
+          },
+        }),
       );
       registry.register(
-        defineModule({ name: "b", onInit: () => { order.push("b"); } }),
+        defineModule({
+          name: "b",
+          onInit: () => {
+            order.push("b");
+          },
+        }),
       );
 
       await registry.initAll();
@@ -131,13 +141,28 @@ describe("createModuleRegistry()", () => {
       const order: string[] = [];
       const registry = createModuleRegistry();
       registry.register(
-        defineModule({ name: "a", onDestroy: () => { order.push("a"); } }),
+        defineModule({
+          name: "a",
+          onDestroy: () => {
+            order.push("a");
+          },
+        }),
       );
       registry.register(
-        defineModule({ name: "b", onDestroy: () => { order.push("b"); } }),
+        defineModule({
+          name: "b",
+          onDestroy: () => {
+            order.push("b");
+          },
+        }),
       );
       registry.register(
-        defineModule({ name: "c", onDestroy: () => { order.push("c"); } }),
+        defineModule({
+          name: "c",
+          onDestroy: () => {
+            order.push("c");
+          },
+        }),
       );
 
       await registry.destroyAll();
@@ -193,13 +218,17 @@ describe("createModuleRegistry()", () => {
       registry.register(
         defineModule({
           name: "users",
-          routes: (r) => { r.get("/users", (ctx) => ctx.json([])); },
+          routes: (r) => {
+            r.get("/users", (ctx) => ctx.json([]));
+          },
         }),
       );
       registry.register(
         defineModule({
           name: "posts",
-          routes: (r) => { r.get("/posts", (ctx) => ctx.json([])); },
+          routes: (r) => {
+            r.get("/posts", (ctx) => ctx.json([]));
+          },
         }),
       );
 

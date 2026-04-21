@@ -53,17 +53,17 @@ export function createTestDatabase(options?: TestContainerOptions): TestDatabase
 
     if (trimmed.startsWith("CREATE TABLE")) {
       const match = sql.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)/i);
-      if (match) {
+      if (match?.[1]) {
         tables.set(match[1], []);
       }
     } else if (trimmed.startsWith("DROP TABLE")) {
       const match = sql.match(/DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(\w+)/i);
-      if (match) {
+      if (match?.[1]) {
         tables.delete(match[1]);
       }
     } else if (trimmed.startsWith("TRUNCATE") || trimmed.startsWith("DELETE FROM")) {
       const match = sql.match(/(?:TRUNCATE|DELETE\s+FROM)\s+(\w+)/i);
-      if (match) {
+      if (match?.[1]) {
         const rows = tables.get(match[1]);
         if (rows) rows.length = 0;
       }
@@ -91,7 +91,10 @@ export function createTestDatabase(options?: TestContainerOptions): TestDatabase
       // 保存当前状态快照
       const snapshot = new Map<string, Array<Record<string, unknown>>>();
       for (const [table, rows] of tables) {
-        snapshot.set(table, rows.map((r) => ({ ...r })));
+        snapshot.set(
+          table,
+          rows.map((r) => ({ ...r })),
+        );
       }
       savepoints.set(name, snapshot);
     },
@@ -101,7 +104,10 @@ export function createTestDatabase(options?: TestContainerOptions): TestDatabase
       if (!snapshot) throw new Error(`Savepoint not found: ${name}`);
       tables.clear();
       for (const [table, rows] of snapshot) {
-        tables.set(table, rows.map((r) => ({ ...r })));
+        tables.set(
+          table,
+          rows.map((r) => ({ ...r })),
+        );
       }
     },
 

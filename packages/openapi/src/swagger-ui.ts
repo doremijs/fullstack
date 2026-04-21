@@ -1,5 +1,7 @@
 // @aeron/openapi - Swagger UI 内嵌页面
 
+import type { AeronApp, Plugin } from "@aeron/core";
+
 export interface SwaggerUIOptions {
   /** OpenAPI JSON 端点路径 */
   specUrl?: string;
@@ -7,6 +9,8 @@ export interface SwaggerUIOptions {
   title?: string;
   /** Swagger UI CDN 版本 */
   version?: string;
+  /** Swagger UI 挂载路径 */
+  path?: string;
 }
 
 /**
@@ -14,11 +18,7 @@ export interface SwaggerUIOptions {
  * 使用 CDN 加载 Swagger UI，不需要本地依赖。
  */
 export function generateSwaggerUI(options: SwaggerUIOptions = {}): string {
-  const {
-    specUrl = "/openapi.json",
-    title = "API Documentation",
-    version = "5.17.14",
-  } = options;
+  const { specUrl = "/openapi.json", title = "API Documentation", version = "5.17.14" } = options;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -35,11 +35,7 @@ export function generateSwaggerUI(options: SwaggerUIOptions = {}): string {
     SwaggerUIBundle({
       url: ${JSON.stringify(specUrl)},
       dom_id: '#swagger-ui',
-      presets: [
-        SwaggerUIBundle.presets.apis,
-        SwaggerUIBundle.SwaggerUIStandalonePreset
-      ],
-      layout: "StandaloneLayout"
+      presets: [SwaggerUIBundle.presets.apis]
     });
   </script>
 </body>
@@ -47,7 +43,11 @@ export function generateSwaggerUI(options: SwaggerUIOptions = {}): string {
 }
 
 function escapeHtmlAttr(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 /**
@@ -60,4 +60,19 @@ export function createSwaggerUIHandler(options: SwaggerUIOptions = {}): () => Re
     new Response(html, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
+}
+
+/**
+ * 创建 Swagger UI 插件。
+ * 自动注册 /docs 路由并在启动时打印访问地址。
+ */
+export function createSwaggerUIPlugin(options: SwaggerUIOptions = {}): Plugin {
+  const path = options.path ?? "/docs";
+  return {
+    name: "swagger-ui",
+    install(app: AeronApp) {
+      app.router.get(path, createSwaggerUIHandler(options));
+      app.addUrl("Swagger UI", path);
+    },
+  };
 }

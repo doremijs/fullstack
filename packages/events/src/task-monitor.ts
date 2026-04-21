@@ -28,7 +28,12 @@ export interface TaskMonitor {
   complete(id: string): void;
   fail(id: string, error: string): void;
   retry(id: string): void;
-  log(id: string, level: TaskLogEntry["level"], message: string, meta?: Record<string, unknown>): void;
+  log(
+    id: string,
+    level: TaskLogEntry["level"],
+    message: string,
+    meta?: Record<string, unknown>,
+  ): void;
   get(id: string): TaskRecord | undefined;
   list(filter?: { status?: TaskStatus; name?: string }): TaskRecord[];
   stats(): { total: number; running: number; completed: number; failed: number; pending: number };
@@ -59,7 +64,11 @@ export function createTaskMonitor(): TaskMonitor {
       task.status = "running";
       task.startedAt = Date.now();
       task.attempts++;
-      task.logs.push({ timestamp: Date.now(), level: "info", message: `Task started (attempt ${task.attempts})` });
+      task.logs.push({
+        timestamp: Date.now(),
+        level: "info",
+        message: `Task started (attempt ${task.attempts})`,
+      });
     },
 
     complete(id: string): void {
@@ -85,13 +94,24 @@ export function createTaskMonitor(): TaskMonitor {
       const task = tasks.get(id);
       if (!task) return;
       task.status = "retrying";
-      task.logs.push({ timestamp: Date.now(), level: "warn", message: `Retrying task (attempt ${task.attempts + 1})` });
+      task.logs.push({
+        timestamp: Date.now(),
+        level: "warn",
+        message: `Retrying task (attempt ${task.attempts + 1})`,
+      });
     },
 
-    log(id: string, level: TaskLogEntry["level"], message: string, meta?: Record<string, unknown>): void {
+    log(
+      id: string,
+      level: TaskLogEntry["level"],
+      message: string,
+      meta?: Record<string, unknown>,
+    ): void {
       const task = tasks.get(id);
       if (!task) return;
-      task.logs.push({ timestamp: Date.now(), level, message, meta });
+      const entry: TaskLogEntry = { timestamp: Date.now(), level, message };
+      if (meta) entry.meta = meta;
+      task.logs.push(entry);
     },
 
     get(id: string): TaskRecord | undefined {

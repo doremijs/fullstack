@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { createMetrics } from "../metrics";
+import { describe, expect, test } from "bun:test";
 import { createGauge } from "../gauge";
+import { createMetrics } from "../metrics";
 
 describe("Gauge", () => {
   test("set and get value", () => {

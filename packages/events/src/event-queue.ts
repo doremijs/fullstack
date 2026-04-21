@@ -77,7 +77,7 @@ export function createEventQueue(options?: EventQueueOptions): EventQueue {
               ),
             ]);
             event.processedAt = Date.now();
-          } catch (err) {
+          } catch (_err) {
             // 处理失败，放回队列尾部（降低优先级）
             event.priority = Math.max(event.priority - 1, -100);
             queue.push(event);

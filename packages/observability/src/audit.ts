@@ -49,8 +49,7 @@ export function createAuditLog(): AuditStore {
     async append(input): Promise<AuditEntry> {
       const id = crypto.randomUUID();
       const timestamp = Date.now();
-      const previousHash =
-        entries.length > 0 ? entries[entries.length - 1]!.hash : undefined;
+      const previousHash = entries.length > 0 ? entries[entries.length - 1]!.hash : undefined;
 
       const hash = await computeHash(
         previousHash,
@@ -67,12 +66,12 @@ export function createAuditLog(): AuditStore {
         actor: input.actor,
         action: input.action,
         resource: input.resource,
-        resourceId: input.resourceId,
         result: input.result,
-        metadata: input.metadata,
-        previousHash,
         hash,
       };
+      if (input.resourceId) entry.resourceId = input.resourceId;
+      if (input.metadata) entry.metadata = input.metadata;
+      if (previousHash) entry.previousHash = previousHash;
 
       entries.push(entry);
       return entry;

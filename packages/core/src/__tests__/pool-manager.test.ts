@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createPoolManager } from "../pool-manager";
 
 describe("createPoolManager", () => {
@@ -18,8 +18,18 @@ describe("createPoolManager", () => {
   test("releaseAll closes in reverse order", async () => {
     const pm = createPoolManager();
     const order: string[] = [];
-    pm.register({ name: "first", close: async () => { order.push("first"); } });
-    pm.register({ name: "second", close: async () => { order.push("second"); } });
+    pm.register({
+      name: "first",
+      close: async () => {
+        order.push("first");
+      },
+    });
+    pm.register({
+      name: "second",
+      close: async () => {
+        order.push("second");
+      },
+    });
     await pm.releaseAll();
     expect(order).toEqual(["second", "first"]);
   });
@@ -34,7 +44,12 @@ describe("createPoolManager", () => {
   test("releaseAll reports errors without stopping", async () => {
     const pm = createPoolManager();
     pm.register({ name: "ok", close: async () => {} });
-    pm.register({ name: "fail", close: async () => { throw new Error("close error"); } });
+    pm.register({
+      name: "fail",
+      close: async () => {
+        throw new Error("close error");
+      },
+    });
     const results = await pm.releaseAll();
     expect(results).toHaveLength(2);
     expect(results[0].name).toBe("fail");

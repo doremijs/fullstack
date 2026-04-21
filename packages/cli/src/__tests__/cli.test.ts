@@ -1,5 +1,5 @@
 // @aeron/cli - CLI Tests
-import { describe, test, expect, spyOn, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { createCLI, run } from "../cli";
 
 describe("createCLI", () => {

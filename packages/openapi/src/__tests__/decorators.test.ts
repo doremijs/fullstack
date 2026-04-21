@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { defineRouteDoc, routesToOpenAPI } from "../decorators";
 import { createOpenAPIGenerator } from "../generator";
-import { schemaObject, schemaString, schemaInteger } from "../schema-builder";
+import { schemaInteger, schemaObject, schemaString } from "../schema-builder";
 
 describe("defineRouteDoc", () => {
   test("returns basic route metadata", () => {
@@ -19,9 +19,7 @@ describe("defineRouteDoc", () => {
     const meta = defineRouteDoc({
       path: "/users/{id}",
       method: "GET",
-      parameters: [
-        { name: "id", in: "path", required: true, schema: { type: "string" } },
-      ],
+      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
     });
     expect(meta.parameters).toHaveLength(1);
     expect(meta.parameters![0]!.name).toBe("id");
@@ -152,10 +150,7 @@ describe("routesToOpenAPI", () => {
     const gen = createOpenAPIGenerator();
     gen.setInfo({ title: "Test", version: "1.0.0" });
 
-    routesToOpenAPI(
-      [defineRouteDoc({ path: "/ping", method: "GET" })],
-      gen,
-    );
+    routesToOpenAPI([defineRouteDoc({ path: "/ping", method: "GET" })], gen);
 
     const doc = gen.generate();
     expect(doc.paths["/ping"]?.get?.responses["200"]?.description).toBe("Success");
@@ -275,7 +270,7 @@ describe("routesToOpenAPI", () => {
     expect(doc.openapi).toBe("3.0.3");
     expect(doc.paths["/users"]?.get).toBeDefined();
     expect(doc.paths["/users"]?.post).toBeDefined();
-    expect(doc.components?.schemas?.["User"]).toBeDefined();
+    expect(doc.components?.schemas?.User).toBeDefined();
 
     const json = gen.toJSON();
     expect(JSON.parse(json).openapi).toBe("3.0.3");

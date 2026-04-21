@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createContextManager } from "../context";
 
 describe("ContextManager", () => {
@@ -65,7 +65,7 @@ describe("ContextManager", () => {
     const ctx = manager.create();
     const id = ctx.conversationId;
     expect(manager.setMetadata(id, "model", "gpt-4")).toBe(true);
-    expect(manager.get(id)!.metadata["model"]).toBe("gpt-4");
+    expect(manager.get(id)!.metadata.model).toBe("gpt-4");
     expect(manager.setMetadata("nonexistent", "key", "val")).toBe(false);
   });
 

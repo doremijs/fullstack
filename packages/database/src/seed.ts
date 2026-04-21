@@ -22,9 +22,7 @@ export function createSeedRunner(executor: SqlExecutor): SeedRunner {
     },
 
     async run(options) {
-      const toRun = options?.only
-        ? seeds.filter((s) => options.only!.includes(s.name))
-        : seeds;
+      const toRun = options?.only ? seeds.filter((s) => options.only!.includes(s.name)) : seeds;
 
       const sorted = [...toRun].sort((a, b) => a.name.localeCompare(b.name));
       const executed: string[] = [];

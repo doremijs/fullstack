@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
-  schemaString,
-  schemaNumber,
-  schemaInteger,
-  schemaBoolean,
   schemaArray,
-  schemaObject,
+  schemaBoolean,
   schemaEnum,
+  schemaInteger,
+  schemaNumber,
+  schemaObject,
   schemaRef,
+  schemaString,
 } from "../schema-builder";
 
 describe("schemaString", () => {
@@ -146,11 +146,7 @@ describe("schemaObject", () => {
   });
 
   test("object with description", () => {
-    const s = schemaObject(
-      { id: schemaString() },
-      ["id"],
-      { description: "A user" },
-    );
+    const s = schemaObject({ id: schemaString() }, ["id"], { description: "A user" });
     expect(s.description).toBe("A user");
   });
 });
@@ -194,12 +190,12 @@ describe("nested schemas", () => {
 
     expect(s.type).toBe("object");
     expect(s.required).toEqual(["users"]);
-    const users = s.properties!["users"]!;
+    const users = s.properties!.users!;
     expect(users.type).toBe("array");
     const item = users.items!;
     expect(item.type).toBe("object");
     expect(item.required).toEqual(["id", "name"]);
-    expect(item.properties!["roles"]!.type).toBe("array");
-    expect(item.properties!["roles"]!.items!.enum).toEqual(["admin", "user"]);
+    expect(item.properties!.roles!.type).toBe("array");
+    expect(item.properties!.roles!.items!.enum).toEqual(["admin", "user"]);
   });
 });

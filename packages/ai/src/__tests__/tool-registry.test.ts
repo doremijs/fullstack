@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createToolRegistry } from "../tool-registry";
 import type { ToolDefinition } from "../tool-registry";
 
@@ -6,10 +6,8 @@ function makeTool(overrides?: Partial<ToolDefinition>): ToolDefinition {
   return {
     name: "test-tool",
     description: "A test tool",
-    parameters: [
-      { name: "input", type: "string", description: "Input value", required: true },
-    ],
-    handler: async (params) => ({ echo: params["input"] }),
+    parameters: [{ name: "input", type: "string", description: "Input value", required: true }],
+    handler: async (params) => ({ echo: params.input }),
     ...overrides,
   };
 }
@@ -120,7 +118,7 @@ describe("ToolRegistry", () => {
     expect(schemas).toHaveLength(1);
     expect(schemas[0]!.name).toBe("test-tool");
     expect(schemas[0]!.parameters.type).toBe("object");
-    expect(schemas[0]!.parameters.properties["query"]).toEqual({
+    expect(schemas[0]!.parameters.properties.query).toEqual({
       type: "string",
       description: "Search query",
     });

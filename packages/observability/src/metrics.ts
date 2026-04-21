@@ -1,6 +1,6 @@
 // @aeron/observability — Metrics (Prometheus-compatible)
 
-import { createGauge, labelsToKey, type Gauge } from "./gauge";
+import { type Gauge, createGauge } from "./gauge";
 
 export type { Gauge } from "./gauge";
 
@@ -51,7 +51,12 @@ function parseLabelsKey(key: string): Record<string, string> | undefined {
   if (!key) return undefined;
   const result: Record<string, string> = {};
   for (const part of key.split(",")) {
-    const [k, v] = part.split("=");
+    if (!part) continue;
+    const eqIdx = part.indexOf("=");
+    if (eqIdx === -1) continue;
+    const k = part.slice(0, eqIdx);
+    const v = part.slice(eqIdx + 1);
+    if (!k || v.length < 2) continue;
     result[k] = v.slice(1, -1); // remove quotes
   }
   return result;
@@ -59,27 +64,41 @@ function parseLabelsKey(key: string): Record<string, string> | undefined {
 
 const noopCounter: Counter = {
   inc() {},
-  get() { return 0; },
+  get() {
+    return 0;
+  },
 };
 
 const noopHistogram: Histogram = {
   observe() {},
-  get() { return { count: 0, sum: 0, buckets: new Map() }; },
+  get() {
+    return { count: 0, sum: 0, buckets: new Map() };
+  },
 };
 
 const noopGauge: Gauge = {
   set() {},
   inc() {},
   dec() {},
-  get() { return 0; },
+  get() {
+    return 0;
+  },
   reset() {},
 };
 
 const noopMetrics: Metrics = {
-  counter() { return noopCounter; },
-  histogram() { return noopHistogram; },
-  gauge() { return noopGauge; },
-  render() { return ""; },
+  counter() {
+    return noopCounter;
+  },
+  histogram() {
+    return noopHistogram;
+  },
+  gauge() {
+    return noopGauge;
+  },
+  render() {
+    return "";
+  },
   reset() {},
 };
 
@@ -110,8 +129,8 @@ export function createMetrics(options?: MetricsOptions): Metrics {
     const fullName = `${prefix}${name}`;
     let state = counters.get(fullName);
     if (!state) {
-      state = { help, values: new Map() };
-      counters.set(fullName, state);
+      state = { ...(help ? { help } : {}), values: new Map() };
+      counters.set(fullName, state as CounterState);
     }
     return {
       inc(labels?, value = 1) {
@@ -129,8 +148,8 @@ export function createMetrics(options?: MetricsOptions): Metrics {
     let state = histograms.get(fullName);
     if (!state) {
       const sortedBuckets = [...(buckets ?? defaultBuckets)].sort((a, b) => a - b);
-      state = { help, buckets: sortedBuckets, values: new Map() };
-      histograms.set(fullName, state);
+      state = { ...(help ? { help } : {}), buckets: sortedBuckets, values: new Map() };
+      histograms.set(fullName, state as HistogramState);
     }
     return {
       observe(value, labels?) {
@@ -166,10 +185,10 @@ export function createMetrics(options?: MetricsOptions): Metrics {
     const fullName = `${prefix}${name}`;
     let entry = gauges.get(fullName);
     if (!entry) {
-      entry = { help, gauge: createGauge() };
-      gauges.set(fullName, entry);
+      entry = { ...(help ? { help } : {}), gauge: createGauge() };
+      gauges.set(fullName, entry as { help?: string; gauge: Gauge });
     }
-    return entry.gauge;
+    return entry!.gauge;
   }
 
   function render(): string {
@@ -195,15 +214,11 @@ export function createMetrics(options?: MetricsOptions): Metrics {
         const lbls = key ? parseLabelsKey(key) : undefined;
         const lblStr = formatLabels(lbls);
         for (const b of state.buckets) {
-          const le = b === Infinity ? "+Inf" : String(b);
-          const bucketLabels = lbls
-            ? `{${labelsKey(lbls)},le="${le}"}`
-            : `{le="${le}"}`;
+          const le = b === Number.POSITIVE_INFINITY ? "+Inf" : String(b);
+          const bucketLabels = lbls ? `{${labelsKey(lbls)},le="${le}"}` : `{le="${le}"}`;
           lines.push(`${name}_bucket${bucketLabels} ${entry.bucketCounts.get(b) ?? 0}`);
         }
-        const infLabels = lbls
-          ? `{${labelsKey(lbls)},le="+Inf"}`
-          : `{le="+Inf"}`;
+        const infLabels = lbls ? `{${labelsKey(lbls)},le="+Inf"}` : `{le="+Inf"}`;
         lines.push(`${name}_bucket${infLabels} ${entry.count}`);
         lines.push(`${name}_sum${lblStr} ${entry.sum}`);
         lines.push(`${name}_count${lblStr} ${entry.count}`);

@@ -4,7 +4,10 @@ export interface ConfigWatcherOptions {
   /** 检查间隔（ms） */
   interval?: number;
   /** 变更回调 */
-  onChange: (newConfig: Record<string, unknown>, oldConfig: Record<string, unknown>) => void | Promise<void>;
+  onChange: (
+    newConfig: Record<string, unknown>,
+    oldConfig: Record<string, unknown>,
+  ) => void | Promise<void>;
 }
 
 export interface ConfigWatcher {
@@ -20,7 +23,7 @@ export interface ConfigWatcher {
  * 支持 watch + callback 模式，配置变更时不重启生效
  */
 export function createConfigWatcher(options: ConfigWatcherOptions): ConfigWatcher {
-  const interval = options.interval ?? 5000;
+  const _interval = options.interval ?? 5000;
   let timer: ReturnType<typeof setInterval> | null = null;
   let currentConfig: Record<string, unknown> = {};
   let watching = false;

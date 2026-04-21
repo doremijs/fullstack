@@ -13,9 +13,7 @@ export interface Factory<T extends Record<string, unknown>> {
 }
 
 function resolveField<T>(generator: FieldGenerator<T>): T {
-  return typeof generator === "function"
-    ? (generator as () => T)()
-    : generator;
+  return typeof generator === "function" ? (generator as () => T)() : generator;
 }
 
 export function defineFactory<T extends Record<string, unknown>>(
@@ -24,9 +22,7 @@ export function defineFactory<T extends Record<string, unknown>>(
   function build(overrides?: Partial<T>): T {
     const result = {} as Record<string, unknown>;
     for (const key of Object.keys(definition.fields)) {
-      result[key] = resolveField(
-        definition.fields[key as keyof T] as FieldGenerator<unknown>,
-      );
+      result[key] = resolveField(definition.fields[key as keyof T] as FieldGenerator<unknown>);
     }
     if (overrides) {
       for (const key of Object.keys(overrides)) {

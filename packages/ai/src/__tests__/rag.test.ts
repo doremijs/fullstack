@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-import { createKnowledgeBase, createAgentRegistry } from "../rag";
+import { describe, expect, test } from "bun:test";
+import { createAgentRegistry, createKnowledgeBase } from "../rag";
 
 describe("createKnowledgeBase", () => {
   test("adds and retrieves documents", () => {

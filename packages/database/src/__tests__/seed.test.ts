@@ -1,10 +1,10 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createSeedRunner } from "../seed";
 
 describe("createSeedRunner", () => {
   function createMockExecutor() {
     const executed: string[] = [];
-    const executor = async (sql: string, params?: unknown[]) => {
+    const executor = async (sql: string, _params?: unknown[]) => {
       executed.push(sql);
       return [];
     };
@@ -34,11 +34,15 @@ describe("createSeedRunner", () => {
 
     runner.addSeed({
       name: "002_posts",
-      run: async () => { order.push("002"); },
+      run: async () => {
+        order.push("002");
+      },
     });
     runner.addSeed({
       name: "001_users",
-      run: async () => { order.push("001"); },
+      run: async () => {
+        order.push("001");
+      },
     });
 
     await runner.run();
@@ -50,9 +54,24 @@ describe("createSeedRunner", () => {
     const runner = createSeedRunner(executor);
     const ran: string[] = [];
 
-    runner.addSeed({ name: "a", run: async () => { ran.push("a"); } });
-    runner.addSeed({ name: "b", run: async () => { ran.push("b"); } });
-    runner.addSeed({ name: "c", run: async () => { ran.push("c"); } });
+    runner.addSeed({
+      name: "a",
+      run: async () => {
+        ran.push("a");
+      },
+    });
+    runner.addSeed({
+      name: "b",
+      run: async () => {
+        ran.push("b");
+      },
+    });
+    runner.addSeed({
+      name: "c",
+      run: async () => {
+        ran.push("c");
+      },
+    });
 
     const result = await runner.run({ only: ["b"] });
     expect(result).toEqual(["b"]);

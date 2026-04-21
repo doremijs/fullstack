@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { computeAPIDiff, generateDiffReport } from "../api-diff";
 
 describe("computeAPIDiff", () => {
@@ -38,7 +38,9 @@ describe("computeAPIDiff", () => {
 
   test("breaking: new required parameter", () => {
     const oldSpec = { paths: { "/users": { get: { parameters: [] } } } };
-    const newSpec = { paths: { "/users": { get: { parameters: [{ name: "page", required: true }] } } } };
+    const newSpec = {
+      paths: { "/users": { get: { parameters: [{ name: "page", required: true }] } } },
+    };
     const diff = computeAPIDiff(oldSpec, newSpec);
     expect(diff.hasBreaking).toBe(true);
   });
@@ -69,10 +71,7 @@ describe("generateDiffReport", () => {
   });
 
   test("includes breaking warning", () => {
-    const diff = computeAPIDiff(
-      { paths: { "/users": { get: {} } } },
-      { paths: {} },
-    );
+    const diff = computeAPIDiff({ paths: { "/users": { get: {} } } }, { paths: {} });
     const report = generateDiffReport(diff);
     expect(report).toContain("Breaking changes");
   });

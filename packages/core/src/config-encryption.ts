@@ -23,7 +23,10 @@ export function createConfigEncryptor(options: ConfigEncryptionOptions): ConfigE
   const keyBytes = new TextEncoder().encode(options.key.padEnd(32, "0").slice(0, 32));
 
   async function getKey(): Promise<CryptoKey> {
-    return crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+    return crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, [
+      "encrypt",
+      "decrypt",
+    ]);
   }
 
   return {

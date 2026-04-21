@@ -30,8 +30,7 @@ export function errorHandler(logger: Logger): Middleware {
     try {
       return await next();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error";
+      const message = error instanceof Error ? error.message : "Unknown error";
 
       logger.error("unhandled error", {
         method: ctx.method,
@@ -39,10 +38,7 @@ export function errorHandler(logger: Logger): Middleware {
         error: message,
       });
 
-      return ctx.json(
-        { error: "INTERNAL_ERROR", message: "Internal Server Error" },
-        500,
-      );
+      return ctx.json({ error: "INTERNAL_ERROR", message: "Internal Server Error" }, 500);
     }
   };
 }

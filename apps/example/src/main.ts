@@ -1,10 +1,11 @@
-// Aeron Example App — 展示框架核心功能
-import { createApp, createRouter, NotFoundError, UnauthorizedError } from "@aeron/core";
-import { createLogger, createHealthCheck } from "@aeron/observability";
-import { createCache, createMemoryAdapter } from "@aeron/cache";
-import { createEventBus, defineEvent } from "@aeron/events";
 import { createJWT, createRBAC } from "@aeron/auth";
-import { requestLogger, errorHandler } from "./middleware";
+import { createCache, createMemoryAdapter } from "@aeron/cache";
+// Aeron Example App — 展示框架核心功能
+import { NotFoundError, UnauthorizedError, createApp } from "@aeron/core";
+import { createEventBus, defineEvent } from "@aeron/events";
+import { createHealthCheck, createLogger } from "@aeron/observability";
+import { createOpenAPIGenerator, createScalarUIPlugin, syncRouterToOpenAPI } from "@aeron/openapi";
+import { errorHandler, requestLogger } from "./middleware";
 
 // ── 基础设施 ────────────────────────────────────────
 
@@ -57,39 +58,45 @@ const MOCK_USERS: User[] = [
   { id: "3", name: "Charlie", email: "charlie@example.com", role: "viewer" },
 ];
 
-// ── 路由 ────────────────────────────────────────────
+// ── 启动应用 ─────────────────────────────────────────
 
-const router = createRouter();
+const app = createApp({ port: 3133 });
 
-// 欢迎页
-router.get("/", async (ctx) =>
-  ctx.json({ name: "Aeron Example", version: "0.1.0" }),
-);
+// 注册全局中间件
+app.use(errorHandler(logger));
+app.use(requestLogger(logger));
 
-// 健康检查
-router.get("/health/live", async (ctx) => ctx.json(health.live()));
-
-router.get("/health/ready", async (ctx) => {
+// 直接使用 app.router 定义路由（避免外部 router 重复注册）
+app.router.get("/", async (ctx) => ctx.json({ name: "Aeron Example", version: "0.1.0" }));
+app.router.get("/health/live", async (ctx) => ctx.json(health.live()));
+app.router.get("/health/ready", async (ctx) => {
   const status = await health.ready();
   return ctx.json(status, status.status === "ok" ? 200 : 503);
 });
 
+// OpenAPI 文档
+const openAPIGen = createOpenAPIGenerator();
+openAPIGen.setInfo({
+  title: "Aeron Example API",
+  version: "0.1.0",
+  description: "Example API for Aeron framework",
+});
+openAPIGen.addServer({ url: "http://localhost:3133", description: "Local development server" });
+
+// Scalar UI 插件
+app.use(createScalarUIPlugin({ specUrl: "/openapi.json", title: "Aeron Example API Docs" }));
+
 // API 路由组
-router.group("/api", (api) => {
-  // 用户列表
+app.router.group("/api", (api) => {
   api.get("/users", async (ctx) => {
-    // 尝试从缓存读取
     const cached = await cache.get<User[]>("users:list");
     if (cached) {
       return ctx.json({ users: cached, source: "cache" });
     }
-
-    // 缓存未命中，使用 mock 数据
     await cache.set("users:list", MOCK_USERS, { ttl: 60 });
     return ctx.json({ users: MOCK_USERS, source: "store" });
   });
 
-  // 用户详情
   api.get("/users/:id", async (ctx) => {
     const user = MOCK_USERS.find((u) => u.id === ctx.params.id);
     if (!user) {
@@ -98,52 +105,33 @@ router.group("/api", (api) => {
     return ctx.json({ user });
   });
 
-  // 登录（返回 JWT）
   api.post("/auth/login", async (ctx) => {
     const body = (await ctx.request.json()) as {
       email?: string;
       password?: string;
     };
-
     if (!body.email || !body.password) {
       return ctx.json({ error: "email and password required" }, 400);
     }
-
     const user = MOCK_USERS.find((u) => u.email === body.email);
     if (!user) {
       throw new UnauthorizedError("Invalid credentials");
     }
-
-    // 示例中不验证密码，仅演示 JWT 签发
-    const token = await jwt.sign(
-      { sub: user.id, role: user.role },
-      JWT_SECRET,
-      { expiresIn: 3600 },
-    );
-
-    // 发布登录事件
+    const token = await jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
+      expiresIn: 3600,
+    });
     await bus.emit(userLoggedIn, {
       userId: user.id,
       at: new Date().toISOString(),
     });
-
     return ctx.json({ token, user: { id: user.id, name: user.name, role: user.role } });
   });
 });
 
-// ── 启动应用 ─────────────────────────────────────────
+// 同步所有已注册路由到 OpenAPI 文档
+syncRouterToOpenAPI(app.router, openAPIGen);
 
-const app = createApp({ port: 3000 });
+app.router.get("/openapi.json", async (ctx) => ctx.json(openAPIGen.generate()));
 
-// 注册全局中间件
-app.use(errorHandler(logger));
-app.use(requestLogger(logger));
-
-// 挂载路由
-for (const route of router.routes()) {
-  const method = route.method.toLowerCase() as "get" | "post" | "put" | "patch" | "delete";
-  app.router[method](route.path, route.handler, ...route.middleware);
-}
-
-logger.info("starting Aeron example app", { port: 3000 });
-app.listen();
+logger.info("starting Aeron example app", { port: 3133 });
+await app.listen();

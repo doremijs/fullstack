@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createParamValidator, paramConstraints } from "../param-constraint";
 
 describe("paramConstraints", () => {
@@ -41,10 +41,7 @@ describe("createParamValidator", () => {
 
   test("reports errors for invalid params", () => {
     const validator = createParamValidator();
-    const result = validator.validate(
-      { id: "abc" },
-      { id: "id" },
-    );
+    const result = validator.validate({ id: "abc" }, { id: "id" });
     expect(result.valid).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]!.param).toBe("id");
@@ -72,10 +69,7 @@ describe("createParamValidator", () => {
 
   test("skips undefined params", () => {
     const validator = createParamValidator();
-    const result = validator.validate(
-      {},
-      { id: "id" },
-    );
+    const result = validator.validate({}, { id: "id" });
     expect(result.valid).toBe(true);
   });
 

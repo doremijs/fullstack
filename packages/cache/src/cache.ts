@@ -40,7 +40,11 @@ function createTaggedCache(adapter: CacheAdapter, tagNames: string[]): TaggedCac
     return JSON.parse(raw) as T;
   }
 
-  async function set(key: string, value: unknown, options?: Omit<CacheOptions, "tags">): Promise<void> {
+  async function set(
+    key: string,
+    value: unknown,
+    options?: Omit<CacheOptions, "tags">,
+  ): Promise<void> {
     await adapter.set(key, JSON.stringify(value), options?.ttl);
     // 将 key 关联到每个 tag
     for (const tag of tagNames) {

@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { xssProtection, escapeHTML, detectXSS } from "../../middlewares/xss";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../../context";
+import { detectXSS, escapeHTML, xssProtection } from "../../middlewares/xss";
 
 describe("escapeHTML", () => {
   test("escapes < and >", () => {
@@ -31,7 +31,7 @@ describe("detectXSS", () => {
   });
 
   test("detects event handler", () => {
-    expect(detectXSS('onerror=alert(1)')).toBe(true);
+    expect(detectXSS("onerror=alert(1)")).toBe(true);
   });
 
   test("detects iframe", () => {

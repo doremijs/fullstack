@@ -16,7 +16,7 @@ async function findFreePort(): Promise<number> {
       return new Response("");
     },
   });
-  const { port } = server;
+  const port = server.port ?? 0;
   server.stop(true);
   return port;
 }

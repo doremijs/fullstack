@@ -55,9 +55,7 @@ describe("createDBIsolation", () => {
       executor: async () => {},
     });
 
-    expect(() => isolation.savepoint("'; DROP TABLE --")).toThrow(
-      /Invalid savepoint name/,
-    );
+    expect(() => isolation.savepoint("'; DROP TABLE --")).toThrow(/Invalid savepoint name/);
   });
 
   test("rollbackTo rejects invalid names", async () => {
@@ -65,9 +63,7 @@ describe("createDBIsolation", () => {
       executor: async () => {},
     });
 
-    expect(() => isolation.rollbackTo("bad name")).toThrow(
-      /Invalid savepoint name/,
-    );
+    expect(() => isolation.rollbackTo("bad name")).toThrow(/Invalid savepoint name/);
   });
 
   test("full transaction lifecycle", async () => {

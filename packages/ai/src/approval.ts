@@ -22,7 +22,11 @@ export interface ApprovalOptions {
 }
 
 export interface ApprovalManager {
-  request(toolName: string, params: Record<string, unknown>, requestedBy: string): Promise<ApprovalRequest>;
+  request(
+    toolName: string,
+    params: Record<string, unknown>,
+    requestedBy: string,
+  ): Promise<ApprovalRequest>;
   approve(id: string, reviewedBy: string, reason?: string): ApprovalRequest | null;
   reject(id: string, reviewedBy: string, reason?: string): ApprovalRequest | null;
   getStatus(id: string): ApprovalRequest | null;

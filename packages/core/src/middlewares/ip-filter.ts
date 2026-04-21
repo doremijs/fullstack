@@ -30,7 +30,7 @@ function matchIP(ip: string, pattern: string): boolean {
   }
   // 通配符匹配
   if (pattern.includes("*")) {
-    const regex = new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*/g, "\\d+") + "$");
+    const regex = new RegExp(`^${pattern.replace(/\./g, "\\.").replace(/\*/g, "\\d+")}$`);
     return regex.test(ip);
   }
   return ip === pattern;
@@ -63,12 +63,7 @@ function ipToNumber(ip: string): number | null {
 }
 
 export function ipFilter(options: IPFilterOptions = {}): Middleware {
-  const {
-    allowlist,
-    denylist,
-    getIP = defaultGetIP,
-    statusCode = 403,
-  } = options;
+  const { allowlist, denylist, getIP = defaultGetIP, statusCode = 403 } = options;
 
   return async (ctx, next) => {
     const ip = getIP(ctx.request);
@@ -76,10 +71,10 @@ export function ipFilter(options: IPFilterOptions = {}): Middleware {
     if (!ip) {
       // 无法获取 IP 时，allowlist 模式下拒绝
       if (allowlist && allowlist.length > 0) {
-        return new Response(
-          JSON.stringify({ error: "FORBIDDEN", message: "Access denied" }),
-          { status: statusCode, headers: { "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ error: "FORBIDDEN", message: "Access denied" }), {
+          status: statusCode,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       return next();
     }
@@ -88,10 +83,10 @@ export function ipFilter(options: IPFilterOptions = {}): Middleware {
     if (denylist && denylist.length > 0) {
       for (const pattern of denylist) {
         if (matchIP(ip, pattern)) {
-          return new Response(
-            JSON.stringify({ error: "FORBIDDEN", message: "Access denied" }),
-            { status: statusCode, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ error: "FORBIDDEN", message: "Access denied" }), {
+            status: statusCode,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       }
     }
@@ -106,10 +101,10 @@ export function ipFilter(options: IPFilterOptions = {}): Middleware {
         }
       }
       if (!allowed) {
-        return new Response(
-          JSON.stringify({ error: "FORBIDDEN", message: "Access denied" }),
-          { status: statusCode, headers: { "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ error: "FORBIDDEN", message: "Access denied" }), {
+          status: statusCode,
+          headers: { "Content-Type": "application/json" },
+        });
       }
     }
 

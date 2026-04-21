@@ -87,7 +87,7 @@ describe("createAuditLog", () => {
 
   it("should query by time range", async () => {
     const log = createAuditLog();
-    const before = Date.now();
+    const _before = Date.now();
     await log.append({ actor: "alice", action: "a1", resource: "r", result: "success" });
     await Bun.sleep(10);
     const mid = Date.now();

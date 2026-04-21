@@ -28,7 +28,9 @@ async function ensureMigrationsTable(executor: SqlExecutor): Promise<void> {
   await executor(CREATE_TABLE_SQL);
 }
 
-async function getExecutedMigrations(executor: SqlExecutor): Promise<Array<{ name: string; executed_at: string }>> {
+async function getExecutedMigrations(
+  executor: SqlExecutor,
+): Promise<Array<{ name: string; executed_at: string }>> {
   const rows = await executor(
     `SELECT name, executed_at FROM ${MIGRATIONS_TABLE} ORDER BY name ASC`,
   );
@@ -59,10 +61,7 @@ export function createMigrationRunner(executor: SqlExecutor): MigrationRunner {
           return Array.isArray(result) ? result : [];
         };
         await migration.up(wrappedExecutor);
-        await executor(
-          `INSERT INTO ${MIGRATIONS_TABLE} (name) VALUES ($1)`,
-          [migration.name],
-        );
+        await executor(`INSERT INTO ${MIGRATIONS_TABLE} (name) VALUES ($1)`, [migration.name]);
         executedList.push(migration.name);
       }
 
@@ -74,9 +73,7 @@ export function createMigrationRunner(executor: SqlExecutor): MigrationRunner {
       const executed = await getExecutedMigrations(executor);
 
       // Get last N executed migrations (reverse order)
-      const toRollback = executed
-        .sort((a, b) => b.name.localeCompare(a.name))
-        .slice(0, steps);
+      const toRollback = executed.sort((a, b) => b.name.localeCompare(a.name)).slice(0, steps);
 
       const rolledBack: string[] = [];
       for (const record of toRollback) {
@@ -87,10 +84,7 @@ export function createMigrationRunner(executor: SqlExecutor): MigrationRunner {
             return Array.isArray(result) ? result : [];
           };
           await migration.down(wrappedExecutor);
-          await executor(
-            `DELETE FROM ${MIGRATIONS_TABLE} WHERE name = $1`,
-            [migration.name],
-          );
+          await executor(`DELETE FROM ${MIGRATIONS_TABLE} WHERE name = $1`, [migration.name]);
           rolledBack.push(migration.name);
         }
       }
@@ -101,9 +95,7 @@ export function createMigrationRunner(executor: SqlExecutor): MigrationRunner {
     async status(): Promise<MigrationStatus[]> {
       await ensureMigrationsTable(executor);
       const executed = await getExecutedMigrations(executor);
-      const executedMap = new Map(
-        executed.map((r) => [r.name, new Date(r.executed_at)]),
-      );
+      const executedMap = new Map(executed.map((r) => [r.name, new Date(r.executed_at)]));
 
       const sorted = [...migrations].sort((a, b) => a.name.localeCompare(b.name));
       return sorted.map((m) => ({

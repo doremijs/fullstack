@@ -158,7 +158,12 @@ export function createScaffoldCommand(): Command {
     description: "Create a new Aeron project",
     options: [
       { name: "name", alias: "n", description: "Project name", required: true },
-      { name: "template", alias: "t", description: "Template (minimal | full)", default: "minimal" },
+      {
+        name: "template",
+        alias: "t",
+        description: "Template (minimal | full)",
+        default: "minimal",
+      },
       { name: "directory", alias: "d", description: "Target directory" },
     ],
     async action(args) {

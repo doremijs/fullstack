@@ -2,7 +2,7 @@
 // Router, Context, Middleware, Lifecycle, Config, Error handling
 
 export { createApp } from "./app";
-export type { AeronApp, AppConfig } from "./app";
+export type { AeronApp, AppConfig, AppUrl } from "./app";
 
 export { createRouter } from "./router";
 export type {
@@ -129,20 +129,27 @@ export type { IPFilterOptions } from "./middlewares/ip-filter";
 export { httpsEnforce } from "./middlewares/https";
 export type { HTTPSOptions } from "./middlewares/https";
 
-export { createAutoBinder } from "./auto-bind";
-export type { AutoBinder, AutoBindOptions, BindableRoute } from "./auto-bind";
+export { bindJSON, bindForm, bindQuery } from "./auto-bind";
+export type { BindOptions, BindResult } from "./auto-bind";
 
-export { createInterceptorChain } from "./interceptor";
-export type { Interceptor, Filter, InterceptorChain } from "./interceptor";
+export { createPipeline } from "./interceptor";
+export type { Interceptor, Filter, Pipeline } from "./interceptor";
 
 export { createPoolManager } from "./pool-manager";
-export type { PoolManager, PoolConfig, PoolStats } from "./pool-manager";
+export type { PoolManager, Disposable } from "./pool-manager";
 
 export { createInstanceCoordinator } from "./instance-coordinator";
-export type { InstanceCoordinator, InstanceInfo } from "./instance-coordinator";
+export type { InstanceCoordinator, InstanceState } from "./instance-coordinator";
 
-export { createGRPCRouter } from "./grpc";
-export type { GRPCRouter, GRPCService, GRPCMethod } from "./grpc";
+export { createGRPCServer, GRPCError, GRPCStatusCode } from "./grpc";
+export type {
+  GRPCServer,
+  ServiceDefinition,
+  MethodDefinition,
+  GRPCHandler,
+  GRPCContext,
+  GRPCStatus,
+} from "./grpc";
 
 export { createRPCRouter, createRPCClient } from "./rpc";
 export type { RPCRouter, RPCClient, RPCMethod } from "./rpc";
@@ -154,10 +161,10 @@ export { createMemoryController } from "./memory";
 export type { MemoryController, MemoryInfo, MemoryControlOptions } from "./memory";
 
 export { createPluginSandbox } from "./plugin-sandbox";
-export type { PluginSandbox, SandboxOptions, SandboxResult } from "./plugin-sandbox";
+export type { PluginSandbox, PluginInfo, PluginInitResult, IsolatedPlugin } from "./plugin-sandbox";
 
 export { createPluginRegistry } from "./plugin-registry";
-export type { PluginRegistry, PluginManifest, PluginEntry } from "./plugin-registry";
+export type { PluginRegistry, PluginRegistryEntry, PluginManifest } from "./plugin-registry";
 
 export { parseYAML, stringifyYAML, loadYAMLConfig } from "./yaml-config";
 

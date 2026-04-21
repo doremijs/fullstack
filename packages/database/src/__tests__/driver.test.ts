@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createDriverAdapter } from "../driver";
 
 describe("createDriverAdapter", () => {
@@ -51,7 +51,8 @@ describe("createDriverAdapter", () => {
     test("driver name", () => expect(ms.driver).toBe("mssql"));
     test("placeholder", () => expect(ms.placeholder(1)).toBe("@p1"));
     test("quote", () => expect(ms.quote("id")).toBe("[id]"));
-    test("limitOffset", () => expect(ms.limitOffset(10, 20)).toContain("OFFSET 20 ROWS FETCH NEXT 10"));
+    test("limitOffset", () =>
+      expect(ms.limitOffset(10, 20)).toContain("OFFSET 20 ROWS FETCH NEXT 10"));
     test("returning", () => expect(ms.returning(["id"])).toContain("OUTPUT"));
     test("now", () => expect(ms.now()).toBe("GETDATE()"));
     test("upsert", () => {

@@ -1,9 +1,9 @@
 // @aeron/core - 多租户中间件测试
 
 import { describe, expect, it } from "bun:test";
-import { createTenantMiddleware } from "../middlewares/tenant";
 import { createContext } from "../context";
 import type { NextFunction } from "../middleware";
+import { createTenantMiddleware } from "../middlewares/tenant";
 
 function makeRequest(url: string, headers?: Record<string, string>): Request {
   return new Request(url, { headers });
@@ -17,9 +17,7 @@ describe("createTenantMiddleware", () => {
   describe("header strategy", () => {
     it("should resolve tenant from default header", async () => {
       const { middleware } = createTenantMiddleware({ strategy: "header" });
-      const ctx = createContext(
-        makeRequest("http://localhost/api", { "x-tenant-id": "tenant1" }),
-      );
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-tenant-id": "tenant1" }));
       const res = await middleware(ctx, makeNext());
       expect(res.status).toBe(200);
       expect(ctx.tenant).toEqual({ tenantId: "tenant1" });
@@ -30,9 +28,7 @@ describe("createTenantMiddleware", () => {
         strategy: "header",
         headerName: "x-org-id",
       });
-      const ctx = createContext(
-        makeRequest("http://localhost/api", { "x-org-id": "org42" }),
-      );
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-org-id": "org42" }));
       const res = await middleware(ctx, makeNext());
       expect(res.status).toBe(200);
       expect(ctx.tenant).toEqual({ tenantId: "org42" });
@@ -51,9 +47,7 @@ describe("createTenantMiddleware", () => {
   describe("subdomain strategy", () => {
     it("should resolve tenant from subdomain", async () => {
       const { middleware } = createTenantMiddleware({ strategy: "subdomain" });
-      const ctx = createContext(
-        makeRequest("http://tenant1.example.com/api"),
-      );
+      const ctx = createContext(makeRequest("http://tenant1.example.com/api"));
       const res = await middleware(ctx, makeNext());
       expect(res.status).toBe(200);
       expect(ctx.tenant).toEqual({ tenantId: "tenant1" });
@@ -68,9 +62,7 @@ describe("createTenantMiddleware", () => {
 
     it("should handle subdomain with port", async () => {
       const { middleware } = createTenantMiddleware({ strategy: "subdomain" });
-      const ctx = createContext(
-        makeRequest("http://acme.example.com:3000/api"),
-      );
+      const ctx = createContext(makeRequest("http://acme.example.com:3000/api"));
       const res = await middleware(ctx, makeNext());
       expect(res.status).toBe(200);
       expect(ctx.tenant).toEqual({ tenantId: "acme" });
@@ -80,9 +72,7 @@ describe("createTenantMiddleware", () => {
   describe("path strategy", () => {
     it("should resolve tenant from first path segment", async () => {
       const { middleware } = createTenantMiddleware({ strategy: "path" });
-      const ctx = createContext(
-        makeRequest("http://localhost/tenant1/api/users"),
-      );
+      const ctx = createContext(makeRequest("http://localhost/tenant1/api/users"));
       const res = await middleware(ctx, makeNext());
       expect(res.status).toBe(200);
       expect(ctx.tenant).toEqual({ tenantId: "tenant1" });
@@ -124,9 +114,7 @@ describe("createTenantMiddleware", () => {
   describe("response header", () => {
     it("should attach x-tenant-id header to response", async () => {
       const { middleware } = createTenantMiddleware({ strategy: "header" });
-      const ctx = createContext(
-        makeRequest("http://localhost/api", { "x-tenant-id": "t1" }),
-      );
+      const ctx = createContext(makeRequest("http://localhost/api", { "x-tenant-id": "t1" }));
       const res = await middleware(ctx, makeNext());
       expect(res.headers.get("x-tenant-id")).toBe("t1");
     });

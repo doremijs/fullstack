@@ -23,11 +23,7 @@ export interface TestClient {
   setHeaders(headers: Record<string, string>): TestClient;
 }
 
-function buildUrl(
-  baseUrl: string,
-  path: string,
-  query?: Record<string, string>,
-): string {
+function buildUrl(baseUrl: string, path: string, query?: Record<string, string>): string {
   const url = new URL(path, baseUrl);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -91,8 +87,7 @@ export function createTestClient(baseUrl: string): TestClient {
       } else {
         init.body = JSON.stringify(body);
         if (!headers["content-type"] && !headers["Content-Type"]) {
-          (init.headers as Record<string, string>)["content-type"] =
-            "application/json";
+          (init.headers as Record<string, string>)["content-type"] = "application/json";
         }
       }
     }

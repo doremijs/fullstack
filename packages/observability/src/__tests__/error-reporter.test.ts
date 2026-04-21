@@ -1,5 +1,10 @@
-import { describe, test, expect } from "bun:test";
-import { createErrorReporter, createSentryChannel, createDingTalkChannel, createWebhookChannel } from "../error-reporter";
+import { describe, expect, test } from "bun:test";
+import {
+  createDingTalkChannel,
+  createErrorReporter,
+  createSentryChannel,
+  createWebhookChannel,
+} from "../error-reporter";
 import type { ErrorChannel, ErrorReport } from "../error-reporter";
 
 function mockChannel(name: string): ErrorChannel & { reports: ErrorReport[] } {
@@ -7,7 +12,9 @@ function mockChannel(name: string): ErrorChannel & { reports: ErrorReport[] } {
   return {
     name,
     reports,
-    async report(error: ErrorReport) { reports.push(error); },
+    async report(error: ErrorReport) {
+      reports.push(error);
+    },
   };
 }
 
@@ -54,7 +61,11 @@ describe("createErrorReporter", () => {
 
   test("environment and serviceName are set", async () => {
     const ch = mockChannel("ch");
-    const reporter = createErrorReporter({ channels: [ch], environment: "prod", serviceName: "api" });
+    const reporter = createErrorReporter({
+      channels: [ch],
+      environment: "prod",
+      serviceName: "api",
+    });
     await reporter.capture("err");
     expect(ch.reports[0].environment).toBe("prod");
     expect(ch.reports[0].serviceName).toBe("api");
@@ -82,7 +93,9 @@ describe("createErrorReporter", () => {
   test("channel failure is silenced", async () => {
     const failChannel: ErrorChannel = {
       name: "fail",
-      async report() { throw new Error("channel error"); },
+      async report() {
+        throw new Error("channel error");
+      },
     };
     const ch = mockChannel("ch");
     const reporter = createErrorReporter({ channels: [failChannel, ch] });

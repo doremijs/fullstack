@@ -64,9 +64,7 @@ function generatePrefix(): string {
 
 export function createApiKeyManager(): ApiKeyManager {
   return {
-    async generate(
-      metadata?: Record<string, unknown>,
-    ): Promise<{
+    async generate(metadata?: Record<string, unknown>): Promise<{
       key: string;
       hash: string;
       metadata?: Record<string, unknown>;

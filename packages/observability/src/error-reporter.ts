@@ -29,7 +29,11 @@ export interface ErrorReport {
 }
 
 export interface ErrorReporter {
-  capture(error: Error | string, context?: Record<string, unknown>, level?: ErrorReport["level"]): Promise<void>;
+  capture(
+    error: Error | string,
+    context?: Record<string, unknown>,
+    level?: ErrorReport["level"],
+  ): Promise<void>;
   captureWarning(message: string, context?: Record<string, unknown>): Promise<void>;
   captureFatal(error: Error | string, context?: Record<string, unknown>): Promise<void>;
 }
@@ -48,7 +52,11 @@ export function createErrorReporter(config: ErrorReporterConfig): ErrorReporter 
     return config.ignorePatterns?.some((p) => p.test(message)) ?? false;
   }
 
-  async function report(error: Error | string, context?: Record<string, unknown>, level: ErrorReport["level"] = "error"): Promise<void> {
+  async function report(
+    error: Error | string,
+    context?: Record<string, unknown>,
+    level: ErrorReport["level"] = "error",
+  ): Promise<void> {
     if (!shouldReport()) return;
 
     const message = error instanceof Error ? error.message : error;
@@ -56,23 +64,15 @@ export function createErrorReporter(config: ErrorReporterConfig): ErrorReporter 
 
     const report: ErrorReport = {
       message,
-      stack: error instanceof Error ? error.stack : undefined,
       level,
       timestamp: Date.now(),
-      context,
-      environment: config.environment,
-      serviceName: config.serviceName,
     };
+    if (error instanceof Error && error.stack) report.stack = error.stack;
+    if (context) report.context = context;
+    if (config.environment) report.environment = config.environment;
+    if (config.serviceName) report.serviceName = config.serviceName;
 
-    const results = await Promise.allSettled(
-      config.channels.map((ch) => ch.report(report)),
-    );
-    // 静默处理通道发送失败
-    for (const r of results) {
-      if (r.status === "rejected") {
-        console.error(`Error channel failed: ${r.reason}`);
-      }
-    }
+    await Promise.allSettled(config.channels.map((ch) => ch.report(report)));
   }
 
   return {

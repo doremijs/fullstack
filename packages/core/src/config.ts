@@ -9,7 +9,9 @@ export interface ConfigFieldDef {
   sensitive?: boolean;
 }
 
-export type ConfigSchema = Record<string, ConfigFieldDef | ConfigSchema>;
+export interface ConfigSchema {
+  [key: string]: ConfigFieldDef | ConfigSchema;
+}
 
 export interface ConfigLoaderOptions {
   basePath?: string;
@@ -51,18 +53,14 @@ function coerceValue(
     case "number": {
       const num = Number(raw);
       if (Number.isNaN(num)) {
-        throw new Error(
-          `Config "${key}": cannot coerce "${raw}" to number`,
-        );
+        throw new Error(`Config "${key}": cannot coerce "${raw}" to number`);
       }
       return num;
     }
     case "boolean": {
       if (raw === "true" || raw === "1") return true;
       if (raw === "false" || raw === "0") return false;
-      throw new Error(
-        `Config "${key}": cannot coerce "${raw}" to boolean`,
-      );
+      throw new Error(`Config "${key}": cannot coerce "${raw}" to boolean`);
     }
   }
 }
@@ -152,10 +150,7 @@ export type ConfigValue<T extends ConfigSchema = ConfigSchema> = {
 
 export function createConfig<T extends ConfigSchema>(
   schema: T,
-  env: Record<string, string | undefined> = process.env as Record<
-    string,
-    string | undefined
-  >,
+  env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
 ): ConfigValue<T> {
   return resolveSchema(schema, env) as ConfigValue<T>;
 }
@@ -248,7 +243,7 @@ export async function loadConfig<T extends ConfigSchema>(
   env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
 ): Promise<ConfigValue<T>> {
   const basePath = options?.basePath ?? "config";
-  const envName = options?.env ?? env["NODE_ENV"] ?? "development";
+  const envName = options?.env ?? env.NODE_ENV ?? "development";
 
   // 1. 加载 base.json
   const baseConfig = (await loadJsonFile(`${basePath}/base.json`)) ?? {};
@@ -271,7 +266,7 @@ export function securityPrecheck(
 ): SecurityCheckResult {
   const errors: string[] = [];
   const minLen = options.minSecretLength ?? 32;
-  const isProduction = env["NODE_ENV"] === "production";
+  const isProduction = env.NODE_ENV === "production";
 
   // 检查必需的 secret
   if (options.requiredSecrets) {
@@ -280,16 +275,14 @@ export function securityPrecheck(
       if (value === undefined || value === "") {
         errors.push(`Missing required secret: ${name}`);
       } else if (value.length < minLen) {
-        errors.push(
-          `Secret ${name} is too short (${value.length} < ${minLen})`,
-        );
+        errors.push(`Secret ${name} is too short (${value.length} < ${minLen})`);
       }
     }
   }
 
   // 生产环境检查 HTTPS
   if (options.requireHTTPS && isProduction) {
-    const protocol = env["PROTOCOL"] ?? env["APP_PROTOCOL"] ?? "";
+    const protocol = env.PROTOCOL ?? env.APP_PROTOCOL ?? "";
     if (protocol !== "https") {
       errors.push("HTTPS is required in production");
     }
@@ -297,7 +290,7 @@ export function securityPrecheck(
 
   // 生产环境禁止 DEBUG
   if (options.disallowDebug && isProduction) {
-    const debug = env["DEBUG"];
+    const debug = env.DEBUG;
     if (debug === "true" || debug === "1") {
       errors.push("DEBUG must not be enabled in production");
     }
@@ -325,11 +318,7 @@ export function sanitizeConfig(
         result[key] = value;
       }
     } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-      result[key] = sanitizeConfig(
-        def as ConfigSchema,
-        value as Record<string, unknown>,
-        mask,
-      );
+      result[key] = sanitizeConfig(def as ConfigSchema, value as Record<string, unknown>, mask);
     } else {
       result[key] = value;
     }

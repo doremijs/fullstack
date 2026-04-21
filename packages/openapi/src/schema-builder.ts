@@ -112,10 +112,7 @@ export function schemaBoolean(options?: SchemaBooleanOptions): OpenAPISchema {
   return schema;
 }
 
-export function schemaArray(
-  items: OpenAPISchema,
-  options?: SchemaArrayOptions,
-): OpenAPISchema {
+export function schemaArray(items: OpenAPISchema, options?: SchemaArrayOptions): OpenAPISchema {
   const schema: OpenAPISchema = { type: "array", items };
   if (options) {
     if (options.description !== undefined) schema.description = options.description;
@@ -138,10 +135,7 @@ export function schemaObject(
   return schema;
 }
 
-export function schemaEnum(
-  values: unknown[],
-  options?: SchemaEnumOptions,
-): OpenAPISchema {
+export function schemaEnum(values: unknown[], options?: SchemaEnumOptions): OpenAPISchema {
   const schema: OpenAPISchema = { enum: values };
   if (options) {
     if (options.description !== undefined) schema.description = options.description;

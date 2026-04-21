@@ -1,9 +1,7 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createUploadValidator, sanitizeFilename } from "../middlewares/upload";
 
-function makeFileRequest(
-  files: Array<{ name: string; content: string; type: string }>,
-): Request {
+function makeFileRequest(files: Array<{ name: string; content: string; type: string }>): Request {
   const formData = new FormData();
   for (const f of files) {
     const blob = new Blob([f.content], { type: f.type });
@@ -47,9 +45,7 @@ describe("createUploadValidator", () => {
       allowedMimeTypes: ["image/png"],
       allowedExtensions: ["png"],
     });
-    const req = makeFileRequest([
-      { name: "photo.png", content: "PNG data", type: "image/png" },
-    ]);
+    const req = makeFileRequest([{ name: "photo.png", content: "PNG data", type: "image/png" }]);
     const result = await validator.validate(req);
     expect(result.valid).toBe(true);
     expect(result.files).toHaveLength(1);
@@ -58,9 +54,7 @@ describe("createUploadValidator", () => {
 
   test("rejects double extension (e.g., file.php.jpg)", async () => {
     const validator = createUploadValidator();
-    const req = makeFileRequest([
-      { name: "shell.php.jpg", content: "data", type: "image/jpeg" },
-    ]);
+    const req = makeFileRequest([{ name: "shell.php.jpg", content: "data", type: "image/jpeg" }]);
     const result = await validator.validate(req);
     expect(result.valid).toBe(false);
     expect(result.errors[0]).toContain("Double extension");
@@ -68,9 +62,7 @@ describe("createUploadValidator", () => {
 
   test("rejects null bytes in filename", async () => {
     const validator = createUploadValidator();
-    const req = makeFileRequest([
-      { name: "file\0.txt", content: "data", type: "text/plain" },
-    ]);
+    const req = makeFileRequest([{ name: "file\0.txt", content: "data", type: "text/plain" }]);
     const result = await validator.validate(req);
     expect(result.valid).toBe(false);
     expect(result.errors[0]).toContain("Null byte");

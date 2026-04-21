@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createSandbox } from "../sandbox";
 
 describe("Sandbox", () => {
@@ -68,9 +68,9 @@ describe("Sandbox", () => {
 
   test("wrapExecution 权限拒绝", async () => {
     const sandbox = createSandbox({ allowedTools: ["read"] });
-    await expect(
-      sandbox.wrapExecution("write", async () => "result"),
-    ).rejects.toThrow("Permission denied");
+    await expect(sandbox.wrapExecution("write", async () => "result")).rejects.toThrow(
+      "Permission denied",
+    );
   });
 
   test("wrapExecution 超时", async () => {

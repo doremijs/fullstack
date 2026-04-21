@@ -1,9 +1,15 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createTransactionManager } from "../transaction";
 
-function mockExecutor(): { executor: (sql: string, params?: unknown[]) => Promise<unknown[]>; queries: string[] } {
+function mockExecutor(): {
+  executor: (sql: string, params?: unknown[]) => Promise<unknown[]>;
+  queries: string[];
+} {
   const queries: string[] = [];
-  const executor = async (sql: string) => { queries.push(sql); return []; };
+  const executor = async (sql: string) => {
+    queries.push(sql);
+    return [];
+  };
   return { executor, queries };
 }
 
@@ -112,7 +118,11 @@ describe("createTransactionManager", () => {
     const { executor } = mockExecutor();
     const tm = createTransactionManager(executor);
     await tm.begin();
-    await expect(tm.nested(async () => { throw new Error("fail"); })).rejects.toThrow("fail");
+    await expect(
+      tm.nested(async () => {
+        throw new Error("fail");
+      }),
+    ).rejects.toThrow("fail");
     await tm.commit();
   });
 });

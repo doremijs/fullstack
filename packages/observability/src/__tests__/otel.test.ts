@@ -1,5 +1,5 @@
-import { describe, test, expect, mock } from "bun:test";
-import { createTracer, createConsoleExporter } from "../otel";
+import { describe, expect, test } from "bun:test";
+import { createConsoleExporter, createTracer } from "../otel";
 
 describe("createTracer", () => {
   test("startSpan creates span with traceId and spanId", () => {
@@ -42,7 +42,11 @@ describe("createTracer", () => {
     const exported: unknown[] = [];
     const tracer = createTracer({
       serviceName: "test",
-      exporter: { export: async (spans) => { exported.push(...spans); } },
+      exporter: {
+        export: async (spans) => {
+          exported.push(...spans);
+        },
+      },
     });
     const span = tracer.startSpan("op");
     tracer.endSpan(span);
@@ -80,14 +84,24 @@ describe("createConsoleExporter", () => {
   test("exports spans to console", async () => {
     const logs: string[] = [];
     const origLog = console.log;
-    console.log = (...args: unknown[]) => { logs.push(String(args[0])); };
+    console.log = (...args: unknown[]) => {
+      logs.push(String(args[0]));
+    };
     try {
       const exporter = createConsoleExporter();
-      await exporter.export([{
-        traceId: "abc", spanId: "def", name: "test",
-        kind: "internal", startTime: 1000, endTime: 1050,
-        status: "ok", attributes: {}, events: [],
-      }]);
+      await exporter.export([
+        {
+          traceId: "abc",
+          spanId: "def",
+          name: "test",
+          kind: "internal",
+          startTime: 1000,
+          endTime: 1050,
+          status: "ok",
+          attributes: {},
+          events: [],
+        },
+      ]);
       expect(logs.length).toBe(1);
       expect(logs[0]).toContain("[TRACE]");
     } finally {

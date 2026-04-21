@@ -18,7 +18,11 @@ export interface HookRegistry {
 export function createHookRegistry(): HookRegistry {
   const listeners = new Map<string, Array<{ callback: HookCallback; once: boolean }>>();
 
-  function on<T = unknown>(hookName: string, callback: HookCallback<T>, isOnce = false): () => void {
+  function on<T = unknown>(
+    hookName: string,
+    callback: HookCallback<T>,
+    isOnce = false,
+  ): () => void {
     if (!listeners.has(hookName)) {
       listeners.set(hookName, []);
     }

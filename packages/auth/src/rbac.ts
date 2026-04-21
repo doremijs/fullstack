@@ -41,25 +41,17 @@ export function createRBAC(): RBAC {
       return { name: role.name, permissions: [...role.permissions] };
     },
 
-    hasPermission(
-      roleName: string,
-      resource: string,
-      action: string,
-    ): boolean {
+    hasPermission(roleName: string, resource: string, action: string): boolean {
       const role = roles.get(roleName);
       if (!role) return false;
-      return role.permissions.some(
-        (p) => p.resource === resource && p.action === action,
-      );
+      return role.permissions.some((p) => p.resource === resource && p.action === action);
     },
 
     can(roleNames: string[], resource: string, action: string): boolean {
       return roleNames.some((roleName) => {
         const role = roles.get(roleName);
         if (!role) return false;
-        return role.permissions.some(
-          (p) => p.resource === resource && p.action === action,
-        );
+        return role.permissions.some((p) => p.resource === resource && p.action === action);
       });
     },
 

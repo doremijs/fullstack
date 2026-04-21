@@ -51,13 +51,15 @@ export function createTracer(): Tracer {
     const span: Span = {
       traceId,
       spanId,
-      parentSpanId: parentContext?.spanId,
       name,
       startTime: performance.now(),
       status: "ok",
       attributes: {},
       events: [],
     };
+    if (parentContext) {
+      span.parentSpanId = parentContext.spanId;
+    }
 
     const handle: SpanHandle = {
       context(): SpanContext {
@@ -67,11 +69,14 @@ export function createTracer(): Tracer {
         span.attributes[key] = value;
       },
       addEvent(eventName: string, attributes?: Record<string, unknown>): void {
-        span.events.push({
+        const event: { name: string; timestamp: number; attributes?: Record<string, unknown> } = {
           name: eventName,
           timestamp: performance.now(),
-          attributes,
-        });
+        };
+        if (attributes) {
+          event.attributes = attributes;
+        }
+        span.events.push(event);
       },
       setStatus(status: "ok" | "error"): void {
         span.status = status;

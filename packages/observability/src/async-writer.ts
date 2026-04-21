@@ -24,7 +24,7 @@ export interface AsyncWriter {
 export function createAsyncWriter(options: AsyncWriterOptions): AsyncWriter {
   const bufferSize = options.bufferSize ?? 100;
   const flushInterval = options.flushInterval ?? 1000;
-  let buffer: string[] = [];
+  const buffer: string[] = [];
   let timer: ReturnType<typeof setInterval> | null = null;
   let flushing = false;
 
@@ -56,7 +56,9 @@ export function createAsyncWriter(options: AsyncWriterOptions): AsyncWriter {
 
     start(): void {
       if (timer) return;
-      timer = setInterval(() => { doFlush(); }, flushInterval);
+      timer = setInterval(() => {
+        doFlush();
+      }, flushInterval);
     },
 
     async stop(): Promise<void> {

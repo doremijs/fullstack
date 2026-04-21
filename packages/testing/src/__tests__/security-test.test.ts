@@ -88,11 +88,11 @@ describe("createSecurityTestSuite", () => {
         fetch: async () => new Response("Bad Request", { status: 400 }),
       };
 
-      const result = await suite.testEndpoint(
-        mockClient,
-        "http://localhost/test",
-        { testXSS: true, testSQLi: false, testPathTraversal: false },
-      );
+      const result = await suite.testEndpoint(mockClient, "http://localhost/test", {
+        testXSS: true,
+        testSQLi: false,
+        testPathTraversal: false,
+      });
 
       expect(result.passed).toBe(true);
       expect(result.failures).toHaveLength(0);
@@ -103,11 +103,11 @@ describe("createSecurityTestSuite", () => {
         fetch: async () => new Response("OK", { status: 200 }),
       };
 
-      const result = await suite.testEndpoint(
-        mockClient,
-        "http://localhost/test",
-        { testXSS: true, testSQLi: false, testPathTraversal: false },
-      );
+      const result = await suite.testEndpoint(mockClient, "http://localhost/test", {
+        testXSS: true,
+        testSQLi: false,
+        testPathTraversal: false,
+      });
 
       expect(result.passed).toBe(false);
       expect(result.failures.length).toBeGreaterThan(0);
@@ -120,11 +120,11 @@ describe("createSecurityTestSuite", () => {
         },
       };
 
-      const result = await suite.testEndpoint(
-        mockClient,
-        "http://localhost/test",
-        { testXSS: true, testSQLi: false, testPathTraversal: false },
-      );
+      const result = await suite.testEndpoint(mockClient, "http://localhost/test", {
+        testXSS: true,
+        testSQLi: false,
+        testPathTraversal: false,
+      });
 
       expect(result.passed).toBe(false);
       expect(result.failures[0]).toContain("Connection refused");
@@ -139,10 +139,7 @@ describe("createSecurityTestSuite", () => {
         },
       };
 
-      const result = await suite.testEndpoint(
-        mockClient,
-        "http://localhost/test",
-      );
+      const result = await suite.testEndpoint(mockClient, "http://localhost/test");
 
       expect(result.passed).toBe(true);
       // XSS (10) + SQLi (10) + Path Traversal (10)
@@ -154,16 +151,12 @@ describe("createSecurityTestSuite", () => {
         fetch: async () => new Response("OK", { status: 200 }),
       };
 
-      const result = await suite.testEndpoint(
-        mockClient,
-        "http://localhost/test",
-        {
-          expectedStatus: [200],
-          testXSS: true,
-          testSQLi: false,
-          testPathTraversal: false,
-        },
-      );
+      const result = await suite.testEndpoint(mockClient, "http://localhost/test", {
+        expectedStatus: [200],
+        testXSS: true,
+        testSQLi: false,
+        testPathTraversal: false,
+      });
 
       expect(result.passed).toBe(true);
     });

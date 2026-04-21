@@ -12,9 +12,10 @@ export interface MethodDefinition {
   streaming?: "client" | "server" | "bidi";
 }
 
-export interface GRPCHandler<TReq = unknown, TRes = unknown> {
-  (request: TReq, context: GRPCContext): Promise<TRes>;
-}
+export type GRPCHandler<TReq = unknown, TRes = unknown> = (
+  request: TReq,
+  context: GRPCContext,
+) => Promise<TRes>;
 
 export interface GRPCContext {
   metadata: Map<string, string>;
@@ -25,7 +26,12 @@ export interface GRPCContext {
 export interface GRPCServer {
   addService(service: ServiceDefinition, handlers: Record<string, GRPCHandler>): void;
   getServices(): ServiceDefinition[];
-  call<TReq, TRes>(serviceName: string, methodName: string, request: TReq, metadata?: Record<string, string>): Promise<TRes>;
+  call<TReq, TRes>(
+    serviceName: string,
+    methodName: string,
+    request: TReq,
+    metadata?: Record<string, string>,
+  ): Promise<TRes>;
 }
 
 export interface GRPCStatus {
@@ -61,7 +67,10 @@ export class GRPCError extends Error {
  * 内部使用 JSON 序列化（非 protobuf），适合内部服务通信
  */
 export function createGRPCServer(): GRPCServer {
-  const services = new Map<string, { definition: ServiceDefinition; handlers: Record<string, GRPCHandler> }>();
+  const services = new Map<
+    string,
+    { definition: ServiceDefinition; handlers: Record<string, GRPCHandler> }
+  >();
 
   return {
     addService(service: ServiceDefinition, handlers: Record<string, GRPCHandler>): void {
@@ -91,12 +100,18 @@ export function createGRPCServer(): GRPCServer {
 
       const method = service.definition.methods[methodName];
       if (!method) {
-        throw new GRPCError(GRPCStatusCode.UNIMPLEMENTED, `Method not found: ${serviceName}/${methodName}`);
+        throw new GRPCError(
+          GRPCStatusCode.UNIMPLEMENTED,
+          `Method not found: ${serviceName}/${methodName}`,
+        );
       }
 
       const handler = service.handlers[methodName];
       if (!handler) {
-        throw new GRPCError(GRPCStatusCode.UNIMPLEMENTED, `Handler not found: ${serviceName}/${methodName}`);
+        throw new GRPCError(
+          GRPCStatusCode.UNIMPLEMENTED,
+          `Handler not found: ${serviceName}/${methodName}`,
+        );
       }
 
       const ctx: GRPCContext = {

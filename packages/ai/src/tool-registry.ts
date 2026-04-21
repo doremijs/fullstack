@@ -33,7 +33,10 @@ export interface ToolRegistry {
   get(name: string): ToolDefinition | undefined;
   list(): ToolDefinition[];
   execute(name: string, params: Record<string, unknown>): Promise<ToolExecutionResult>;
-  validateParams(name: string, params: Record<string, unknown>): { valid: boolean; errors: string[] };
+  validateParams(
+    name: string,
+    params: Record<string, unknown>,
+  ): { valid: boolean; errors: string[] };
   toJSONSchema(): Array<{
     name: string;
     description: string;
@@ -88,7 +91,10 @@ export function createToolRegistry(): ToolRegistry {
     return Array.from(tools.values());
   }
 
-  function validateParams(name: string, params: Record<string, unknown>): { valid: boolean; errors: string[] } {
+  function validateParams(
+    name: string,
+    params: Record<string, unknown>,
+  ): { valid: boolean; errors: string[] } {
     const tool = tools.get(name);
     if (!tool) {
       return { valid: false, errors: [`Tool "${name}" not found`] };
@@ -105,14 +111,19 @@ export function createToolRegistry(): ToolRegistry {
       }
 
       if (value !== undefined && value !== null && !validateParamType(value, param.type)) {
-        errors.push(`Parameter "${param.name}" expected type "${param.type}" but got "${typeof value}"`);
+        errors.push(
+          `Parameter "${param.name}" expected type "${param.type}" but got "${typeof value}"`,
+        );
       }
     }
 
     return { valid: errors.length === 0, errors };
   }
 
-  async function execute(name: string, params: Record<string, unknown>): Promise<ToolExecutionResult> {
+  async function execute(
+    name: string,
+    params: Record<string, unknown>,
+  ): Promise<ToolExecutionResult> {
     const tool = tools.get(name);
     if (!tool) {
       return {
@@ -143,7 +154,10 @@ export function createToolRegistry(): ToolRegistry {
       const result = await Promise.race([
         tool.handler(params),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Tool "${name}" execution timed out after ${timeout}ms`)), timeout),
+          setTimeout(
+            () => reject(new Error(`Tool "${name}" execution timed out after ${timeout}ms`)),
+            timeout,
+          ),
         ),
       ]);
 

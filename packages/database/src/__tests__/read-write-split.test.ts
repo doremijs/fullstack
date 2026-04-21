@@ -1,9 +1,18 @@
-import { describe, test, expect } from "bun:test";
-import { createReadWriteSplit, createMultiDataSource } from "../read-write-split";
+import { describe, expect, test } from "bun:test";
+import { createMultiDataSource, createReadWriteSplit } from "../read-write-split";
 
-function mockSql(label: string): { executor: (sql: string) => Promise<unknown[]>; calls: string[] } {
+function mockSql(label: string): {
+  executor: (sql: string) => Promise<unknown[]>;
+  calls: string[];
+} {
   const calls: string[] = [];
-  return { executor: async (sql: string) => { calls.push(`${label}:${sql}`); return []; }, calls };
+  return {
+    executor: async (sql: string) => {
+      calls.push(`${label}:${sql}`);
+      return [];
+    },
+    calls,
+  };
 }
 
 describe("createReadWriteSplit", () => {
@@ -57,7 +66,9 @@ describe("createReadWriteSplit", () => {
 
   test("no readers throws", () => {
     const w = mockSql("w");
-    expect(() => createReadWriteSplit({ writer: w.executor, readers: [] })).toThrow("At least one reader");
+    expect(() => createReadWriteSplit({ writer: w.executor, readers: [] })).toThrow(
+      "At least one reader",
+    );
   });
 });
 
@@ -79,7 +90,10 @@ describe("createMultiDataSource", () => {
   test("getDefault with explicit default", () => {
     const a = mockSql("a");
     const b = mockSql("b");
-    const ds = createMultiDataSource({ sources: { a: a.executor, b: b.executor }, defaultSource: "b" });
+    const ds = createMultiDataSource({
+      sources: { a: a.executor, b: b.executor },
+      defaultSource: "b",
+    });
     expect(ds.getDefault()).toBe(b.executor);
   });
 

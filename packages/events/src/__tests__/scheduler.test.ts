@@ -1,4 +1,4 @@
-import { describe, test, expect, afterEach } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { createScheduler, parseCronToInterval } from "../scheduler";
 
 describe("parseCronToInterval", () => {
@@ -60,10 +60,10 @@ describe("Scheduler", () => {
   describe("schedule with cron", () => {
     test("cron expression is converted to interval", async () => {
       scheduler = createScheduler();
-      let count = 0;
+      let _count = 0;
       // We can't wait 5 minutes, but we verify it schedules without error
       const task = scheduler.schedule({ name: "cron-task", cron: "*/5 * * * *" }, () => {
-        count++;
+        _count++;
       });
       expect(task.running).toBe(true);
       expect(task.name).toBe("cron-task");

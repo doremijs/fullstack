@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createConfigWatcher } from "../config-watch";
 
 describe("createConfigWatcher", () => {
@@ -21,7 +21,9 @@ describe("createConfigWatcher", () => {
     let changed: Record<string, unknown> | undefined;
     const watcher = createConfigWatcher({
       interval: 100000,
-      onChange: (config) => { changed = config; },
+      onChange: (config) => {
+        changed = config;
+      },
     });
     watcher.start({ port: 3000 });
     watcher.update({ port: 4000 });
@@ -34,7 +36,9 @@ describe("createConfigWatcher", () => {
     let callCount = 0;
     const watcher = createConfigWatcher({
       interval: 100000,
-      onChange: () => { callCount++; },
+      onChange: () => {
+        callCount++;
+      },
     });
     watcher.start({ port: 3000 });
     watcher.update({ port: 3000 });

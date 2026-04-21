@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { apiVersion, parseVersionFromAccept } from "../api-version";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../../../core/src/context";
+import { apiVersion, parseVersionFromAccept } from "../api-version";
 
 describe("parseVersionFromAccept", () => {
   test("parses version from Accept header", () => {
@@ -33,7 +33,7 @@ describe("apiVersion middleware", () => {
 
   test("uses default version when no header", async () => {
     const ctx = createContext(new Request("http://localhost/test"));
-    const response = await middleware(ctx, async () => new Response("ok"));
+    const _response = await middleware(ctx, async () => new Response("ok"));
     expect(ctx.state.get("apiVersion")).toBe("1");
   });
 
@@ -65,7 +65,7 @@ describe("apiVersion middleware", () => {
     );
     const response = await middleware(ctx, async () => new Response("ok"));
     expect(response.status).toBe(400);
-    const body = await response.json() as { error: string };
+    const body = (await response.json()) as { error: string };
     expect(body.error).toBe("UNSUPPORTED_VERSION");
   });
 

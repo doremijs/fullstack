@@ -27,9 +27,7 @@ export function createCircuitOpenError(): Error {
   return error;
 }
 
-export function createCircuitBreaker(
-  options?: CircuitBreakerOptions,
-): CircuitBreaker {
+export function createCircuitBreaker(options?: CircuitBreakerOptions): CircuitBreaker {
   const failureThreshold = options?.failureThreshold ?? 5;
   const resetTimeout = options?.resetTimeout ?? 30_000;
   const halfOpenMax = options?.halfOpenMax ?? 1;
@@ -113,12 +111,20 @@ export function createCircuitBreaker(
 
     getStats() {
       checkOpenTimeout();
-      return {
+      const stats: {
+        state: CircuitState;
+        failures: number;
+        successes: number;
+        lastFailure?: number;
+      } = {
         state,
         failures,
         successes,
-        lastFailure,
       };
+      if (lastFailure !== undefined) {
+        stats.lastFailure = lastFailure;
+      }
+      return stats;
     },
 
     reset(): void {

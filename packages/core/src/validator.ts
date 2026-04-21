@@ -24,11 +24,7 @@ export interface ValidationResult {
   errors: string[];
 }
 
-function validateField(
-  value: unknown,
-  rule: FieldRule,
-  path: string,
-): string[] {
+function validateField(value: unknown, rule: FieldRule, path: string): string[] {
   const errors: string[] = [];
 
   // required check
@@ -50,8 +46,14 @@ function validateField(
       errors.push(`${path} must be of type object`);
       return errors;
     }
-  } else if (typeof value !== rule.type) {
-    errors.push(`${path} must be of type ${rule.type}`);
+  } else if (rule.type === "string" && typeof value !== "string") {
+    errors.push(`${path} must be of type string`);
+    return errors;
+  } else if (rule.type === "number" && typeof value !== "number") {
+    errors.push(`${path} must be of type number`);
+    return errors;
+  } else if (rule.type === "boolean" && typeof value !== "boolean") {
+    errors.push(`${path} must be of type boolean`);
     return errors;
   }
 

@@ -27,9 +27,7 @@ function resolveFromHeader(req: Request, headerName: string): string | null {
 function resolveFromSubdomain(req: Request): string | null {
   const host = req.headers.get("host");
   // 如果没有 Host header，从 URL 中提取
-  const hostname = host
-    ? host.split(":")[0]!
-    : new URL(req.url).hostname;
+  const hostname = host ? host.split(":")[0]! : new URL(req.url).hostname;
   const parts = hostname.split(".");
   // 至少需要 tenant.example.com 三段
   if (parts.length < 3) return null;
@@ -45,9 +43,7 @@ function resolveFromPath(req: Request): string | null {
   return segments[0]!;
 }
 
-export function createTenantMiddleware(
-  options: TenantResolverOptions,
-): TenantMiddlewareResult {
+export function createTenantMiddleware(options: TenantResolverOptions): TenantMiddlewareResult {
   const headerName = options.headerName ?? "x-tenant-id";
 
   function getTenantFromRequest(req: Request): string | null {
@@ -69,13 +65,10 @@ export function createTenantMiddleware(
     const tenantId = getTenantFromRequest(ctx.request);
 
     if (!tenantId) {
-      return new Response(
-        JSON.stringify({ error: "Missing tenant identifier" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Missing tenant identifier" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     ctx.tenant = { tenantId } satisfies TenantContext;

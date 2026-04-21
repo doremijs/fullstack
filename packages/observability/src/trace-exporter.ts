@@ -27,9 +27,7 @@ function toZipkinSpan(span: OTelSpan) {
     timestamp: span.startTime * 1000, // Zipkin 用微秒
     duration: ((span.endTime ?? Date.now()) - span.startTime) * 1000,
     kind: span.kind === "server" ? "SERVER" : span.kind === "client" ? "CLIENT" : undefined,
-    tags: Object.fromEntries(
-      Object.entries(span.attributes).map(([k, v]) => [k, String(v)]),
-    ),
+    tags: Object.fromEntries(Object.entries(span.attributes).map(([k, v]) => [k, String(v)])),
     annotations: span.events.map((e) => ({
       timestamp: e.timestamp * 1000,
       value: e.name,
@@ -65,11 +63,12 @@ function toOTLPSpan(span: OTelSpan) {
     status: { code: statusMap[span.status] ?? 0 },
     attributes: Object.entries(span.attributes).map(([key, value]) => ({
       key,
-      value: typeof value === "string"
-        ? { stringValue: value }
-        : typeof value === "number"
-          ? { intValue: String(value) }
-          : { boolValue: value },
+      value:
+        typeof value === "string"
+          ? { stringValue: value }
+          : typeof value === "number"
+            ? { intValue: String(value) }
+            : { boolValue: value },
     })),
     events: span.events.map((e) => ({
       timeUnixNano: String(e.timestamp * 1_000_000),
@@ -81,17 +80,19 @@ function toOTLPSpan(span: OTelSpan) {
 /**
  * 创建 Trace 导出器
  */
-export function createTraceExporter(config: TraceExporterConfig): SpanExporter & { start(): void; stop(): Promise<void> } {
+export function createTraceExporter(
+  config: TraceExporterConfig,
+): SpanExporter & { start(): void; stop(): Promise<void> } {
   const batchSize = config.batchSize ?? 100;
   const flushInterval = config.flushInterval ?? 5000;
-  let buffer: OTelSpan[] = [];
+  const buffer: OTelSpan[] = [];
   let timer: ReturnType<typeof setInterval> | null = null;
 
   async function doExport(spans: OTelSpan[]): Promise<void> {
     if (spans.length === 0) return;
 
     let body: string;
-    let contentType = "application/json";
+    const contentType = "application/json";
 
     switch (config.type) {
       case "zipkin":
@@ -101,15 +102,19 @@ export function createTraceExporter(config: TraceExporterConfig): SpanExporter &
       case "tempo":
       case "otlp":
         body = JSON.stringify({
-          resourceSpans: [{
-            resource: {
-              attributes: [],
+          resourceSpans: [
+            {
+              resource: {
+                attributes: [],
+              },
+              scopeSpans: [
+                {
+                  scope: { name: "aeron" },
+                  spans: spans.map(toOTLPSpan),
+                },
+              ],
             },
-            scopeSpans: [{
-              scope: { name: "aeron" },
-              spans: spans.map(toOTLPSpan),
-            }],
-          }],
+          ],
         });
         break;
       default:

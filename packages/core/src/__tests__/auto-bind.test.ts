@@ -1,9 +1,12 @@
-import { describe, test, expect } from "bun:test";
-import { bindJSON, bindForm, bindQuery } from "../auto-bind";
+import { describe, expect, test } from "bun:test";
+import { bindForm, bindJSON, bindQuery } from "../auto-bind";
 import { createContext } from "../context";
 import type { Schema } from "../validator";
 
-function makeJSONCtx(body: unknown, contentType = "application/json"): ReturnType<typeof createContext> {
+function makeJSONCtx(
+  body: unknown,
+  contentType = "application/json",
+): ReturnType<typeof createContext> {
   const json = JSON.stringify(body);
   const req = new Request("http://localhost/test", {
     method: "POST",

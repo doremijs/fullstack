@@ -94,7 +94,9 @@ export function createMemoryEventStore(): EventStore {
     snapshots.set(aggregateId, { state, version });
   }
 
-  async function getSnapshot(aggregateId: string): Promise<{ state: unknown; version: number } | null> {
+  async function getSnapshot(
+    aggregateId: string,
+  ): Promise<{ state: unknown; version: number } | null> {
     return snapshots.get(aggregateId) ?? null;
   }
 

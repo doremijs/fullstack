@@ -1,7 +1,3 @@
-// @aeron/core - WebSocket 路由支持
-
-import type { Context } from "./context";
-
 export interface WSMessage {
   type: string;
   data: unknown;
@@ -32,7 +28,10 @@ export interface WebSocketRouter {
   /** 生成 Bun.serve() websocket 配置 */
   compile(): {
     routes: WSRoute[];
-    upgrade: (req: Request, server: { upgrade(req: Request, opts?: { data?: unknown }): boolean }) => boolean;
+    upgrade: (
+      req: Request,
+      server: { upgrade(req: Request, opts?: { data?: unknown }): boolean },
+    ) => boolean;
     handlers: {
       open: (ws: WSConnection) => void;
       message: (ws: WSConnection, msg: string | Buffer) => void;

@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { rateLimit, createMemoryRateLimitStore } from "../middlewares/rate-limit";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
+import { createMemoryRateLimitStore, rateLimit } from "../middlewares/rate-limit";
 
 function makeCtx(ip = "127.0.0.1") {
   const request = new Request("http://localhost/api/test", {
@@ -9,8 +9,8 @@ function makeCtx(ip = "127.0.0.1") {
   return createContext(request);
 }
 
-const okHandler = (ctx: ReturnType<typeof createContext>) =>
-  () => Promise.resolve(ctx.json({ ok: true }));
+const okHandler = (ctx: ReturnType<typeof createContext>) => () =>
+  Promise.resolve(ctx.json({ ok: true }));
 
 describe("rateLimit", () => {
   test("allows requests under limit", async () => {

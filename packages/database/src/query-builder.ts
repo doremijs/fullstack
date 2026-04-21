@@ -86,7 +86,9 @@ function cloneState(state: QueryState): QueryState {
     isSoftDelete: state.isSoftDelete,
     groupByFields: [...state.groupByFields],
     havings: [...state.havings],
-    batchInsertRows: state.batchInsertRows ? state.batchInsertRows.map((r) => ({ ...r })) : undefined,
+    batchInsertRows: state.batchInsertRows
+      ? state.batchInsertRows.map((r) => ({ ...r }))
+      : undefined,
     batchInsertFields: state.batchInsertFields ? [...state.batchInsertFields] : undefined,
     versionClause: state.versionClause ? { ...state.versionClause } : undefined,
     isHardDelete: state.isHardDelete,
@@ -172,7 +174,12 @@ function buildSelectSQL(tableName: string, state: QueryState): { text: string; p
   const fieldList = state.fields.length > 0 ? state.fields.join(", ") : "*";
   let text = `SELECT ${fieldList} FROM ${tableName}`;
 
-  const where = buildWhereClause(state.wheres, state.isSoftDelete, state.includeDeleted, paramIndex);
+  const where = buildWhereClause(
+    state.wheres,
+    state.isSoftDelete,
+    state.includeDeleted,
+    paramIndex,
+  );
   text += where.clause;
   params.push(...where.params);
   paramIndex = where.nextParamIndex;
@@ -286,7 +293,7 @@ function buildDeleteSQL(tableName: string, state: QueryState): { text: string; p
   // Restore: UPDATE ... SET deleted_at = NULL
   if (state.isRestore) {
     const params: unknown[] = [];
-    let paramIndex = 1;
+    const paramIndex = 1;
     let text = `UPDATE ${tableName} SET deleted_at = NULL`;
 
     const where = buildWhereClause(state.wheres, false, true, paramIndex);
@@ -299,7 +306,7 @@ function buildDeleteSQL(tableName: string, state: QueryState): { text: string; p
   // Hard delete: always physical DELETE, even for softDelete models
   if (state.isHardDelete) {
     const params: unknown[] = [];
-    let paramIndex = 1;
+    const paramIndex = 1;
     let text = `DELETE FROM ${tableName}`;
 
     const where = buildWhereClause(state.wheres, false, true, paramIndex);
@@ -312,7 +319,7 @@ function buildDeleteSQL(tableName: string, state: QueryState): { text: string; p
   // Soft delete: UPDATE ... SET deleted_at = NOW()
   if (state.isSoftDelete) {
     const params: unknown[] = [];
-    let paramIndex = 1;
+    const paramIndex = 1;
 
     let text = `UPDATE ${tableName} SET deleted_at = NOW()`;
 
@@ -329,7 +336,7 @@ function buildDeleteSQL(tableName: string, state: QueryState): { text: string; p
 
   // Hard delete (non-softDelete model)
   const params: unknown[] = [];
-  let paramIndex = 1;
+  const paramIndex = 1;
   let text = `DELETE FROM ${tableName}`;
 
   const where = buildWhereClause(state.wheres, false, true, paramIndex);

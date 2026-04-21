@@ -49,7 +49,11 @@ export function diffSchemas(current: TableSchema[], target: TableSchema[]): Sche
     if (!currentTable) continue;
 
     const diff = diffTable(currentTable, targetTable);
-    if (diff.addedColumns.length > 0 || diff.removedColumns.length > 0 || diff.modifiedColumns.length > 0) {
+    if (
+      diff.addedColumns.length > 0 ||
+      diff.removedColumns.length > 0 ||
+      diff.modifiedColumns.length > 0
+    ) {
       modifiedTables.push(diff);
     }
   }
@@ -80,13 +84,13 @@ function diffTable(current: TableSchema, target: TableSchema): TableDiff {
     }
     if ((currentCol.nullable ?? true) !== (targetCol.nullable ?? true)) {
       changes.push("nullable");
-      from.nullable = currentCol.nullable;
-      to.nullable = targetCol.nullable;
+      if (currentCol.nullable !== undefined) from.nullable = currentCol.nullable;
+      if (targetCol.nullable !== undefined) to.nullable = targetCol.nullable;
     }
     if (currentCol.defaultValue !== targetCol.defaultValue) {
       changes.push("default");
-      from.defaultValue = currentCol.defaultValue;
-      to.defaultValue = targetCol.defaultValue;
+      if (currentCol.defaultValue !== undefined) from.defaultValue = currentCol.defaultValue;
+      if (targetCol.defaultValue !== undefined) to.defaultValue = targetCol.defaultValue;
     }
 
     if (changes.length > 0) {
@@ -116,7 +120,9 @@ export function generateMigrationSQL(diff: SchemaDiff): { up: string[]; down: st
 
   for (const mod of diff.modifiedTables) {
     for (const col of mod.addedColumns) {
-      up.push(`ALTER TABLE ${mod.table} ADD COLUMN ${col.name} ${col.type}${col.nullable === false ? " NOT NULL" : ""}${col.defaultValue ? ` DEFAULT ${col.defaultValue}` : ""};`);
+      up.push(
+        `ALTER TABLE ${mod.table} ADD COLUMN ${col.name} ${col.type}${col.nullable === false ? " NOT NULL" : ""}${col.defaultValue ? ` DEFAULT ${col.defaultValue}` : ""};`,
+      );
       down.push(`ALTER TABLE ${mod.table} DROP COLUMN ${col.name};`);
     }
 

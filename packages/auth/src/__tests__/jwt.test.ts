@@ -1,6 +1,5 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createJWT } from "../jwt";
-import type { JWTPayload } from "../jwt";
 
 const SECRET_32 = "a]3Kf9$mPqR7wXyZ!bNcDe2GhJkLs5Tv"; // 32+ bytes
 const SHORT_SECRET = "too-short";
@@ -48,31 +47,19 @@ describe("createJWT", () => {
         const token = await jwt.sign({ sub: "user1" }, SECRET_32, {
           algorithm: alg,
         });
-        const header = JSON.parse(
-          atob(
-            token
-              .split(".")[0]!
-              .replace(/-/g, "+")
-              .replace(/_/g, "/"),
-          ),
-        );
+        const header = JSON.parse(atob(token.split(".")[0]!.replace(/-/g, "+").replace(/_/g, "/")));
         expect(header.alg).toBe(alg);
       }
     });
 
     test("throws on secret shorter than 32 bytes", async () => {
-      await expect(
-        jwt.sign({ sub: "user1" }, SHORT_SECRET),
-      ).rejects.toThrow("at least 32 bytes");
+      await expect(jwt.sign({ sub: "user1" }, SHORT_SECRET)).rejects.toThrow("at least 32 bytes");
     });
   });
 
   describe("verify", () => {
     test("verifies a valid token", async () => {
-      const token = await jwt.sign(
-        { sub: "user1", role: "admin" },
-        SECRET_32,
-      );
+      const token = await jwt.sign({ sub: "user1", role: "admin" }, SECRET_32);
       const payload = await jwt.verify(token, SECRET_32);
       expect(payload.sub).toBe("user1");
       expect(payload.role).toBe("admin");
@@ -80,36 +67,30 @@ describe("createJWT", () => {
 
     test("rejects token with wrong secret", async () => {
       const token = await jwt.sign({ sub: "user1" }, SECRET_32);
-      const otherSecret = SECRET_32 + "extra-bytes-to-make-it-different";
-      await expect(jwt.verify(token, otherSecret)).rejects.toThrow(
-        "Invalid signature",
-      );
+      const otherSecret = `${SECRET_32}extra-bytes-to-make-it-different`;
+      await expect(jwt.verify(token, otherSecret)).rejects.toThrow("Invalid signature");
     });
 
     test("rejects expired token", async () => {
       const token = await jwt.sign({ sub: "user1" }, SECRET_32, {
         expiresIn: -10,
       });
-      await expect(jwt.verify(token, SECRET_32)).rejects.toThrow(
-        "Token expired",
-      );
+      await expect(jwt.verify(token, SECRET_32)).rejects.toThrow("Token expired");
     });
 
     test("rejects token before nbf", async () => {
       const future = Math.floor(Date.now() / 1000) + 9999;
       const token = await jwt.sign({ sub: "user1", nbf: future }, SECRET_32);
-      await expect(jwt.verify(token, SECRET_32)).rejects.toThrow(
-        "not yet valid",
-      );
+      await expect(jwt.verify(token, SECRET_32)).rejects.toThrow("not yet valid");
     });
 
     test("validates issuer", async () => {
       const token = await jwt.sign({ sub: "user1" }, SECRET_32, {
         issuer: "issuer-a",
       });
-      await expect(
-        jwt.verify(token, SECRET_32, { issuer: "issuer-b" }),
-      ).rejects.toThrow("Issuer mismatch");
+      await expect(jwt.verify(token, SECRET_32, { issuer: "issuer-b" })).rejects.toThrow(
+        "Issuer mismatch",
+      );
 
       // Should succeed with correct issuer
       const payload = await jwt.verify(token, SECRET_32, {
@@ -122,9 +103,9 @@ describe("createJWT", () => {
       const token = await jwt.sign({ sub: "user1" }, SECRET_32, {
         audience: "aud-a",
       });
-      await expect(
-        jwt.verify(token, SECRET_32, { audience: "aud-b" }),
-      ).rejects.toThrow("Audience mismatch");
+      await expect(jwt.verify(token, SECRET_32, { audience: "aud-b" })).rejects.toThrow(
+        "Audience mismatch",
+      );
 
       const payload = await jwt.verify(token, SECRET_32, {
         audience: "aud-a",
@@ -144,31 +125,25 @@ describe("createJWT", () => {
         .replace(/=+$/, "");
       const fakeToken = `${header}.${payload}.fakesig`;
 
-      await expect(jwt.verify(fakeToken, SECRET_32)).rejects.toThrow(
-        "Unsupported algorithm",
-      );
+      await expect(jwt.verify(fakeToken, SECRET_32)).rejects.toThrow("Unsupported algorithm");
     });
 
     test("rejects algorithm mismatch", async () => {
       const token = await jwt.sign({ sub: "user1" }, SECRET_32, {
         algorithm: "HS256",
       });
-      await expect(
-        jwt.verify(token, SECRET_32, { algorithm: "HS512" }),
-      ).rejects.toThrow("Algorithm mismatch");
+      await expect(jwt.verify(token, SECRET_32, { algorithm: "HS512" })).rejects.toThrow(
+        "Algorithm mismatch",
+      );
     });
 
     test("rejects malformed token", async () => {
       await expect(jwt.verify("not.a.valid.jwt", SECRET_32)).rejects.toThrow();
-      await expect(jwt.verify("onlyonepart", SECRET_32)).rejects.toThrow(
-        "Invalid token format",
-      );
+      await expect(jwt.verify("onlyonepart", SECRET_32)).rejects.toThrow("Invalid token format");
     });
 
     test("throws on secret shorter than 32 bytes", async () => {
-      await expect(
-        jwt.verify("a.b.c", SHORT_SECRET),
-      ).rejects.toThrow("at least 32 bytes");
+      await expect(jwt.verify("a.b.c", SHORT_SECRET)).rejects.toThrow("at least 32 bytes");
     });
 
     test("verifies with all supported algorithms", async () => {
@@ -186,10 +161,7 @@ describe("createJWT", () => {
 
   describe("decode", () => {
     test("decodes payload without verification", async () => {
-      const token = await jwt.sign(
-        { sub: "user1", custom: "data" },
-        SECRET_32,
-      );
+      const token = await jwt.sign({ sub: "user1", custom: "data" }, SECRET_32);
       const payload = jwt.decode(token);
       expect(payload).not.toBeNull();
       expect(payload!.sub).toBe("user1");
@@ -204,7 +176,7 @@ describe("createJWT", () => {
 
     test("decodes even with invalid signature", async () => {
       const token = await jwt.sign({ sub: "user1" }, SECRET_32);
-      const tampered = token.slice(0, -5) + "XXXXX";
+      const tampered = `${token.slice(0, -5)}XXXXX`;
       const payload = jwt.decode(tampered);
       expect(payload).not.toBeNull();
       expect(payload!.sub).toBe("user1");

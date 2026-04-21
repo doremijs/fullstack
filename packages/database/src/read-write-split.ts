@@ -1,6 +1,6 @@
 // @aeron/database - 读写分离 / 多数据源切换
 
-import type { SqlExecutor, Database } from "./database";
+import type { SqlExecutor } from "./database";
 
 export interface ReadWriteSplitOptions {
   /** 写库执行器 */
@@ -22,7 +22,19 @@ export interface ReadWriteSplitExecutor {
   currentReaderIndex(): number;
 }
 
-const WRITE_KEYWORDS = ["INSERT", "UPDATE", "DELETE", "CREATE", "ALTER", "DROP", "TRUNCATE", "BEGIN", "COMMIT", "ROLLBACK", "SAVEPOINT"];
+const WRITE_KEYWORDS = [
+  "INSERT",
+  "UPDATE",
+  "DELETE",
+  "CREATE",
+  "ALTER",
+  "DROP",
+  "TRUNCATE",
+  "BEGIN",
+  "COMMIT",
+  "ROLLBACK",
+  "SAVEPOINT",
+];
 
 function isWriteQuery(sql: string): boolean {
   const trimmed = sql.trim().toUpperCase();

@@ -42,7 +42,10 @@ export interface KnowledgeBase {
  * 生产环境应接入向量数据库。
  */
 function computeTermFrequency(text: string): Map<string, number> {
-  const terms = text.toLowerCase().split(/\W+/).filter((t) => t.length > 1);
+  const terms = text
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((t) => t.length > 1);
   const freq = new Map<string, number>();
   for (const term of terms) {
     freq.set(term, (freq.get(term) ?? 0) + 1);
@@ -95,9 +98,7 @@ export function createKnowledgeBase(): KnowledgeBase {
         }
       }
 
-      return results
-        .sort((a, b) => b.score - a.score)
-        .slice(0, limit);
+      return results.sort((a, b) => b.score - a.score).slice(0, limit);
     },
 
     list() {

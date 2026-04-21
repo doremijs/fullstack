@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-import { createRouter, type RouteHandler } from "../router";
+import { describe, expect, test } from "bun:test";
+import { type RouteHandler, createRouter } from "../router";
 
 const dummyHandler: RouteHandler = (ctx) => ctx.json({ ok: true });
 
@@ -76,30 +76,21 @@ describe("Router - namedRoute() & url()", () => {
 
   test("url() substitutes multiple params", () => {
     const router = createRouter();
-    router.namedRoute(
-      "post.comment",
-      "GET",
-      "/posts/:postId/comments/:commentId",
-      dummyHandler,
-    );
-    expect(
-      router.url("post.comment", { postId: "1", commentId: "2" }),
-    ).toBe("/posts/1/comments/2");
+    router.namedRoute("post.comment", "GET", "/posts/:postId/comments/:commentId", dummyHandler);
+    expect(router.url("post.comment", { postId: "1", commentId: "2" })).toBe("/posts/1/comments/2");
   });
 
   test("url() throws for unknown name", () => {
     const router = createRouter();
-    expect(() => router.url("nonexistent")).toThrow(
-      'Route name "nonexistent" not found',
-    );
+    expect(() => router.url("nonexistent")).toThrow('Route name "nonexistent" not found');
   });
 
   test("namedRoute() throws on duplicate name", () => {
     const router = createRouter();
     router.namedRoute("home", "GET", "/", dummyHandler);
-    expect(() =>
-      router.namedRoute("home", "GET", "/other", dummyHandler),
-    ).toThrow('Route name "home" is already registered');
+    expect(() => router.namedRoute("home", "GET", "/other", dummyHandler)).toThrow(
+      'Route name "home" is already registered',
+    );
   });
 
   test("namedRoute() applies middleware", () => {
@@ -124,9 +115,7 @@ describe("Router - compile() conflict detection", () => {
     router.get("/users", dummyHandler);
     router.get("/users", dummyHandler);
 
-    expect(() => router.compile()).toThrow(
-      "Duplicate route detected: GET /users",
-    );
+    expect(() => router.compile()).toThrow("Duplicate route detected: GET /users");
   });
 
   test("allows same path with different methods", () => {
@@ -150,9 +139,7 @@ describe("Router - compile() conflict detection", () => {
     router.get("/users", dummyHandler);
     router.resource("/users", { index: dummyHandler });
 
-    expect(() => router.compile()).toThrow(
-      "Duplicate route detected: GET /users",
-    );
+    expect(() => router.compile()).toThrow("Duplicate route detected: GET /users");
   });
 
   test("detects conflicts from group expansion", () => {
@@ -162,8 +149,6 @@ describe("Router - compile() conflict detection", () => {
       g.get("/users", dummyHandler);
     });
 
-    expect(() => router.compile()).toThrow(
-      "Duplicate route detected: GET /api/users",
-    );
+    expect(() => router.compile()).toThrow("Duplicate route detected: GET /api/users");
   });
 });

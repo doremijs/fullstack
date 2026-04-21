@@ -69,10 +69,12 @@ export function defineModel<T extends Record<string, ColumnDef>>(
   options?: ModelOptions,
 ): ModelDefinition {
   const resolvedOptions: ModelOptions = {
-    comment: options?.comment,
     softDelete: options?.softDelete ?? false,
     timestamps: options?.timestamps ?? true,
   };
+  if (options?.comment) {
+    resolvedOptions.comment = options.comment;
+  }
 
   return {
     tableName,

@@ -1,22 +1,20 @@
 // @aeron/core - 路由系统
 
-import { createContext, type Context } from "./context";
-import { compose, type Middleware } from "./middleware";
+import { type Context, createContext } from "./context";
+import { type Middleware, compose } from "./middleware";
 
 export type RouteHandler = (ctx: Context) => Promise<Response> | Response;
 
 type BunRouteHandler = (req: Request) => Response | Promise<Response>;
 
-export type CompiledRoutes = Record<
-  string,
-  BunRouteHandler | Record<string, BunRouteHandler>
->;
+export type CompiledRoutes = Record<string, BunRouteHandler | Record<string, BunRouteHandler>>;
 
 export interface RouteDefinition {
   method: string;
   path: string;
   handler: RouteHandler;
   middleware: Middleware[];
+  metadata?: Record<string, unknown>;
 }
 
 export interface ResourceHandlers {
@@ -31,27 +29,11 @@ export interface Router {
   get(path: string, handler: RouteHandler, ...middleware: Middleware[]): Router;
   post(path: string, handler: RouteHandler, ...middleware: Middleware[]): Router;
   put(path: string, handler: RouteHandler, ...middleware: Middleware[]): Router;
-  patch(
-    path: string,
-    handler: RouteHandler,
-    ...middleware: Middleware[]
-  ): Router;
-  delete(
-    path: string,
-    handler: RouteHandler,
-    ...middleware: Middleware[]
-  ): Router;
-  group(
-    prefix: string,
-    callback: (group: Router) => void,
-    ...middleware: Middleware[]
-  ): Router;
+  patch(path: string, handler: RouteHandler, ...middleware: Middleware[]): Router;
+  delete(path: string, handler: RouteHandler, ...middleware: Middleware[]): Router;
+  group(prefix: string, callback: (group: Router) => void, ...middleware: Middleware[]): Router;
   use(...middleware: Middleware[]): Router;
-  resource(
-    prefix: string,
-    handlers: ResourceHandlers,
-    ...middleware: Middleware[]
-  ): Router;
+  resource(prefix: string, handlers: ResourceHandlers, ...middleware: Middleware[]): Router;
   namedRoute(
     name: string,
     method: string,
@@ -62,6 +44,8 @@ export interface Router {
   url(name: string, params?: Record<string, string>): string;
   routes(): readonly RouteDefinition[];
   compile(globalMiddleware?: Middleware[]): CompiledRoutes;
+  /** 为已有路由附加元数据（如 OpenAPI 文档信息） */
+  doc(method: string, path: string, metadata: Record<string, unknown>): Router;
 }
 
 export function createRouter(): Router {
@@ -159,6 +143,15 @@ export function createRouter(): Router {
       }));
     },
 
+    doc(method: string, path: string, metadata: Record<string, unknown>): Router {
+      const upper = method.toUpperCase();
+      const target = routeDefs.find((r) => r.method === upper && r.path === path);
+      if (target) {
+        target.metadata = { ...target.metadata, ...metadata };
+      }
+      return router;
+    },
+
     compile(globalMiddleware: Middleware[] = []): CompiledRoutes {
       const finalRoutes = router.routes();
 
@@ -167,9 +160,7 @@ export function createRouter(): Router {
       for (const route of finalRoutes) {
         const key = `${route.method} ${route.path || "/"}`;
         if (seen.has(key)) {
-          throw new Error(
-            `Duplicate route detected: ${route.method} ${route.path || "/"}`,
-          );
+          throw new Error(`Duplicate route detected: ${route.method} ${route.path || "/"}`);
         }
         seen.add(key);
       }
@@ -185,17 +176,14 @@ export function createRouter(): Router {
         const allMiddleware = [...globalMiddleware, ...route.middleware];
 
         compiled[path]![route.method] = (req: Request): Promise<Response> => {
-          const params =
-            (req as Request & { params?: Record<string, string> }).params ?? {};
+          const params = (req as Request & { params?: Record<string, string> }).params ?? {};
           const ctx = createContext(req, params);
 
           if (allMiddleware.length === 0) {
             return Promise.resolve(route.handler(ctx));
           }
 
-          return compose(allMiddleware)(ctx, () =>
-            Promise.resolve(route.handler(ctx)),
-          );
+          return compose(allMiddleware)(ctx, () => Promise.resolve(route.handler(ctx)));
         };
       }
 

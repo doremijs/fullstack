@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-import { createGRPCServer, GRPCError, GRPCStatusCode } from "../grpc";
+import { describe, expect, test } from "bun:test";
+import { GRPCError, GRPCStatusCode, createGRPCServer } from "../grpc";
 
 describe("createGRPCServer", () => {
   const testService = {
@@ -22,9 +22,11 @@ describe("createGRPCServer", () => {
 
   test("addService throws if handler missing", () => {
     const server = createGRPCServer();
-    expect(() => server.addService(testService, {
-      getUser: async () => ({}),
-    })).toThrow("Missing handler for method: UserService/createUser");
+    expect(() =>
+      server.addService(testService, {
+        getUser: async () => ({}),
+      }),
+    ).toThrow("Missing handler for method: UserService/createUser");
   });
 
   test("call invokes handler and returns result", async () => {
@@ -41,7 +43,10 @@ describe("createGRPCServer", () => {
     const server = createGRPCServer();
     let receivedAuth: string | undefined;
     server.addService(testService, {
-      getUser: async (_req, ctx) => { receivedAuth = ctx.metadata.get("authorization"); return {}; },
+      getUser: async (_req, ctx) => {
+        receivedAuth = ctx.metadata.get("authorization");
+        return {};
+      },
       createUser: async () => ({}),
     });
     await server.call("UserService", "getUser", {}, { authorization: "Bearer token" });

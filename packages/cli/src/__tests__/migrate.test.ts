@@ -1,10 +1,10 @@
 // @aeron/cli - Migrate Command Tests
-import { describe, test, expect, spyOn, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createMigrateCommand } from "../commands/migrate";
 import type { MigrationRunner, MigrationStatus } from "@aeron/database";
+import { createMigrateCommand } from "../commands/migrate";
 
 function createMockRunner(overrides?: Partial<MigrationRunner>): MigrationRunner {
   return {
@@ -34,7 +34,9 @@ describe("createMigrateCommand", () => {
     const cmd = createMigrateCommand();
     await cmd.action({});
 
-    expect(errorSpy).toHaveBeenCalledWith("Usage: aeron migrate <up|down|status|generate> [options]");
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Usage: aeron migrate <up|down|status|generate> [options]",
+    );
   });
 
   test("shows error for unknown subcommand", async () => {

@@ -1,7 +1,7 @@
-import { describe, test, expect } from "bun:test";
-import { createScaffoldCommand, scaffold } from "../commands/scaffold";
+import { describe, expect, test } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { createScaffoldCommand, scaffold } from "../commands/scaffold";
 
 const TEST_DIR = join(import.meta.dir, "__test_scaffold_output__");
 

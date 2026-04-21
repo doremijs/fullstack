@@ -1,6 +1,8 @@
-import { describe, test, expect } from "bun:test";
-import { createRouter } from "../router";
+import { describe, expect, test } from "bun:test";
 import type { Middleware } from "../middleware";
+import { createRouter } from "../router";
+
+type RouteHandler = (req: Request) => Response | Promise<Response>;
 
 describe("createRouter", () => {
   test("registers GET route", () => {
@@ -53,7 +55,7 @@ describe("createRouter", () => {
 describe("Router.use()", () => {
   test("router middleware applies to all routes", () => {
     const calls: string[] = [];
-    const mw: Middleware = async (ctx, next) => {
+    const mw: Middleware = async (_ctx, next) => {
       calls.push("router-mw");
       return await next();
     };
@@ -67,8 +69,8 @@ describe("Router.use()", () => {
   });
 
   test("router middleware + route middleware combine", () => {
-    const routerMw: Middleware = async (ctx, next) => await next();
-    const routeMw: Middleware = async (ctx, next) => await next();
+    const routerMw: Middleware = async (_ctx, next) => await next();
+    const routeMw: Middleware = async (_ctx, next) => await next();
 
     const router = createRouter();
     router.use(routerMw);
@@ -97,7 +99,7 @@ describe("Router.group()", () => {
   });
 
   test("group middleware applies to grouped routes", () => {
-    const groupMw: Middleware = async (ctx, next) => await next();
+    const groupMw: Middleware = async (_ctx, next) => await next();
 
     const router = createRouter();
     router.group(
@@ -124,8 +126,8 @@ describe("Router.group()", () => {
   });
 
   test("sub-router middleware included in group routes", () => {
-    const subMw: Middleware = async (ctx, next) => await next();
-    const groupMw: Middleware = async (ctx, next) => await next();
+    const subMw: Middleware = async (_ctx, next) => await next();
+    const groupMw: Middleware = async (_ctx, next) => await next();
 
     const router = createRouter();
     router.group(
@@ -161,12 +163,8 @@ describe("Router.compile()", () => {
 
     expect(compiled["/health"]).toBeDefined();
     expect(compiled["/users"]).toBeDefined();
-    expect(typeof (compiled["/health"] as Record<string, unknown>)["GET"]).toBe(
-      "function",
-    );
-    expect(
-      typeof (compiled["/users"] as Record<string, unknown>)["POST"],
-    ).toBe("function");
+    expect(typeof (compiled["/health"] as Record<string, unknown>).GET).toBe("function");
+    expect(typeof (compiled["/users"] as Record<string, unknown>).POST).toBe("function");
   });
 
   test("compiled handler creates context and returns response", async () => {
@@ -174,7 +172,7 @@ describe("Router.compile()", () => {
     router.get("/hello", (ctx) => ctx.json({ message: "hello" }));
 
     const compiled = router.compile();
-    const handler = (compiled["/hello"] as Record<string, Function>)["GET"]!;
+    const handler = (compiled["/hello"] as Record<string, RouteHandler>).GET!;
 
     const req = new Request("http://localhost:3000/hello");
     const res = await handler(req);
@@ -184,12 +182,10 @@ describe("Router.compile()", () => {
 
   test("compiled handler passes params from request", async () => {
     const router = createRouter();
-    router.get("/users/:id", (ctx) => ctx.json({ id: ctx.params["id"] }));
+    router.get("/users/:id", (ctx) => ctx.json({ id: ctx.params.id }));
 
     const compiled = router.compile();
-    const handler = (compiled["/users/:id"] as Record<string, Function>)[
-      "GET"
-    ]!;
+    const handler = (compiled["/users/:id"] as Record<string, RouteHandler>).GET!;
 
     // Simulate Bun.serve adding params to request
     const req = new Request("http://localhost:3000/users/42");
@@ -201,7 +197,7 @@ describe("Router.compile()", () => {
 
   test("compiled handler runs middleware", async () => {
     const calls: string[] = [];
-    const mw: Middleware = async (ctx, next) => {
+    const mw: Middleware = async (_ctx, next) => {
       calls.push("mw");
       return await next();
     };
@@ -217,7 +213,7 @@ describe("Router.compile()", () => {
     );
 
     const compiled = router.compile();
-    const handler = (compiled["/test"] as Record<string, Function>)["GET"]!;
+    const handler = (compiled["/test"] as Record<string, RouteHandler>).GET!;
     await handler(new Request("http://localhost:3000/test"));
 
     expect(calls).toEqual(["mw", "handler"]);
@@ -225,7 +221,7 @@ describe("Router.compile()", () => {
 
   test("compiled handler runs global middleware", async () => {
     const calls: string[] = [];
-    const globalMw: Middleware = async (ctx, next) => {
+    const globalMw: Middleware = async (_ctx, next) => {
       calls.push("global");
       return await next();
     };
@@ -237,7 +233,7 @@ describe("Router.compile()", () => {
     });
 
     const compiled = router.compile([globalMw]);
-    const handler = (compiled["/test"] as Record<string, Function>)["GET"]!;
+    const handler = (compiled["/test"] as Record<string, RouteHandler>).GET!;
     await handler(new Request("http://localhost:3000/test"));
 
     expect(calls).toEqual(["global", "handler"]);
@@ -249,9 +245,9 @@ describe("Router.compile()", () => {
     router.post("/users", async (ctx) => ctx.json({ id: 1 }, 201));
 
     const compiled = router.compile();
-    const methods = compiled["/users"] as Record<string, Function>;
-    expect(typeof methods["GET"]).toBe("function");
-    expect(typeof methods["POST"]).toBe("function");
+    const methods = compiled["/users"] as Record<string, RouteHandler>;
+    expect(typeof methods.GET).toBe("function");
+    expect(typeof methods.POST).toBe("function");
   });
 
   test("handler without middleware skips compose", async () => {
@@ -259,7 +255,7 @@ describe("Router.compile()", () => {
     router.get("/fast", (ctx) => ctx.text("fast"));
 
     const compiled = router.compile();
-    const handler = (compiled["/fast"] as Record<string, Function>)["GET"]!;
+    const handler = (compiled["/fast"] as Record<string, RouteHandler>).GET!;
     const res = await handler(new Request("http://localhost:3000/fast"));
     expect(await res.text()).toBe("fast");
   });

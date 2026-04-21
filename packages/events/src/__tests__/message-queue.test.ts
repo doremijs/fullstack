@@ -1,4 +1,4 @@
-import { describe, expect, test, mock } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createMemoryQueue } from "../message-queue";
 import type { Message } from "../message-queue";
 

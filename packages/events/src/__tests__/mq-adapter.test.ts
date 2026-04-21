@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeEach } from "bun:test";
-import { createMemoryMQAdapter, createMQAdapterFactory } from "../mq-adapter";
+import { beforeEach, describe, expect, test } from "bun:test";
+import { createMQAdapterFactory, createMemoryMQAdapter } from "../mq-adapter";
 
 describe("createMemoryMQAdapter", () => {
   let adapter: ReturnType<typeof createMemoryMQAdapter>;
@@ -55,7 +55,9 @@ describe("createMemoryMQAdapter", () => {
   test("unsubscribe stops delivery", async () => {
     await adapter.connect();
     let count = 0;
-    const unsub = await adapter.subscribe("test", async () => { count++; });
+    const unsub = await adapter.subscribe("test", async () => {
+      count++;
+    });
     await adapter.publish("test", { body: "a" });
     expect(count).toBe(1);
     unsub();
@@ -66,8 +68,12 @@ describe("createMemoryMQAdapter", () => {
   test("multiple subscribers on same topic", async () => {
     await adapter.connect();
     let count = 0;
-    await adapter.subscribe("test", async () => { count++; });
-    await adapter.subscribe("test", async () => { count++; });
+    await adapter.subscribe("test", async () => {
+      count++;
+    });
+    await adapter.subscribe("test", async () => {
+      count++;
+    });
     await adapter.publish("test", { body: "x" });
     expect(count).toBe(2);
   });
@@ -75,7 +81,9 @@ describe("createMemoryMQAdapter", () => {
   test("disconnect clears subscribers", async () => {
     await adapter.connect();
     let count = 0;
-    await adapter.subscribe("test", async () => { count++; });
+    await adapter.subscribe("test", async () => {
+      count++;
+    });
     await adapter.disconnect();
     await adapter.connect();
     await adapter.publish("test", { body: "x" });
@@ -85,7 +93,9 @@ describe("createMemoryMQAdapter", () => {
   test("preserves custom message id", async () => {
     await adapter.connect();
     let receivedId: string | undefined;
-    await adapter.subscribe("test", async (m) => { receivedId = m.id; });
+    await adapter.subscribe("test", async (m) => {
+      receivedId = m.id;
+    });
     await adapter.publish("test", { id: "custom-id", body: "x" });
     expect(receivedId).toBe("custom-id");
   });

@@ -23,10 +23,7 @@ export interface Context {
   stream(body: ReadableStream, contentType?: string): Response;
 }
 
-export function createContext(
-  request: Request,
-  params?: Record<string, string>,
-): Context {
+export function createContext(request: Request, params?: Record<string, string>): Context {
   const url = new URL(request.url);
   const query: Record<string, string> = {};
   url.searchParams.forEach((value, key) => {
@@ -74,10 +71,7 @@ export function createContext(
       });
     },
 
-    stream(
-      body: ReadableStream,
-      contentType = "application/octet-stream",
-    ): Response {
+    stream(body: ReadableStream, contentType = "application/octet-stream"): Response {
       return new Response(body, {
         headers: { "Content-Type": contentType },
       });

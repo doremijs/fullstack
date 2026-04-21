@@ -31,14 +31,8 @@ export interface OAuthUserInfo {
 
 export interface OAuthManager {
   getAuthorizationURL(provider: OAuthProvider, state: string): string;
-  exchangeCode(
-    provider: OAuthProvider,
-    code: string,
-  ): Promise<OAuthTokenResponse>;
-  getUserInfo(
-    provider: OAuthProvider,
-    accessToken: string,
-  ): Promise<OAuthUserInfo>;
+  exchangeCode(provider: OAuthProvider, code: string): Promise<OAuthTokenResponse>;
+  getUserInfo(provider: OAuthProvider, accessToken: string): Promise<OAuthUserInfo>;
   github(config: {
     clientId: string;
     clientSecret: string;
@@ -65,10 +59,7 @@ export function createOAuth(): OAuthManager {
       return url.toString();
     },
 
-    async exchangeCode(
-      provider: OAuthProvider,
-      code: string,
-    ): Promise<OAuthTokenResponse> {
+    async exchangeCode(provider: OAuthProvider, code: string): Promise<OAuthTokenResponse> {
       const body = new URLSearchParams({
         grant_type: "authorization_code",
         code,
@@ -87,31 +78,25 @@ export function createOAuth(): OAuthManager {
       });
 
       if (!response.ok) {
-        throw new Error(
-          `OAuth token exchange failed: ${response.status} ${response.statusText}`,
-        );
+        throw new Error(`OAuth token exchange failed: ${response.status} ${response.statusText}`);
       }
 
       const data = (await response.json()) as Record<string, unknown>;
 
-      return {
+      const token: OAuthTokenResponse = {
         accessToken: data.access_token as string,
         tokenType: (data.token_type as string) ?? "bearer",
-        expiresIn: data.expires_in as number | undefined,
-        refreshToken: data.refresh_token as string | undefined,
-        scope: data.scope as string | undefined,
-        idToken: data.id_token as string | undefined,
       };
+      if (data.expires_in) token.expiresIn = data.expires_in as number;
+      if (data.refresh_token) token.refreshToken = data.refresh_token as string;
+      if (data.scope) token.scope = data.scope as string;
+      if (data.id_token) token.idToken = data.id_token as string;
+      return token;
     },
 
-    async getUserInfo(
-      provider: OAuthProvider,
-      accessToken: string,
-    ): Promise<OAuthUserInfo> {
+    async getUserInfo(provider: OAuthProvider, accessToken: string): Promise<OAuthUserInfo> {
       if (!provider.userInfoURL) {
-        throw new Error(
-          `Provider ${provider.name} does not have a userInfoURL configured`,
-        );
+        throw new Error(`Provider ${provider.name} does not have a userInfoURL configured`);
       }
 
       const response = await fetch(provider.userInfoURL, {
@@ -129,13 +114,11 @@ export function createOAuth(): OAuthManager {
 
       const raw = (await response.json()) as Record<string, unknown>;
 
-      return {
-        id: String(raw.id ?? raw.sub ?? ""),
-        email: raw.email as string | undefined,
-        name: (raw.name ?? raw.login) as string | undefined,
-        avatar: (raw.avatar_url ?? raw.picture) as string | undefined,
-        raw,
-      };
+      const user: OAuthUserInfo = { id: String(raw.id ?? raw.sub ?? ""), raw };
+      if (raw.email) user.email = raw.email as string;
+      if (raw.name ?? raw.login) user.name = (raw.name ?? raw.login) as string;
+      if (raw.avatar_url ?? raw.picture) user.avatar = (raw.avatar_url ?? raw.picture) as string;
+      return user;
     },
 
     github(config) {

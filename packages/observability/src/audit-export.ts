@@ -70,13 +70,13 @@ export function createAuditExporter(): AuditExporter {
       const pageSize = filter.pageSize ?? 50;
 
       // 获取全部匹配记录
-      const all = await store.query({
-        actor: filter.actor,
-        action: filter.action,
-        resource: filter.resource,
-        from: filter.from,
-        to: filter.to,
-      });
+      const q: Record<string, string | number> = {};
+      if (filter.actor) q.actor = filter.actor;
+      if (filter.action) q.action = filter.action;
+      if (filter.resource) q.resource = filter.resource;
+      if (filter.from !== undefined) q.from = filter.from;
+      if (filter.to !== undefined) q.to = filter.to;
+      const all = await store.query(q);
 
       const total = all.length;
       const start = (page - 1) * pageSize;

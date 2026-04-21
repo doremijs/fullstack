@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { createDistributedScheduler } from "../distributed-scheduler";
 
 describe("createDistributedScheduler", () => {
@@ -40,7 +40,13 @@ describe("createDistributedScheduler", () => {
 
   test("execute runs task and returns success", async () => {
     let ran = false;
-    scheduler.register({ id: "t1", name: "Task 1", handler: async () => { ran = true; } });
+    scheduler.register({
+      id: "t1",
+      name: "Task 1",
+      handler: async () => {
+        ran = true;
+      },
+    });
     const result = await scheduler.execute("t1");
     expect(result.success).toBe(true);
     expect(result.duration).toBeGreaterThanOrEqual(0);
@@ -54,7 +60,13 @@ describe("createDistributedScheduler", () => {
   });
 
   test("execute handles task failure", async () => {
-    scheduler.register({ id: "t1", name: "Task 1", handler: async () => { throw new Error("boom"); } });
+    scheduler.register({
+      id: "t1",
+      name: "Task 1",
+      handler: async () => {
+        throw new Error("boom");
+      },
+    });
     const result = await scheduler.execute("t1");
     expect(result.success).toBe(false);
     expect(result.error).toBe("boom");
@@ -65,7 +77,9 @@ describe("createDistributedScheduler", () => {
       id: "t1",
       name: "Task 1",
       timeout: 50,
-      handler: async () => { await Bun.sleep(200); },
+      handler: async () => {
+        await Bun.sleep(200);
+      },
     });
     const result = await scheduler.execute("t1");
     expect(result.success).toBe(false);

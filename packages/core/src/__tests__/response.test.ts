@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-import { success, fail, paginated } from "../response";
+import { describe, expect, test } from "bun:test";
+import { fail, paginated, success } from "../response";
 import type { ApiResponse, PaginatedData } from "../response";
 
 describe("success()", () => {

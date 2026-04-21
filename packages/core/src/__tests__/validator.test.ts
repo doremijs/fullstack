@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { validate, validateBody, validateQuery, type Schema } from "../validator";
+import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
+import { type Schema, validate, validateBody, validateQuery } from "../validator";
 
 describe("validate", () => {
   test("returns valid for empty schema", () => {

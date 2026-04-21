@@ -1,7 +1,7 @@
 // @aeron/observability — File Logger with Rotation
 
-import { appendFileSync, renameSync, unlinkSync, existsSync, statSync } from "node:fs";
-import { createLogger, type Logger, type LogLevel, type LogEntry } from "./logger";
+import { appendFileSync, existsSync, renameSync, statSync, unlinkSync } from "node:fs";
+import { type LogEntry, type LogLevel, type Logger, createLogger } from "./logger";
 
 export interface FileLoggerOptions {
   filePath: string;
@@ -74,24 +74,35 @@ export function createFileLogger(options: FileLoggerOptions): FileLogger {
       rotateSync();
     }
 
-    const line = JSON.stringify(entry) + "\n";
+    const line = `${JSON.stringify(entry)}\n`;
     appendFileSync(options.filePath, line, "utf-8");
   }
 
   // Create internal logger that delegates to our file writer
-  const inner = createLogger({
-    level: options.level,
-    sensitiveFields: options.sensitiveFields,
-    output: writeEntry,
-  });
+  const loggerOpts: Parameters<typeof createLogger>[0] = { output: writeEntry };
+  if (options.level) loggerOpts.level = options.level;
+  if (options.sensitiveFields) loggerOpts.sensitiveFields = options.sensitiveFields;
+  const inner = createLogger(loggerOpts);
 
   return {
-    debug(message, meta) { inner.debug(message, meta); },
-    info(message, meta) { inner.info(message, meta); },
-    warn(message, meta) { inner.warn(message, meta); },
-    error(message, meta) { inner.error(message, meta); },
-    fatal(message, meta) { inner.fatal(message, meta); },
-    child(defaultMeta) { return inner.child(defaultMeta); },
+    debug(message, meta) {
+      inner.debug(message, meta);
+    },
+    info(message, meta) {
+      inner.info(message, meta);
+    },
+    warn(message, meta) {
+      inner.warn(message, meta);
+    },
+    error(message, meta) {
+      inner.error(message, meta);
+    },
+    fatal(message, meta) {
+      inner.fatal(message, meta);
+    },
+    child(defaultMeta) {
+      return inner.child(defaultMeta);
+    },
     async rotate(): Promise<void> {
       rotateSync();
     },

@@ -21,15 +21,15 @@ export interface SecurityTestSuite {
 }
 
 const XSS_PAYLOADS: string[] = [
-  '<script>alert(1)</script>',
-  '<img src=x onerror=alert(1)>',
-  '<svg onload=alert(1)>',
-  'javascript:alert(1)',
+  "<script>alert(1)</script>",
+  "<img src=x onerror=alert(1)>",
+  "<svg onload=alert(1)>",
+  "javascript:alert(1)",
   '"><script>alert(1)</script>',
   "'-alert(1)-'",
   '<iframe src="javascript:alert(1)">',
-  '<body onload=alert(1)>',
-  '<input onfocus=alert(1) autofocus>',
+  "<body onload=alert(1)>",
+  "<input onfocus=alert(1) autofocus>",
   '{{constructor.constructor("alert(1)")()}}',
 ];
 
@@ -103,10 +103,7 @@ export function createSecurityTestSuite(): SecurityTestSuite {
 
       const failures: string[] = [];
 
-      async function testPayloads(
-        category: string,
-        payloads: string[],
-      ): Promise<void> {
+      async function testPayloads(category: string, payloads: string[]): Promise<void> {
         for (const payload of payloads) {
           try {
             const response = await client.fetch(url, {

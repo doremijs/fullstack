@@ -1,10 +1,12 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createReliableDelivery } from "../reliable-delivery";
 
 describe("createReliableDelivery", () => {
   test("send creates message and marks as sent on success", async () => {
     const sent: unknown[] = [];
-    const rd = createReliableDelivery(async (_topic, body) => { sent.push(body); });
+    const rd = createReliableDelivery(async (_topic, body) => {
+      sent.push(body);
+    });
     const id = await rd.send("test", { data: 1 });
     expect(id).toBeDefined();
     expect(sent).toEqual([{ data: 1 }]);
@@ -12,7 +14,9 @@ describe("createReliableDelivery", () => {
   });
 
   test("send marks as failed on error", async () => {
-    const rd = createReliableDelivery(async () => { throw new Error("fail"); });
+    const rd = createReliableDelivery(async () => {
+      throw new Error("fail");
+    });
     await rd.send("test", "data");
     expect(rd.stats().failed).toBe(1);
     expect(rd.getFailed()).toHaveLength(1);
@@ -64,7 +68,12 @@ describe("createReliableDelivery", () => {
   });
 
   test("message moves to dead after max attempts", async () => {
-    const rd = createReliableDelivery(async () => { throw new Error("always fail"); }, { maxAttempts: 2 });
+    const rd = createReliableDelivery(
+      async () => {
+        throw new Error("always fail");
+      },
+      { maxAttempts: 2 },
+    );
     await rd.send("test", "data"); // attempt 1
     await rd.retry(); // attempt 2 → dead
     expect(rd.stats().dead).toBe(1);

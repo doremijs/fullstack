@@ -5,11 +5,7 @@ import { UnauthorizedError } from "@aeron/core";
 
 export type JWTAlgorithm = "HS256" | "HS384" | "HS512";
 
-const ALGORITHM_WHITELIST: ReadonlySet<string> = new Set([
-  "HS256",
-  "HS384",
-  "HS512",
-]);
+const ALGORITHM_WHITELIST: ReadonlySet<string> = new Set(["HS256", "HS384", "HS512"]);
 
 const ALGORITHM_MAP: Record<JWTAlgorithm, string> = {
   HS256: "SHA-256",
@@ -38,16 +34,8 @@ export interface JWTOptions {
 }
 
 export interface JWTManager {
-  sign(
-    payload: JWTPayload,
-    secret: string,
-    options?: JWTOptions,
-  ): Promise<string>;
-  verify(
-    token: string,
-    secret: string,
-    options?: JWTOptions,
-  ): Promise<JWTPayload>;
+  sign(payload: JWTPayload, secret: string, options?: JWTOptions): Promise<string>;
+  verify(token: string, secret: string, options?: JWTOptions): Promise<JWTPayload>;
   decode(token: string): JWTPayload | null;
 }
 
@@ -85,10 +73,7 @@ function validateSecret(secret: string): void {
   }
 }
 
-async function importKey(
-  secret: string,
-  algorithm: JWTAlgorithm,
-): Promise<CryptoKey> {
+async function importKey(secret: string, algorithm: JWTAlgorithm): Promise<CryptoKey> {
   const keyData = new TextEncoder().encode(secret);
   return crypto.subtle.importKey(
     "raw",
@@ -101,11 +86,7 @@ async function importKey(
 
 export function createJWT(): JWTManager {
   return {
-    async sign(
-      payload: JWTPayload,
-      secret: string,
-      options: JWTOptions = {},
-    ): Promise<string> {
+    async sign(payload: JWTPayload, secret: string, options: JWTOptions = {}): Promise<string> {
       validateSecret(secret);
 
       const algorithm = options.algorithm ?? "HS256";
@@ -129,9 +110,7 @@ export function createJWT(): JWTManager {
         finalPayload.exp = now + options.expiresIn;
       }
 
-      const header = base64urlEncodeString(
-        JSON.stringify({ alg: algorithm, typ: "JWT" }),
-      );
+      const header = base64urlEncodeString(JSON.stringify({ alg: algorithm, typ: "JWT" }));
       const body = base64urlEncodeString(JSON.stringify(finalPayload));
       const signingInput = `${header}.${body}`;
 
@@ -146,11 +125,7 @@ export function createJWT(): JWTManager {
       return `${signingInput}.${sig}`;
     },
 
-    async verify(
-      token: string,
-      secret: string,
-      options: JWTOptions = {},
-    ): Promise<JWTPayload> {
+    async verify(token: string, secret: string, options: JWTOptions = {}): Promise<JWTPayload> {
       validateSecret(secret);
 
       const parts = token.split(".");
@@ -158,11 +133,7 @@ export function createJWT(): JWTManager {
         throw new UnauthorizedError("Invalid token format");
       }
 
-      const [headerPart, payloadPart, signaturePart] = parts as [
-        string,
-        string,
-        string,
-      ];
+      const [headerPart, payloadPart, signaturePart] = parts as [string, string, string];
 
       // Decode and validate header
       let header: { alg?: string; typ?: string };
@@ -173,9 +144,7 @@ export function createJWT(): JWTManager {
       }
 
       if (!header.alg || !ALGORITHM_WHITELIST.has(header.alg)) {
-        throw new UnauthorizedError(
-          `Unsupported algorithm: ${header.alg ?? "none"}`,
-        );
+        throw new UnauthorizedError(`Unsupported algorithm: ${header.alg ?? "none"}`);
       }
 
       const algorithm = header.alg as JWTAlgorithm;
@@ -188,12 +157,15 @@ export function createJWT(): JWTManager {
 
       // Verify signature using crypto.subtle.verify (constant-time)
       const key = await importKey(secret, algorithm);
-      const signingInput = new TextEncoder().encode(
-        `${headerPart}.${payloadPart}`,
-      );
+      const signingInput = new TextEncoder().encode(`${headerPart}.${payloadPart}`);
       const signature = base64urlDecode(signaturePart);
 
-      const valid = await crypto.subtle.verify("HMAC", key, signature, signingInput);
+      const valid = await crypto.subtle.verify(
+        "HMAC",
+        key,
+        signature as unknown as Uint8Array<ArrayBuffer>,
+        signingInput,
+      );
       if (!valid) {
         throw new UnauthorizedError("Invalid signature");
       }

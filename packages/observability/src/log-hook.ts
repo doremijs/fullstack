@@ -35,7 +35,7 @@ export function createLogHook(config: LogHookConfig): LogHook {
   const batchSize = config.batchSize ?? 50;
   const flushInterval = config.flushInterval ?? 2000;
   const format = config.format ?? defaultFormat;
-  let buffer: string[] = [];
+  const buffer: string[] = [];
   let timer: ReturnType<typeof setInterval> | null = null;
 
   function defaultFormat(entry: LogEntry): string {
@@ -83,7 +83,9 @@ export function createLogHook(config: LogHookConfig): LogHook {
 
     start(): void {
       if (timer) return;
-      timer = setInterval(() => { doFlush(); }, flushInterval);
+      timer = setInterval(() => {
+        doFlush();
+      }, flushInterval);
     },
 
     async stop(): Promise<void> {

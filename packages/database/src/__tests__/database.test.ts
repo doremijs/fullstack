@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
-import { column, defineModel } from "../model";
 import { createDatabase } from "../database";
+import { column, defineModel } from "../model";
 
 const UserModel = defineModel("users", {
   id: column.bigint({ primary: true, autoIncrement: true }),
@@ -105,12 +105,7 @@ describe("Database.query - list", () => {
     executor.mockResolvedValueOnce([]);
 
     const db = createDatabase({ executor });
-    await db
-      .query(UserModel)
-      .where("name", "LIKE", "%a%")
-      .orderBy("id", "desc")
-      .limit(5)
-      .list();
+    await db.query(UserModel).where("name", "LIKE", "%a%").orderBy("id", "desc").limit(5).list();
 
     expect(executor).toHaveBeenCalledWith(
       "SELECT * FROM users WHERE name LIKE $1 ORDER BY id DESC LIMIT $2",
@@ -128,10 +123,7 @@ describe("Database.query - get", () => {
     const user = await db.query(UserModel).where("id", "=", 1).get();
 
     expect(user).toEqual({ id: 1, name: "Alice", email: "alice@test.com" });
-    expect(executor).toHaveBeenCalledWith(
-      "SELECT * FROM users WHERE id = $1 LIMIT $2",
-      [1, 1],
-    );
+    expect(executor).toHaveBeenCalledWith("SELECT * FROM users WHERE id = $1 LIMIT $2", [1, 1]);
   });
 
   test("get returns undefined when no rows", async () => {
@@ -154,10 +146,7 @@ describe("Database.query - count", () => {
     const total = await db.query(UserModel).count();
 
     expect(total).toBe(42);
-    expect(executor).toHaveBeenCalledWith(
-      "SELECT COUNT(*) as count FROM users",
-      [],
-    );
+    expect(executor).toHaveBeenCalledWith("SELECT COUNT(*) as count FROM users", []);
   });
 
   test("count returns 0 when no rows", async () => {
@@ -180,10 +169,10 @@ describe("Database.query - insert", () => {
     const result = await db.query(UserModel).insert({ name: "John", email: "john@test.com" });
 
     expect(result).toBeUndefined();
-    expect(executor).toHaveBeenCalledWith(
-      "INSERT INTO users (name, email) VALUES ($1, $2)",
-      ["John", "john@test.com"],
-    );
+    expect(executor).toHaveBeenCalledWith("INSERT INTO users (name, email) VALUES ($1, $2)", [
+      "John",
+      "john@test.com",
+    ]);
   });
 
   test("insert with returning", async () => {
@@ -191,10 +180,9 @@ describe("Database.query - insert", () => {
     executor.mockResolvedValueOnce([{ id: 1, name: "John", email: "john@test.com" }]);
 
     const db = createDatabase({ executor });
-    const result = await db.query(UserModel).insert(
-      { name: "John", email: "john@test.com" },
-      { returning: true },
-    );
+    const result = await db
+      .query(UserModel)
+      .insert({ name: "John", email: "john@test.com" }, { returning: true });
 
     expect(result).toEqual({ id: 1, name: "John", email: "john@test.com" });
     expect(executor).toHaveBeenCalledWith(
@@ -212,10 +200,7 @@ describe("Database.query - update", () => {
     const db = createDatabase({ executor });
     await db.query(UserModel).where("id", "=", 1).update({ name: "Jane" });
 
-    expect(executor).toHaveBeenCalledWith(
-      "UPDATE users SET name = $1 WHERE id = $2",
-      ["Jane", 1],
-    );
+    expect(executor).toHaveBeenCalledWith("UPDATE users SET name = $1 WHERE id = $2", ["Jane", 1]);
   });
 
   test("update with returning", async () => {
@@ -240,10 +225,7 @@ describe("Database.query - delete", () => {
     const db = createDatabase({ executor });
     await db.query(UserModel).where("id", "=", 1).delete();
 
-    expect(executor).toHaveBeenCalledWith(
-      "DELETE FROM users WHERE id = $1",
-      [1],
-    );
+    expect(executor).toHaveBeenCalledWith("DELETE FROM users WHERE id = $1", [1]);
   });
 
   test("soft delete on softDelete model", async () => {
@@ -266,10 +248,7 @@ describe("Database.query - delete", () => {
     const db = createDatabase({ executor });
     await db.query(PostModel).where("id", "=", 1).delete({ force: true });
 
-    expect(executor).toHaveBeenCalledWith(
-      "DELETE FROM posts WHERE id = $1",
-      [1],
-    );
+    expect(executor).toHaveBeenCalledWith("DELETE FROM posts WHERE id = $1", [1]);
   });
 });
 
@@ -281,10 +260,7 @@ describe("Database.query - select fields", () => {
     const db = createDatabase({ executor });
     await db.query(UserModel).select("id", "name").list();
 
-    expect(executor).toHaveBeenCalledWith(
-      "SELECT id, name FROM users",
-      [],
-    );
+    expect(executor).toHaveBeenCalledWith("SELECT id, name FROM users", []);
   });
 });
 
@@ -370,10 +346,7 @@ describe("Database.query - softDelete model select", () => {
     const db = createDatabase({ executor });
     await db.query(PostModel).list();
 
-    expect(executor).toHaveBeenCalledWith(
-      "SELECT * FROM posts WHERE deleted_at IS NULL",
-      [],
-    );
+    expect(executor).toHaveBeenCalledWith("SELECT * FROM posts WHERE deleted_at IS NULL", []);
   });
 });
 
@@ -385,10 +358,7 @@ describe("Database.query - offset", () => {
     const db = createDatabase({ executor });
     await db.query(UserModel).limit(10).offset(20).list();
 
-    expect(executor).toHaveBeenCalledWith(
-      "SELECT * FROM users LIMIT $1 OFFSET $2",
-      [10, 20],
-    );
+    expect(executor).toHaveBeenCalledWith("SELECT * FROM users LIMIT $1 OFFSET $2", [10, 20]);
   });
 });
 

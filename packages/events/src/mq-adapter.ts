@@ -45,7 +45,11 @@ export function createMemoryMQAdapter(): MQAdapter {
 
     async publish(topic: string, message: MQMessage): Promise<void> {
       if (!connected) throw new Error("MQ adapter not connected");
-      const msg = { ...message, id: message.id ?? crypto.randomUUID(), timestamp: message.timestamp ?? Date.now() };
+      const msg = {
+        ...message,
+        id: message.id ?? crypto.randomUUID(),
+        timestamp: message.timestamp ?? Date.now(),
+      };
       const handlers = subscribers.get(topic);
       if (handlers) {
         for (const handler of handlers) {
@@ -62,7 +66,9 @@ export function createMemoryMQAdapter(): MQAdapter {
         subscribers.set(topic, handlers);
       }
       handlers.add(handler);
-      return () => { handlers!.delete(handler); };
+      return () => {
+        handlers!.delete(handler);
+      };
     },
 
     isConnected(): boolean {

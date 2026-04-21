@@ -1,15 +1,23 @@
-import { describe, test, expect } from "bun:test";
-import { createL2Cache } from "../l2-cache";
+import { describe, expect, test } from "bun:test";
 import type { CacheAdapter } from "../cache";
+import { createL2Cache } from "../l2-cache";
 
 function mockL2(): CacheAdapter & { store: Map<string, string> } {
   const store = new Map<string, string>();
   return {
     store,
-    async get(key: string) { return store.get(key) ?? null; },
-    async set(key: string, value: string) { store.set(key, value); },
-    async delete(key: string) { store.delete(key); },
-    async has(key: string) { return store.has(key); },
+    async get(key: string) {
+      return store.get(key) ?? null;
+    },
+    async set(key: string, value: string) {
+      store.set(key, value);
+    },
+    async del(key: string) {
+      store.delete(key);
+    },
+    async has(key: string) {
+      return store.has(key);
+    },
   };
 }
 

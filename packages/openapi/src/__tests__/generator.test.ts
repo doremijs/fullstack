@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createOpenAPIGenerator, toYAML } from "../generator";
-import { schemaObject, schemaString, schemaInteger, schemaArray } from "../schema-builder";
+import { schemaInteger, schemaObject, schemaString } from "../schema-builder";
 
 describe("createOpenAPIGenerator", () => {
   test("setInfo sets document info", () => {
@@ -35,13 +35,10 @@ describe("createOpenAPIGenerator", () => {
   test("addSchema adds component schema", () => {
     const gen = createOpenAPIGenerator();
     gen.setInfo({ title: "API", version: "1.0.0" });
-    const userSchema = schemaObject(
-      { id: schemaInteger(), name: schemaString() },
-      ["id", "name"],
-    );
+    const userSchema = schemaObject({ id: schemaInteger(), name: schemaString() }, ["id", "name"]);
     gen.addSchema("User", userSchema);
     const doc = gen.generate();
-    expect(doc.components?.schemas?.["User"]).toEqual(userSchema);
+    expect(doc.components?.schemas?.User).toEqual(userSchema);
   });
 
   test("addSecurityScheme adds security scheme", () => {
@@ -53,7 +50,7 @@ describe("createOpenAPIGenerator", () => {
       bearerFormat: "JWT",
     });
     const doc = gen.generate();
-    expect(doc.components?.securitySchemes?.["bearerAuth"]).toEqual({
+    expect(doc.components?.securitySchemes?.bearerAuth).toEqual({
       type: "http",
       scheme: "bearer",
       bearerFormat: "JWT",
@@ -119,8 +116,8 @@ describe("createOpenAPIGenerator", () => {
     expect(doc.info.title).toBe("Full API");
     expect(doc.servers).toHaveLength(1);
     expect(doc.tags).toHaveLength(1);
-    expect(doc.components?.schemas?.["Item"]).toBeDefined();
-    expect(doc.components?.securitySchemes?.["apiKey"]).toBeDefined();
+    expect(doc.components?.schemas?.Item).toBeDefined();
+    expect(doc.components?.securitySchemes?.apiKey).toBeDefined();
     expect(doc.paths["/items"]?.get).toBeDefined();
     expect(doc.paths["/items"]?.post).toBeDefined();
   });

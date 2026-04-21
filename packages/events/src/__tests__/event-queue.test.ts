@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { createEventQueue } from "../event-queue";
 
 describe("createEventQueue", () => {
@@ -25,7 +25,9 @@ describe("createEventQueue", () => {
     const processed: string[] = [];
     queue.enqueue("a", "x");
     queue.enqueue("b", "y");
-    await queue.process(async (event) => { processed.push(event.name); });
+    await queue.process(async (event) => {
+      processed.push(event.name);
+    });
     expect(processed).toContain("a");
   });
 
@@ -35,7 +37,9 @@ describe("createEventQueue", () => {
     q.enqueue("b", 2);
     q.enqueue("c", 3);
     const processed: string[] = [];
-    await q.process(async (event) => { processed.push(event.name); });
+    await q.process(async (event) => {
+      processed.push(event.name);
+    });
     expect(processed).toHaveLength(2); // concurrency=2
     expect(q.size()).toBe(1); // one left
   });
@@ -52,7 +56,9 @@ describe("createEventQueue", () => {
 
   test("failed event is re-queued with lower priority", async () => {
     queue.enqueue("fail", "data", 5);
-    await queue.process(async () => { throw new Error("oops"); });
+    await queue.process(async () => {
+      throw new Error("oops");
+    });
     expect(queue.size()).toBe(1);
     expect(queue.pending()[0].priority).toBe(4);
   });
@@ -69,7 +75,9 @@ describe("createEventQueue", () => {
     queue.pause();
     expect(queue.isPaused()).toBe(true);
     const processed: string[] = [];
-    await queue.process(async (event) => { processed.push(event.name); });
+    await queue.process(async (event) => {
+      processed.push(event.name);
+    });
     expect(processed).toHaveLength(0);
     expect(queue.size()).toBe(1);
   });
@@ -80,7 +88,9 @@ describe("createEventQueue", () => {
     queue.resume();
     expect(queue.isPaused()).toBe(false);
     const processed: string[] = [];
-    await queue.process(async (event) => { processed.push(event.name); });
+    await queue.process(async (event) => {
+      processed.push(event.name);
+    });
     expect(processed).toHaveLength(1);
   });
 

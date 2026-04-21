@@ -10,7 +10,7 @@ import type { Middleware, NextFunction } from "./middleware";
 export interface Interceptor {
   name: string;
   /** handler 执行前，返回 Response 即短路 */
-  before?(ctx: Context): Promise<Response | void> | Response | void;
+  before?(ctx: Context): Promise<Response | undefined> | Response | undefined;
   /** handler 执行后，可修改 Response */
   after?(ctx: Context, response: Response): Promise<Response> | Response;
 }
