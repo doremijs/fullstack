@@ -1,5 +1,5 @@
-// 示例中间件
 import type { Middleware } from "@aeron/core";
+import { AeronError } from "@aeron/core";
 import type { Logger } from "@aeron/observability";
 
 /**
@@ -31,6 +31,15 @@ export function errorHandler(logger: Logger): Middleware {
       return await next();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
+
+      if (error instanceof AeronError) {
+        logger.error("unhandled error", {
+          method: ctx.method,
+          path: ctx.path,
+          error: message,
+        });
+        return ctx.json({ error: error.errorCode, message: error.message }, error.code);
+      }
 
       logger.error("unhandled error", {
         method: ctx.method,

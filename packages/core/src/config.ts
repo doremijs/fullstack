@@ -2,6 +2,7 @@
 
 export interface ConfigFieldDef {
   type: "string" | "number" | "boolean";
+  options?: readonly unknown[];
   default?: unknown;
   env?: string;
   required?: boolean;
@@ -71,16 +72,18 @@ function resolveField(
   env: Record<string, string | undefined>,
   overrides?: Record<string, unknown>,
 ): unknown {
+  let value: unknown;
+
   // 1. 从环境变量读取（最高优先级）
   if (fieldDef.env) {
     const envValue = env[fieldDef.env];
     if (envValue !== undefined) {
-      return coerceValue(envValue, fieldDef.type, key);
+      value = coerceValue(envValue, fieldDef.type, key);
     }
   }
 
   // 2. 从 overrides（文件合并后的值）读取
-  if (overrides !== undefined) {
+  if (value === undefined && overrides !== undefined) {
     const parts = key.split(".");
     let current: unknown = overrides;
     for (const part of parts) {
@@ -93,23 +96,31 @@ function resolveField(
     }
     if (current !== undefined) {
       if (typeof current === "string") {
-        return coerceValue(current, fieldDef.type, key);
+        value = coerceValue(current, fieldDef.type, key);
+      } else {
+        value = current;
       }
-      return current;
     }
   }
 
   // 3. 使用默认值
-  if (fieldDef.default !== undefined) {
-    return fieldDef.default;
+  if (value === undefined && fieldDef.default !== undefined) {
+    value = fieldDef.default;
   }
 
   // 4. 必填字段缺失
-  if (fieldDef.required) {
+  if (value === undefined && fieldDef.required) {
     throw new Error(`Config "${key}" is required but not provided`);
   }
 
-  return undefined;
+  // 5. 校验 options
+  if (fieldDef.options && value !== undefined && !fieldDef.options.includes(value)) {
+    throw new Error(
+      `Config "${key}": value "${value}" is not in allowed options [${fieldDef.options.join(", ")}]`,
+    );
+  }
+
+  return value;
 }
 
 function resolveSchema(
@@ -134,15 +145,19 @@ function resolveSchema(
   return result;
 }
 
+type ExtractFieldType<T> = T extends { options: readonly (infer O)[] }
+  ? O
+  : T extends { type: "string" }
+    ? string
+    : T extends { type: "number" }
+      ? number
+      : T extends { type: "boolean" }
+        ? boolean
+        : unknown;
+
 export type ConfigValue<T extends ConfigSchema = ConfigSchema> = {
   [K in keyof T]: T[K] extends ConfigFieldDef
-    ? T[K]["type"] extends "string"
-      ? string | undefined
-      : T[K]["type"] extends "number"
-        ? number | undefined
-        : T[K]["type"] extends "boolean"
-          ? boolean | undefined
-          : unknown
+    ? ExtractFieldType<T[K]> | undefined
     : T[K] extends ConfigSchema
       ? ConfigValue<T[K]>
       : unknown;
