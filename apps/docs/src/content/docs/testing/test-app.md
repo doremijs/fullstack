@@ -16,7 +16,7 @@ const router = createRouter();
 router.get("/hello", async (ctx) => ctx.json({ message: "Hello!" }));
 
 const app = createTestApp();
-app.use(router.middleware());
+app.use(router);
 
 describe("GET /hello", () => {
   test("returns greeting", async () => {
@@ -33,7 +33,7 @@ describe("GET /hello", () => {
 
 ```typescript
 const app = createTestApp();
-app.use(userRouter.middleware());
+app.use(userRouter);
 
 // GET 请求
 const getRes = await app.request("GET", "/users/1");
@@ -99,7 +99,7 @@ afterEach(async () => {
 
 test("creates a user", async () => {
   const app = createTestApp();
-  app.use(createUsersRouter(db).middleware());
+  app.use(createUsersRouter(db));
 
   const res = await app.request("POST", "/users", {
     body: JSON.stringify({ name: "Test", email: "test@test.com", password: "password123" }),

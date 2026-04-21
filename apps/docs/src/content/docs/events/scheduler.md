@@ -13,8 +13,14 @@ import { createScheduler } from "@aeron/events";
 const scheduler = createScheduler();
 
 // cron 任务（每天凌晨 2 点）
+const SessionModel = defineModel("sessions", {
+  id: column.bigint({ primary: true, autoIncrement: true }),
+  token: column.varchar({ length: 255 }),
+  expiresAt: column.timestamp(),
+});
+
 scheduler.cron("cleanup", "0 2 * * *", async () => {
-  await db.delete("expired_sessions").where("expires_at", "<", new Date()).execute();
+  await db.query(SessionModel).where("expiresAt", "<", new Date()).hardDelete();
   console.log("过期会话已清理");
 });
 

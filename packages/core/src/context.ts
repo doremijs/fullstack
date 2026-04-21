@@ -1,29 +1,80 @@
 // @aeron/core - 请求上下文
 
-export interface Context {
+/** HTTP 请求上下文接口，包含请求信息、参数及响应辅助方法 */
+export interface Context<TParams extends Record<string, unknown> = Record<string, string>> {
+  /** 原始 Request 对象 */
   readonly request: Request;
+  /** 解析后的 URL 对象 */
   readonly url: URL;
+  /** HTTP 方法（如 GET、POST） */
   readonly method: string;
+  /** 请求路径 */
   readonly path: string;
-  readonly params: Record<string, string>;
+  /** 路由参数 */
+  readonly params: TParams;
+  /** URL 查询参数对象 */
   readonly query: Record<string, string>;
+  /** 请求头 */
   readonly headers: Headers;
+  /** 可在中间件间共享的状态存储 */
   readonly state: Map<string, unknown>;
+  /** 请求开始时间戳（performance.now()） */
   readonly startTime: number;
 
-  // 用户/租户 (中间件注入)
+  // 用户/租户（由中间件注入）
+  /** 当前用户（需认证中间件注入） */
   user?: unknown;
+  /** 当前租户（需租户中间件注入） */
   tenant?: unknown;
 
   // 响应方法
+  /**
+   * 返回 JSON 响应
+   * @param data - 响应数据
+   * @param status - HTTP 状态码，默认 200
+   * @returns Response 对象
+   */
   json(data: unknown, status?: number): Response;
+  /**
+   * 返回纯文本响应
+   * @param data - 文本内容
+   * @param status - HTTP 状态码，默认 200
+   * @returns Response 对象
+   */
   text(data: string, status?: number): Response;
+  /**
+   * 返回 HTML 响应
+   * @param data - HTML 内容
+   * @param status - HTTP 状态码，默认 200
+   * @returns Response 对象
+   */
   html(data: string, status?: number): Response;
+  /**
+   * 返回重定向响应
+   * @param url - 跳转目标地址
+   * @param status - HTTP 状态码，默认 302
+   * @returns Response 对象
+   */
   redirect(url: string, status?: number): Response;
+  /**
+   * 返回流式响应
+   * @param body - 可读流
+   * @param contentType - Content-Type，默认 application/octet-stream
+   * @returns Response 对象
+   */
   stream(body: ReadableStream, contentType?: string): Response;
 }
 
-export function createContext(request: Request, params?: Record<string, string>): Context {
+/**
+ * 创建请求上下文
+ * @param request - 原始 Request 对象
+ * @param params - 路由参数
+ * @returns Context 实例
+ */
+export function createContext<TParams extends Record<string, unknown> = Record<string, string>>(
+  request: Request,
+  params?: TParams,
+): Context<TParams> {
   const url = new URL(request.url);
   const query: Record<string, string> = {};
   url.searchParams.forEach((value, key) => {
@@ -35,7 +86,7 @@ export function createContext(request: Request, params?: Record<string, string>)
     url,
     method: request.method,
     path: url.pathname,
-    params: params ?? {},
+    params: params ?? ({} as TParams),
     query,
     headers: request.headers,
     state: new Map(),

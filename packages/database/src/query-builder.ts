@@ -1,78 +1,173 @@
-// @aeron/database - Query Builder
+// @aeron/database — 查询构建器
+// 提供不可变状态、链式调用的 SQL 构建能力，支持 SELECT / INSERT / UPDATE / DELETE 及软删除
 
 import type { ModelDefinition } from "./model";
 
+/**
+ * WHERE 条件单元。
+ */
 export interface WhereCondition {
+  /** 字段名 */
   field: string;
+  /** 比较操作符 */
   op: "=" | "!=" | ">" | ">=" | "<" | "<=" | "LIKE" | "IN" | "IS NULL" | "IS NOT NULL";
+  /** 比较值（IS NULL / IS NOT NULL 时可选） */
   value?: unknown;
+  /** 与前一条件的连接方式（AND / OR） */
   connector: "AND" | "OR";
 }
 
+/**
+ * ORDER BY 子句单元。
+ */
 export interface OrderByClause {
+  /** 排序字段 */
   field: string;
+  /** 排序方向 */
   direction: "asc" | "desc";
 }
 
+/**
+ * HAVING 条件单元。
+ */
 export interface HavingCondition {
+  /** 字段名 */
   field: string;
+  /** 比较操作符 */
   op: string;
+  /** 比较值 */
   value: unknown;
 }
 
+/**
+ * 乐观锁版本子句。
+ */
 export interface VersionClause {
+  /** 版本字段名 */
   field: string;
+  /** 当前版本号 */
   currentVersion: number;
 }
 
+/**
+ * 所有支持的 WHERE 操作符联合类型。
+ */
+export type WhereOp = WhereCondition["op"];
+
+/**
+ * 查询构建器接口，所有方法返回新的不可变实例。
+ * @template T — 模型行类型
+ */
 export interface QueryBuilder<T = unknown> {
-  where(field: string, op: string, value?: unknown): QueryBuilder<T>;
-  orWhere(field: string, op: string, value?: unknown): QueryBuilder<T>;
-  orderBy(field: string, direction?: "asc" | "desc"): QueryBuilder<T>;
+  // WHERE
+  where(field: keyof T, op: "IS NULL" | "IS NOT NULL"): QueryBuilder<T>;
+  where(field: keyof T, op: Exclude<WhereOp, "IS NULL" | "IS NOT NULL">, value: unknown): QueryBuilder<T>;
+  where(field: keyof T, op: WhereOp, value?: unknown): QueryBuilder<T>;
+  orWhere(field: keyof T, op: "IS NULL" | "IS NOT NULL"): QueryBuilder<T>;
+  orWhere(field: keyof T, op: Exclude<WhereOp, "IS NULL" | "IS NOT NULL">, value: unknown): QueryBuilder<T>;
+  orWhere(field: keyof T, op: WhereOp, value?: unknown): QueryBuilder<T>;
+
+  // 排序与分页
+  /** 按字段排序（默认升序） */
+  orderBy(field: keyof T, direction?: "asc" | "desc"): QueryBuilder<T>;
+  /** 限制返回条数 */
   limit(n: number): QueryBuilder<T>;
+  /** 跳过前 n 条 */
   offset(n: number): QueryBuilder<T>;
+  /** 选择返回字段（传入空数组则 SELECT *） */
   select(...fields: string[]): QueryBuilder<T>;
 
-  groupBy(...fields: string[]): QueryBuilder<T>;
-  having(field: string, op: string, value: unknown): QueryBuilder<T>;
+  // 分组与过滤
+  /** 按字段分组 */
+  groupBy(...fields: (keyof T)[]): QueryBuilder<T>;
+  /** 对分组结果添加 HAVING 条件 */
+  having(field: keyof T, op: string, value: unknown): QueryBuilder<T>;
 
+  // 批量插入
+  /**
+   * 批量插入数据。
+   * @param rows — 待插入的行数据数组
+   * @param fields — 要插入的字段列表
+   */
   batchInsert(rows: Record<string, unknown>[], fields: string[]): QueryBuilder<T>;
 
-  withVersion(field: string, currentVersion: number): QueryBuilder<T>;
+  // 乐观锁
+  /**
+   * 启用乐观锁（UPDATE 时自动 version + 1 并校验）。
+   * @param field — 版本字段名
+   * @param currentVersion — 当前版本号
+   */
+  withVersion(field: keyof T, currentVersion: number): QueryBuilder<T>;
 
+  // 删除与恢复
+  /** 标记为物理删除（无视 softDelete） */
   hardDelete(): QueryBuilder<T>;
+  /** 标记为恢复软删除（将 deleted_at 置 NULL） */
   restore(): QueryBuilder<T>;
+  /** 查询时包含已软删除的行 */
   withDeleted(): QueryBuilder<T>;
 
+  // SQL 生成
+  /** 生成最终 SQL 文本与参数数组 */
   toSQL(): { text: string; params: unknown[] };
 
+  // 内部状态转换（由 database.ts 调用）
+  /** 设置为单条插入模式 */
   insertData(data: Record<string, unknown>): QueryBuilder<T>;
+  /** 设置为更新模式 */
   updateData(data: Record<string, unknown>): QueryBuilder<T>;
+  /** 设置为删除模式 */
   deleteQuery(): QueryBuilder<T>;
 
+  /** 获取当前操作类型 */
   getOperation(): "select" | "insert" | "update" | "delete";
 }
 
+/**
+ * 查询内部状态，记录所有链式调用累积的条件与配置。
+ */
 interface QueryState {
+  /** 当前操作类型 */
   operation: "select" | "insert" | "update" | "delete";
+  /** SELECT 字段列表 */
   fields: string[];
+  /** WHERE 条件列表 */
   wheres: WhereCondition[];
+  /** ORDER BY 列表 */
   orders: OrderByClause[];
+  /** LIMIT 值 */
   limitVal: number | undefined;
+  /** OFFSET 值 */
   offsetVal: number | undefined;
+  /** 单条插入数据 */
   insertValues: Record<string, unknown> | undefined;
+  /** 更新数据 */
   updateValues: Record<string, unknown> | undefined;
+  /** 是否启用软删除 */
   isSoftDelete: boolean;
+  /** GROUP BY 字段 */
   groupByFields: string[];
+  /** HAVING 条件 */
   havings: HavingCondition[];
+  /** 批量插入行数据 */
   batchInsertRows: Record<string, unknown>[] | undefined;
+  /** 批量插入字段 */
   batchInsertFields: string[] | undefined;
+  /** 乐观锁子句 */
   versionClause: VersionClause | undefined;
+  /** 是否强制物理删除 */
   isHardDelete: boolean;
+  /** 是否恢复软删除 */
   isRestore: boolean;
+  /** 查询时是否包含已删除行 */
   includeDeleted: boolean;
 }
 
+/**
+ * 深拷贝查询状态，保证不可变性。
+ * @param state — 当前状态
+ * @returns 新的状态副本
+ */
 function cloneState(state: QueryState): QueryState {
   return {
     operation: state.operation,
@@ -97,6 +192,14 @@ function cloneState(state: QueryState): QueryState {
   };
 }
 
+/**
+ * 构建 WHERE 子句及参数列表。
+ * @param wheres — WHERE 条件数组
+ * @param isSoftDelete — 当前模型是否启用软删除
+ * @param includeDeleted — 是否包含已软删除行
+ * @param startParamIndex — 参数起始索引（从 1 开始）
+ * @returns 子句文本、参数数组与下一个参数索引
+ */
 function buildWhereClause(
   wheres: WhereCondition[],
   isSoftDelete: boolean,
@@ -143,6 +246,12 @@ function buildWhereClause(
   return { clause: ` WHERE ${parts.join(" ")}`, params, nextParamIndex: paramIndex };
 }
 
+/**
+ * 构建 GROUP BY 与 HAVING 子句。
+ * @param state — 查询状态
+ * @param startParamIndex — 参数起始索引
+ * @returns 子句文本、参数数组与下一个参数索引
+ */
 function buildGroupByHaving(
   state: QueryState,
   startParamIndex: number,
@@ -167,6 +276,12 @@ function buildGroupByHaving(
   return { clause, params, nextParamIndex: paramIndex };
 }
 
+/**
+ * 构建 SELECT 语句。
+ * @param tableName — 表名
+ * @param state — 查询状态
+ * @returns SQL 文本与参数数组
+ */
 function buildSelectSQL(tableName: string, state: QueryState): { text: string; params: unknown[] } {
   const params: unknown[] = [];
   let paramIndex = 1;
@@ -207,8 +322,14 @@ function buildSelectSQL(tableName: string, state: QueryState): { text: string; p
   return { text, params };
 }
 
+/**
+ * 构建 INSERT 语句。
+ * @param tableName — 表名
+ * @param state — 查询状态
+ * @returns SQL 文本与参数数组
+ */
 function buildInsertSQL(tableName: string, state: QueryState): { text: string; params: unknown[] } {
-  // Batch insert
+  // 批量插入
   if (state.batchInsertRows && state.batchInsertFields) {
     const fields = state.batchInsertFields;
     const rows = state.batchInsertRows;
@@ -229,7 +350,7 @@ function buildInsertSQL(tableName: string, state: QueryState): { text: string; p
     return { text, params };
   }
 
-  // Single insert
+  // 单行插入
   const data = state.insertValues;
   if (!data) {
     return { text: "", params: [] };
@@ -249,6 +370,12 @@ function buildInsertSQL(tableName: string, state: QueryState): { text: string; p
   return { text, params };
 }
 
+/**
+ * 构建 UPDATE 语句（支持乐观锁）。
+ * @param tableName — 表名
+ * @param state — 查询状态
+ * @returns SQL 文本与参数数组
+ */
 function buildUpdateSQL(tableName: string, state: QueryState): { text: string; params: unknown[] } {
   const data = state.updateValues;
   if (!data) {
@@ -264,14 +391,14 @@ function buildUpdateSQL(tableName: string, state: QueryState): { text: string; p
     params.push(data[key]);
   }
 
-  // Optimistic lock: add version = version + 1 to SET
+  // 乐观锁：SET 中自动 version = version + 1
   if (state.versionClause) {
     setParts.push(`${state.versionClause.field} = ${state.versionClause.field} + 1`);
   }
 
   let text = `UPDATE ${tableName} SET ${setParts.join(", ")}`;
 
-  // Add version check to where conditions
+  // 乐观锁：WHERE 中追加 version = currentVersion
   const wheres = [...state.wheres];
   if (state.versionClause) {
     wheres.push({
@@ -289,8 +416,14 @@ function buildUpdateSQL(tableName: string, state: QueryState): { text: string; p
   return { text, params };
 }
 
+/**
+ * 构建 DELETE 语句（支持软删除、恢复、物理删除）。
+ * @param tableName — 表名
+ * @param state — 查询状态
+ * @returns SQL 文本与参数数组
+ */
 function buildDeleteSQL(tableName: string, state: QueryState): { text: string; params: unknown[] } {
-  // Restore: UPDATE ... SET deleted_at = NULL
+  // 恢复：UPDATE ... SET deleted_at = NULL
   if (state.isRestore) {
     const params: unknown[] = [];
     const paramIndex = 1;
@@ -303,7 +436,7 @@ function buildDeleteSQL(tableName: string, state: QueryState): { text: string; p
     return { text, params };
   }
 
-  // Hard delete: always physical DELETE, even for softDelete models
+  // 物理删除：无视 softDelete 直接 DELETE
   if (state.isHardDelete) {
     const params: unknown[] = [];
     const paramIndex = 1;
@@ -316,14 +449,14 @@ function buildDeleteSQL(tableName: string, state: QueryState): { text: string; p
     return { text, params };
   }
 
-  // Soft delete: UPDATE ... SET deleted_at = NOW()
+  // 软删除：UPDATE ... SET deleted_at = NOW()
   if (state.isSoftDelete) {
     const params: unknown[] = [];
     const paramIndex = 1;
 
     let text = `UPDATE ${tableName} SET deleted_at = NOW()`;
 
-    // For soft delete WHERE, include deleted_at IS NULL filter
+    // 软删除 WHERE 追加 deleted_at IS NULL，防止重复删除
     const wheres = [...state.wheres];
     wheres.push({ field: "deleted_at", op: "IS NULL", connector: "AND" });
 
@@ -334,7 +467,7 @@ function buildDeleteSQL(tableName: string, state: QueryState): { text: string; p
     return { text, params };
   }
 
-  // Hard delete (non-softDelete model)
+  // 普通硬删除（非 softDelete 模型）
   const params: unknown[] = [];
   const paramIndex = 1;
   let text = `DELETE FROM ${tableName}`;
@@ -346,23 +479,29 @@ function buildDeleteSQL(tableName: string, state: QueryState): { text: string; p
   return { text, params };
 }
 
+/**
+ * 创建不可变查询构建器实例。
+ * @param tableName — 表名
+ * @param state — 当前查询状态
+ * @returns QueryBuilder 实例
+ */
 function createBuilder<T>(tableName: string, state: QueryState): QueryBuilder<T> {
   return {
-    where(field: string, op: string, value?: unknown): QueryBuilder<T> {
+    where(field: keyof T, op: WhereOp, value?: unknown): QueryBuilder<T> {
       const next = cloneState(state);
-      next.wheres.push({ field, op: op as WhereCondition["op"], value, connector: "AND" });
+      next.wheres.push({ field: field as string, op, value, connector: "AND" });
       return createBuilder<T>(tableName, next);
     },
 
-    orWhere(field: string, op: string, value?: unknown): QueryBuilder<T> {
+    orWhere(field: keyof T, op: WhereOp, value?: unknown): QueryBuilder<T> {
       const next = cloneState(state);
-      next.wheres.push({ field, op: op as WhereCondition["op"], value, connector: "OR" });
+      next.wheres.push({ field: field as string, op, value, connector: "OR" });
       return createBuilder<T>(tableName, next);
     },
 
-    orderBy(field: string, direction: "asc" | "desc" = "asc"): QueryBuilder<T> {
+    orderBy(field: keyof T, direction: "asc" | "desc" = "asc"): QueryBuilder<T> {
       const next = cloneState(state);
-      next.orders.push({ field, direction });
+      next.orders.push({ field: field as string, direction });
       return createBuilder<T>(tableName, next);
     },
 
@@ -384,15 +523,15 @@ function createBuilder<T>(tableName: string, state: QueryState): QueryBuilder<T>
       return createBuilder<T>(tableName, next);
     },
 
-    groupBy(...fields: string[]): QueryBuilder<T> {
+    groupBy(...fields: (keyof T)[]): QueryBuilder<T> {
       const next = cloneState(state);
-      next.groupByFields = fields;
+      next.groupByFields = fields as string[];
       return createBuilder<T>(tableName, next);
     },
 
-    having(field: string, op: string, value: unknown): QueryBuilder<T> {
+    having(field: keyof T, op: string, value: unknown): QueryBuilder<T> {
       const next = cloneState(state);
-      next.havings.push({ field, op, value });
+      next.havings.push({ field: field as string, op, value });
       return createBuilder<T>(tableName, next);
     },
 
@@ -404,9 +543,9 @@ function createBuilder<T>(tableName: string, state: QueryState): QueryBuilder<T>
       return createBuilder<T>(tableName, next);
     },
 
-    withVersion(field: string, currentVersion: number): QueryBuilder<T> {
+    withVersion(field: keyof T, currentVersion: number): QueryBuilder<T> {
       const next = cloneState(state);
-      next.versionClause = { field, currentVersion };
+      next.versionClause = { field: field as string, currentVersion };
       return createBuilder<T>(tableName, next);
     },
 
@@ -469,6 +608,12 @@ function createBuilder<T>(tableName: string, state: QueryState): QueryBuilder<T>
   };
 }
 
+/**
+ * 基于模型定义创建初始查询构建器。
+ * @template T — 模型行类型
+ * @param model — 模型定义
+ * @returns 初始 QueryBuilder 实例（默认 select 操作）
+ */
 export function createQueryBuilder<T = unknown>(model: ModelDefinition<T>): QueryBuilder<T> {
   const state: QueryState = {
     operation: "select",

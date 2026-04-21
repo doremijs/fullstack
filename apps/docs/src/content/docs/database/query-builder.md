@@ -1,180 +1,178 @@
 ---
 title: 查询构建器
-description: 使用 createQueryBuilder 构建类型安全的 SQL 查询
+description: 使用 defineModel 和 db.query 构建完全类型安全的 SQL 查询
 ---
 
-`createQueryBuilder` 提供了流畅的链式 API 来构建 SQL 查询，无需手写 SQL 字符串，同时避免 SQL 注入。
+Aeron 的查询构建器基于模型定义自动推导 TypeScript 类型，从 `db.query(Model).get()` 到返回结果的每一个字段都有完整类型提示。
 
-## 初始化
+## 定义模型
+
+使用 `defineModel` 和 `column` 定义数据模型，列类型会自动映射到 TypeScript 类型：
 
 ```typescript
-import { createQueryBuilder } from "@aeron/database";
+import { defineModel, column } from "@aeron/database";
 
-const db = createQueryBuilder({
-  url: process.env.DATABASE_URL!,
+const UserModel = defineModel("users", {
+  id: column.bigint({ primary: true, autoIncrement: true }),
+  email: column.varchar({ length: 255, unique: true }),
+  name: column.varchar({ length: 255 }),
+  age: column.int({ nullable: true }),
+  active: column.boolean({ default: true }),
+  role: column.enum({ values: ["admin", "user"] as const }),
+  metadata: column.json<{ tags: string[] }>(),
+  createdAt: column.timestamp(),
 });
+
+// 推导出的用户类型：
+// {
+//   id: bigint;
+//   email: string;
+//   name: string;
+//   age: number | null;
+//   active: boolean;
+//   role: "admin" | "user";
+//   metadata: { tags: string[] };
+//   createdAt: Date;
+// }
+```
+
+### 列类型映射
+
+| 列方法 | TypeScript 类型 | 说明 |
+|--------|----------------|------|
+| `column.bigint()` | `bigint` | 64 位整数 |
+| `column.int()` | `number` | 32 位整数 |
+| `column.varchar()` | `string` | 变长字符串 |
+| `column.text()` | `string` | 长文本 |
+| `column.boolean()` | `boolean` | 布尔值 |
+| `column.timestamp()` | `Date` | 时间戳 |
+| `column.json<T>()` | `T` | JSON 列，可指定泛型 |
+| `column.enum({ values })` | 字面量联合 | 枚举值 |
+| `column.decimal()` | `string` | 高精度小数（字符串存储避免精度丢失） |
+
+### 可空列
+
+`nullable: true` 会自动在 TypeScript 类型中加上 `| null`：
+
+```typescript
+const PostModel = defineModel("posts", {
+  id: column.bigint({ primary: true, autoIncrement: true }),
+  title: column.varchar({ length: 200 }),
+  // publishedAt 可以是 null
+  publishedAt: column.timestamp({ nullable: true }),
+});
+
+// 推导类型：{ id: bigint; title: string; publishedAt: Date | null }
 ```
 
 ## SELECT 查询
 
 ```typescript
-// 查询所有字段
-const users = await db.from("users").execute();
+const db = createDatabase({ url: process.env.DATABASE_URL! });
 
-// 指定字段
-const users = await db
-  .from("users")
-  .select(["id", "name", "email"])
-  .execute();
+// 查询全部 — 返回完整类型数组
+const users = await db.query(UserModel).list();
+// users: { id: bigint; email: string; ... }[]
 
-// 带条件
-const activeUsers = await db
-  .from("users")
-  .select(["id", "name"])
-  .where("active", "=", true)
-  .where("role", "=", "user")
-  .execute();
+// 单条查询 — 返回完整类型或 undefined
+const user = await db.query(UserModel).where("email", "=", "alice@example.com").get();
+// user: { id: bigint; email: string; ... } | undefined
+
+// 指定字段 — 返回部分类型
+const names = await db.query(UserModel).select("id", "name").list();
+// names: { id: bigint; name: string }[]
 ```
 
 ## WHERE 条件
 
 ```typescript
 // 等值
-.where("status", "=", "active")
+const admin = await db.query(UserModel).where("role", "=", "admin").get();
 
 // 比较
-.where("age", ">", 18)
-.where("created_at", ">=", new Date("2024-01-01"))
+const adults = await db.query(UserModel).where("age", ">=", 18).list();
 
 // LIKE
-.where("email", "LIKE", "%@example.com")
+const matched = await db.query(UserModel).where("email", "LIKE", "%@example.com").list();
 
 // IN
-.whereIn("role", ["admin", "moderator"])
+const selected = await db.query(UserModel).where("id", "IN", [1, 2, 3]).list();
 
 // IS NULL
-.whereNull("deleted_at")
-.whereNotNull("email")
+const unaged = await db.query(UserModel).where("age", "IS NULL").list();
 ```
 
 ## 排序和分页
 
 ```typescript
 const users = await db
-  .from("users")
-  .select(["id", "name", "created_at"])
+  .query(UserModel)
   .where("active", "=", true)
-  .orderBy("created_at", "DESC")
+  .orderBy("createdAt", "desc")
   .limit(20)
-  .offset(40)  // 第 3 页
-  .execute();
-```
-
-## JOIN 查询
-
-```typescript
-const posts = await db
-  .from("posts")
-  .select(["posts.id", "posts.title", "users.name as author_name"])
-  .join("users", "posts.user_id", "=", "users.id")
-  .leftJoin("categories", "posts.category_id", "=", "categories.id")
-  .where("posts.published", "=", true)
-  .execute();
+  .offset(40)
+  .list();
 ```
 
 ## 聚合查询
 
 ```typescript
-// 计数
-const total = await db
-  .from("users")
-  .where("active", "=", true)
-  .count();
+const total = await db.query(UserModel).where("active", "=", true).count();
+// total: number
 
-// 分组
-const countByRole = await db
-  .from("users")
-  .select(["role"])
-  .count("* as total")
-  .groupBy("role")
-  .execute();
+const avgAge = await db.query(UserModel).where("age", "IS NOT NULL").avg("age");
+// avgAge: number
 ```
 
 ## INSERT
 
 ```typescript
-// 插入单条记录
-const user = await db
-  .insert("users", {
-    name: "Alice",
-    email: "alice@example.com",
-    role: "user",
-  })
-  .returning("*")
-  .first();
-
-// 批量插入
-await db.insertMany("users", [
-  { name: "Bob", email: "bob@example.com" },
-  { name: "Carol", email: "carol@example.com" },
-]);
+// 插入并返回完整记录
+const newUser = await db.query(UserModel).insert(
+  { email: "alice@example.com", name: "Alice", role: "user" },
+  { returning: true },
+);
+// newUser: { id: bigint; email: string; name: string; ... } | undefined
 ```
 
 ## UPDATE
 
 ```typescript
-// 更新
-await db
-  .update("users")
-  .set({ name: "Alice Smith", updated_at: new Date() })
-  .where("id", "=", userId)
-  .execute();
-
-// 返回更新后的记录
+// 更新并返回更新后的记录
 const updated = await db
-  .update("users")
-  .set({ active: false })
-  .where("id", "=", userId)
-  .returning("*")
-  .first();
+  .query(UserModel)
+  .where("id", "=", 1)
+  .update({ name: "Alice Smith" }, { returning: true });
+// updated: { id: bigint; email: string; name: string; ... } | undefined
 ```
 
 ## DELETE
 
 ```typescript
-await db
-  .delete("users")
-  .where("id", "=", userId)
-  .execute();
+// 硬删除
+await db.query(UserModel).where("id", "=", 1).hardDelete();
 
-// 软删除
-await db
-  .update("users")
-  .set({ deleted_at: new Date() })
-  .where("id", "=", userId)
-  .execute();
+// 软删除（模型需开启 softDelete: true）
+await db.query(UserModel).where("id", "=", 1).delete();
+
+// 恢复软删除记录
+await db.query(UserModel).where("id", "=", 1).restore();
+```
+
+## 事务
+
+```typescript
+await db.transaction(async (tx) => {
+  const user = await tx.query(UserModel).insert({ email: "a@b.com", name: "A", role: "user" });
+  await tx.query(PostModel).insert({ title: "Hello", userId: user!.id });
+});
 ```
 
 ## 原始 SQL
 
-```typescript
-// 需要原始 SQL 时
-const result = await db.raw(
-  "SELECT * FROM users WHERE age > $1 AND city = $2",
-  [18, "Shanghai"]
-);
-```
-
-## 查询单条记录
+当查询构建器无法表达复杂查询时，可回退到原始 SQL：
 
 ```typescript
-// 返回第一条，无结果返回 null
-const user = await db
-  .from("users")
-  .where("email", "=", "alice@example.com")
-  .first();
-
-if (!user) {
-  throw new NotFoundError("用户不存在");
-}
+const rows = await db.raw("SELECT * FROM users WHERE age > $1", [18]);
+// rows: unknown[] — 需自行断言类型
 ```

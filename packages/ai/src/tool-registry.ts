@@ -1,42 +1,106 @@
-// Tool Registry - Tool 注册、发现与调用
+/**
+ * @aeron/ai — 工具注册、发现与调用
+ *
+ * 提供 AI 工具的注册、参数校验、超时执行和 JSON Schema 导出能力。
+ * 所有工具必须显式注册，禁止任意执行未注册函数。
+ */
 
+/** 工具参数定义 */
 export interface ToolParameter {
+  /** 参数名称 */
   name: string;
+  /** 参数类型 */
   type: "string" | "number" | "boolean" | "object" | "array";
+  /** 参数说明 */
   description: string;
+  /** 是否必填 */
   required?: boolean;
+  /** 额外 JSON Schema 约束 */
   schema?: Record<string, unknown>;
 }
 
+/** 工具定义 */
 export interface ToolDefinition {
+  /** 工具名称 */
   name: string;
+  /** 工具说明 */
   description: string;
+  /** 参数列表 */
   parameters: ToolParameter[];
+  /** 工具处理函数 */
   handler: (params: Record<string, unknown>) => Promise<unknown>;
+  /** 是否需要审批 */
   requiresApproval?: boolean;
+  /** 风险等级 */
   riskLevel?: "low" | "medium" | "high" | "critical";
+  /** 超时时间（毫秒） */
   timeout?: number;
 }
 
+/** 工具执行结果 */
 export interface ToolExecutionResult {
+  /** 工具名称 */
   toolName: string;
+  /** 是否执行成功 */
   success: boolean;
+  /** 执行结果 */
   result?: unknown;
+  /** 错误信息 */
   error?: string;
+  /** 执行耗时（毫秒） */
   duration: number;
+  /** 执行时间戳（毫秒） */
   timestamp: number;
 }
 
+/** 工具注册表，负责工具的注册、发现、参数校验和执行 */
 export interface ToolRegistry {
+  /**
+   * 注册工具
+   * @param tool - 工具定义
+   */
   register(tool: ToolDefinition): void;
+
+  /**
+   * 注销工具
+   * @param name - 工具名称
+   * @returns 注销成功返回 true
+   */
   unregister(name: string): boolean;
+
+  /**
+   * 获取工具定义
+   * @param name - 工具名称
+   * @returns 工具定义，不存在返回 undefined
+   */
   get(name: string): ToolDefinition | undefined;
+
+  /** 列出所有已注册的工具 */
   list(): ToolDefinition[];
+
+  /**
+   * 执行指定工具
+   * @param name - 工具名称
+   * @param params - 调用参数
+   * @returns 工具执行结果
+   */
   execute(name: string, params: Record<string, unknown>): Promise<ToolExecutionResult>;
+
+  /**
+   * 校验工具参数
+   * @param name - 工具名称
+   * @param params - 待校验参数
+   * @returns 校验结果及错误信息列表
+   */
   validateParams(
     name: string,
     params: Record<string, unknown>,
   ): { valid: boolean; errors: string[] };
+
+  /**
+   * 导出所有工具的 JSON Schema 描述
+   * @returns JSON Schema 数组，用于 OpenAPI / Function Calling
+   */
   toJSONSchema(): Array<{
     name: string;
     description: string;
@@ -44,8 +108,10 @@ export interface ToolRegistry {
   }>;
 }
 
+/** 默认工具执行超时：30 秒（毫秒） */
 const DEFAULT_TIMEOUT = 30_000;
 
+/** 内部参数类型到 JSON Schema 类型的映射 */
 const PARAM_TYPE_MAP: Record<ToolParameter["type"], string> = {
   string: "string",
   number: "number",
@@ -54,6 +120,12 @@ const PARAM_TYPE_MAP: Record<ToolParameter["type"], string> = {
   array: "array",
 };
 
+/**
+ * 校验单个参数值是否符合期望类型
+ * @param value - 参数值
+ * @param expectedType - 期望类型
+ * @returns 是否匹配
+ */
 function validateParamType(value: unknown, expectedType: ToolParameter["type"]): boolean {
   switch (expectedType) {
     case "string":
@@ -69,6 +141,10 @@ function validateParamType(value: unknown, expectedType: ToolParameter["type"]):
   }
 }
 
+/**
+ * 创建工具注册表实例
+ * @returns ToolRegistry 实例
+ */
 export function createToolRegistry(): ToolRegistry {
   const tools = new Map<string, ToolDefinition>();
 

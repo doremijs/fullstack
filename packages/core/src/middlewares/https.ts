@@ -2,6 +2,7 @@
 
 import type { Middleware } from "../middleware";
 
+/** HTTPS 强制中间件配置选项 */
 export interface HTTPSOptions {
   /** 是否启用 HSTS header */
   hsts?: boolean;
@@ -17,6 +18,12 @@ export interface HTTPSOptions {
   excludePaths?: string[];
 }
 
+/**
+ * 创建 HTTPS 强制中间件
+ * 非 HTTPS 请求将被 301 重定向；HTTPS 响应附加 HSTS 头
+ * @param options - 配置选项
+ * @returns Middleware 实例
+ */
 export function httpsEnforce(options: HTTPSOptions = {}): Middleware {
   const {
     hsts = true,

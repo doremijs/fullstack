@@ -22,7 +22,7 @@ const tracer = createTracer({
 // 追踪一个操作
 const span = tracer.start("get-user");
 try {
-  const user = await db.from("users").where("id", "=", userId).first();
+  const user = await db.query(UserModel).where("id", "=", userId).get();
   span.setAttribute("user.id", userId);
   span.setStatus("ok");
   return user;
@@ -69,11 +69,11 @@ async function getUserWithPosts(userId: string, parentSpan?: Span) {
   try {
     // 子操作的 span
     const userSpan = tracer.start("db-get-user", { parent: span });
-    const user = await db.from("users").where("id", "=", userId).first();
+    const user = await db.query(UserModel).where("id", "=", userId).get();
     userSpan.finish();
 
     const postsSpan = tracer.start("db-get-posts", { parent: span });
-    const posts = await db.from("posts").where("user_id", "=", userId).execute();
+    const posts = await db.query(PostModel).where("userId", "=", userId).list();
     postsSpan.finish();
 
     return { user, posts };

@@ -46,13 +46,13 @@ const app = createApp({ port: config.port });
 app.use(loggerMiddleware(logger));
 
 // 路由
-app.use(authRouter().middleware());
-app.use(usersRouter().middleware());
+app.use(authRouter());
+app.use(usersRouter());
 
-app.onStart(() => logger.info("Server started", { port: config.port }));
-app.onStop(() => logger.info("Server stopped"));
+app.lifecycle.onAfterStart(() => logger.info("Server started", { port: config.port }));
+app.lifecycle.onBeforeStop(() => logger.info("Server stopped"));
 
-app.start();
+await app.listen();
 ```
 
 ## 路由模块
@@ -62,24 +62,31 @@ app.start();
 ```typescript
 // src/routes/users.ts
 import { createRouter } from "@aeron/core";
-import type { QueryBuilder } from "@aeron/database";
+import { defineModel, column } from "@aeron/database";
+import type { Database } from "@aeron/database";
 
-export function usersRouter(db: QueryBuilder) {
+const UserModel = defineModel("users", {
+  id: column.bigint({ primary: true, autoIncrement: true }),
+  name: column.varchar({ length: 255 }),
+  email: column.varchar({ length: 255, unique: true }),
+});
+
+export function usersRouter(db: Database) {
   const router = createRouter();
 
   router.get("/users", async (ctx) => {
-    const users = await db.from("users").execute();
+    const users = await db.query(UserModel).list();
     return ctx.json(users);
   });
 
   router.post("/users", async (ctx) => {
     const body = await ctx.body<{ name: string; email: string }>();
-    const user = await db.insert("users", body).returning("*").first();
+    const user = await db.query(UserModel).insert(body, { returning: true });
     return ctx.json(user, 201);
   });
 
-  router.get("/users/:id", async (ctx) => {
-    const user = await db.from("users").where("id", "=", ctx.params.id).first();
+  router.get("/users/:id<int>", async (ctx) => {
+    const user = await db.query(UserModel).where("id", "=", ctx.params.id).get();
     if (!user) return ctx.json({ error: "Not found" }, 404);
     return ctx.json(user);
   });

@@ -1,43 +1,107 @@
 // @aeron/auth - OAuth2/OIDC 客户端
 // state 参数防 CSRF，exchangeCode 用 POST 换取 token
 
+/**
+ * OAuth2 提供商配置
+ */
 export interface OAuthProvider {
+  /** 提供商名称 */
   name: string;
+  /** 授权端点 URL */
   authorizationURL: string;
+  /** Token 端点 URL */
   tokenURL: string;
+  /** 用户信息端点 URL（可选） */
   userInfoURL?: string;
+  /** 客户端 ID */
   clientId: string;
+  /** 客户端密钥 */
   clientSecret: string;
+  /** 请求的权限范围 */
   scopes: string[];
+  /** 回调地址 */
   redirectURL: string;
 }
 
+/**
+ * OAuth2 Token 响应数据
+ */
 export interface OAuthTokenResponse {
+  /** 访问令牌 */
   accessToken: string;
+  /** 令牌类型（如 bearer） */
   tokenType: string;
+  /** 过期时间（秒） */
   expiresIn?: number;
+  /** 刷新令牌 */
   refreshToken?: string;
+  /** 授权的权限范围 */
   scope?: string;
+  /** ID Token（OIDC） */
   idToken?: string;
 }
 
+/**
+ * OAuth2 用户信息
+ */
 export interface OAuthUserInfo {
+  /** 用户在提供商处的唯一标识 */
   id: string;
+  /** 用户邮箱 */
   email?: string;
+  /** 用户姓名 */
   name?: string;
+  /** 用户头像 URL */
   avatar?: string;
+  /** 原始响应数据 */
   raw: Record<string, unknown>;
 }
 
+/**
+ * OAuth2 管理器接口
+ * 提供授权 URL 生成、Code 换 Token、获取用户信息及常用提供商预设
+ */
 export interface OAuthManager {
+  /**
+   * 生成授权 URL
+   * @param provider OAuth 提供商配置
+   * @param state 防 CSRF 的 state 参数
+   * @returns 完整的授权跳转 URL
+   */
   getAuthorizationURL(provider: OAuthProvider, state: string): string;
+
+  /**
+   * 用授权码换取访问令牌
+   * @param provider OAuth 提供商配置
+   * @param code 授权码
+   * @returns Token 响应数据
+   */
   exchangeCode(provider: OAuthProvider, code: string): Promise<OAuthTokenResponse>;
+
+  /**
+   * 获取用户信息
+   * @param provider OAuth 提供商配置（需配置 userInfoURL）
+   * @param accessToken 访问令牌
+   * @returns 用户信息
+   */
   getUserInfo(provider: OAuthProvider, accessToken: string): Promise<OAuthUserInfo>;
+
+  /**
+   * 创建 GitHub OAuth 提供商配置
+   * @param config 客户端配置
+   * @returns GitHub 提供商配置
+   */
   github(config: {
     clientId: string;
     clientSecret: string;
     redirectURL: string;
   }): OAuthProvider;
+
+  /**
+   * 创建 Google OAuth 提供商配置
+   * @param config 客户端配置
+   * @returns Google 提供商配置
+   */
   google(config: {
     clientId: string;
     clientSecret: string;
@@ -45,6 +109,10 @@ export interface OAuthManager {
   }): OAuthProvider;
 }
 
+/**
+ * 创建 OAuth2 管理器实例
+ * @returns OAuth 管理器实例
+ */
 export function createOAuth(): OAuthManager {
   return {
     getAuthorizationURL(provider: OAuthProvider, state: string): string {

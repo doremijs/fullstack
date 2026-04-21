@@ -4,19 +4,21 @@
 export { createApp } from "./app";
 export type { AeronApp, AppConfig, AppUrl } from "./app";
 
-export { createRouter } from "./router";
+export { createRouter, parseRoutePath } from "./router";
 export type {
   Router,
   RouteDefinition,
   RouteHandler,
   CompiledRoutes,
   ResourceHandlers,
+  ParsedParam,
+  ParsedRoute,
+  InferParams,
 } from "./router";
 
 export { createContext } from "./context";
 export type { Context } from "./context";
 
-export { compose } from "./middleware";
 export type { Middleware, NextFunction } from "./middleware";
 
 export { createConfig, loadConfig, parseArgs, securityPrecheck, sanitizeConfig } from "./config";
@@ -80,6 +82,12 @@ export type { TimeoutOptions } from "./middlewares/timeout";
 
 export { requestId } from "./middlewares/request-id";
 
+export { requestLogger } from "./middlewares/logger";
+export type { LoggerLike, RequestLoggerOptions } from "./middlewares/logger";
+
+export { errorHandler } from "./middlewares/error-handler";
+export type { ErrorHandlerOptions } from "./middlewares/error-handler";
+
 export { csrf } from "./middlewares/csrf";
 export type { CSRFOptions } from "./middlewares/csrf";
 
@@ -105,8 +113,12 @@ export type { ModuleDefinition, ModuleRegistry } from "./module";
 export { createWebSocketRouter } from "./websocket";
 export type { WSRoute, WSConnection, WebSocketRouter } from "./websocket";
 
-export { createParamValidator, paramConstraints } from "./param-constraint";
-export type { ParamConstraint, RouteParamValidator } from "./param-constraint";
+export { paramTypes, isValidParamType } from "./param-constraint";
+export type {
+  ParamType,
+  ParamTypeMap,
+  ParamTypeDef,
+} from "./param-constraint";
 
 export { negotiate } from "./content-negotiation";
 export type { NegotiationResult } from "./content-negotiation";

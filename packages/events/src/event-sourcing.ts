@@ -1,19 +1,39 @@
 /**
- * In-memory event store with optimistic concurrency and snapshot support.
+ * @aeron/events - 内存事件溯源存储
+ * 支持乐观并发控制与快照机制
  */
 
+/** 存储的事件记录 */
 export interface StoredEvent<T = unknown> {
+  /** 事件唯一标识 */
   id: string;
+  /** 聚合根 ID */
   aggregateId: string;
+  /** 聚合根类型 */
   aggregateType: string;
+  /** 事件类型 */
   eventType: string;
+  /** 事件载荷 */
   payload: T;
+  /** 版本号（用于乐观并发控制） */
   version: number;
+  /** 事件发生时间戳 */
   timestamp: number;
+  /** 可选的元数据 */
   metadata?: Record<string, unknown>;
 }
 
+/** 事件存储接口 */
 export interface EventStore {
+  /**
+   * 追加事件到聚合根流
+   * @param aggregateId 聚合根 ID
+   * @param aggregateType 聚合根类型
+   * @param events 要追加的事件列表
+   * @param expectedVersion 期望的当前版本（乐观并发控制）
+   * @returns 存储后的事件记录列表
+   * @throws 版本冲突时抛出 Error
+   */
   append(
     aggregateId: string,
     aggregateType: string,
@@ -25,13 +45,42 @@ export interface EventStore {
     expectedVersion: number,
   ): Promise<StoredEvent[]>;
 
+  /**
+   * 获取聚合根的事件流
+   * @param aggregateId 聚合根 ID
+   * @param fromVersion 起始版本（可选，默认从第一个事件开始）
+   * @returns 事件记录列表
+   */
   getEvents(aggregateId: string, fromVersion?: number): Promise<StoredEvent[]>;
+
+  /**
+   * 获取聚合根的最新版本号
+   * @param aggregateId 聚合根 ID
+   * @returns 最新版本号，无事件时返回 0
+   */
   getLatestVersion(aggregateId: string): Promise<number>;
 
+  /**
+   * 保存聚合根快照
+   * @param aggregateId 聚合根 ID
+   * @param state 聚合根状态
+   * @param version 快照对应的版本号
+   */
   saveSnapshot(aggregateId: string, state: unknown, version: number): Promise<void>;
+
+  /**
+   * 获取聚合根快照
+   * @param aggregateId 聚合根 ID
+   * @returns 快照状态与版本号，不存在返回 null
+   */
   getSnapshot(aggregateId: string): Promise<{ state: unknown; version: number } | null>;
 }
 
+/**
+ * 创建内存事件存储实例
+ * 基于 Map 实现，支持乐观并发控制与快照
+ * @returns 事件存储实例
+ */
 export function createMemoryEventStore(): EventStore {
   const streams = new Map<string, StoredEvent[]>();
   const snapshots = new Map<string, { state: unknown; version: number }>();

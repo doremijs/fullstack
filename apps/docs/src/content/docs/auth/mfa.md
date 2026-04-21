@@ -51,10 +51,10 @@ router.post("/auth/mfa/verify-setup", authMiddleware, async (ctx) => {
   }
 
   // 持久化 secret
-  await db.update("users")
-    .set({ mfa_secret: secret, mfa_enabled: true })
-    .where("id", "=", userId)
-    .execute();
+  await db.query(UserModel).where("id", "=", userId).update({
+    mfaSecret: secret,
+    mfaEnabled: true,
+  });
 
   await cache.delete(`mfa:pending:${userId}`);
   return ctx.json({ enabled: true });

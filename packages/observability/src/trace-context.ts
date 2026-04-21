@@ -8,17 +8,22 @@ import type { SpanContext } from "./tracing";
  */
 const TRACEPARENT_REGEX = /^00-([a-f0-9]{32})-([a-f0-9]{16})-([a-f0-9]{2})$/;
 
+/** 链路上下文传播器接口，用于在请求间传递和提取追踪信息 */
 export interface TraceContextPropagator {
-  /** 从 headers 提取 trace context */
+  /** 从请求头中提取 trace context
+   * @param headers 请求头对象
+   * @returns 提取到的 SpanContext，若不存在或格式非法则返回 null */
   extract(headers: Headers): SpanContext | null;
-  /** 注入 trace context 到 headers */
+  /** 将 trace context 注入请求头
+   * @param context 当前 Span 的上下文
+   * @param headers 要注入的目标请求头对象 */
   inject(context: SpanContext, headers: Headers): void;
 }
 
 /**
- * W3C TraceContext 传播器
- * https://www.w3.org/TR/trace-context/
- */
+ * 创建 W3C TraceContext 传播器
+ * 遵循 https://www.w3.org/TR/trace-context/ 规范
+ * @returns TraceContextPropagator 实例 */
 export function createW3CTraceContextPropagator(): TraceContextPropagator {
   return {
     extract(headers) {
@@ -53,8 +58,9 @@ export function createW3CTraceContextPropagator(): TraceContextPropagator {
 }
 
 /**
- * B3 传播器 (Zipkin)
- */
+ * 创建 B3 传播器（Zipkin 风格）
+ * 支持单头（b3）与多头（x-b3-*）两种格式
+ * @returns TraceContextPropagator 实例 */
 export function createB3Propagator(): TraceContextPropagator {
   return {
     extract(headers) {

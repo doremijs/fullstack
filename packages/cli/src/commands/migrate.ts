@@ -1,14 +1,26 @@
-// @aeron/cli - Migrate Command
+/**
+ * @aeron/cli — Migrate Command
+ *
+ * 提供数据库迁移的执行、状态查询和迁移文件生成功能。
+ */
 
 import type { MigrationRunner } from "@aeron/database";
 import type { Command } from "../cli";
 
+/** Migrate 命令选项 */
 export interface MigrateOptions {
+  /** 迁移执行器，用于 up/down/status 子命令 */
   runner?: MigrationRunner;
+  /** 迁移文件输出目录 */
   outputDir?: string;
+  /** 自定义时间戳生成函数 */
   timestampFn?: () => string;
 }
 
+/**
+ * 生成时间戳字符串（YYYYMMDDHHMMSS 格式）
+ * @returns 14 位时间戳字符串
+ */
 function generateTimestamp(): string {
   const now = new Date();
   const pad = (n: number, len = 2) => String(n).padStart(len, "0");
@@ -18,6 +30,12 @@ function generateTimestamp(): string {
   );
 }
 
+/**
+ * 生成迁移文件模板内容
+ * @param name - 迁移名称
+ * @param timestamp - 时间戳前缀
+ * @returns 迁移文件内容字符串
+ */
 function migrationFileTemplate(name: string, timestamp: string): string {
   return `// Migration: ${name}
 import type { Migration } from "@aeron/database";
@@ -40,6 +58,11 @@ export const migration: Migration = {
 `;
 }
 
+/**
+ * 创建 migrate 命令
+ * @param opts - 可选配置项
+ * @returns migrate 命令实例
+ */
 export function createMigrateCommand(opts?: MigrateOptions): Command {
   const getTimestamp = opts?.timestampFn ?? generateTimestamp;
   const outputDir = opts?.outputDir ?? process.cwd();

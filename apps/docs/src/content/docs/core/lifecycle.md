@@ -59,7 +59,7 @@ lifecycle.onStop(async () => {
 });
 
 await lifecycle.start();
-app.start();
+await app.listen();
 
 // 处理系统信号
 process.on("SIGTERM", async () => {

@@ -1,20 +1,43 @@
 // @aeron/core - 自定义 Hook 系统
 
+/** Hook 回调函数 */
 export type HookCallback<T = unknown> = (data: T) => void | Promise<void>;
 
+/** Hook 注册表接口 */
 export interface HookRegistry {
-  /** 注册 hook 监听 */
+  /**
+   * 注册 hook 监听
+   * @param hookName - hook 名称
+   * @param callback - 回调函数
+   * @returns 取消监听函数
+   */
   on<T = unknown>(hookName: string, callback: HookCallback<T>): () => void;
-  /** 触发 hook */
+  /**
+   * 触发 hook
+   * @param hookName - hook 名称
+   * @param data - 传递数据
+   */
   emit<T = unknown>(hookName: string, data: T): Promise<void>;
-  /** 注册一次性 hook */
+  /**
+   * 注册一次性 hook
+   * @param hookName - hook 名称
+   * @param callback - 回调函数
+   * @returns 取消监听函数
+   */
   once<T = unknown>(hookName: string, callback: HookCallback<T>): () => void;
-  /** 移除所有某个 hook 的监听 */
+  /**
+   * 移除所有某个 hook 的监听
+   * @param hookName - hook 名称
+   */
   off(hookName: string): void;
   /** 列出所有已注册的 hook 名称 */
   hooks(): string[];
 }
 
+/**
+ * 创建 Hook 注册表
+ * @returns HookRegistry 实例
+ */
 export function createHookRegistry(): HookRegistry {
   const listeners = new Map<string, Array<{ callback: HookCallback; once: boolean }>>();
 

@@ -4,6 +4,7 @@ import type { Context } from "./context";
 import type { Schema } from "./validator";
 import { validate } from "./validator";
 
+/** 自动绑定配置选项 */
 export interface BindOptions {
   /** 最大 JSON body 大小（字节） */
   maxBodySize?: number;
@@ -11,14 +12,24 @@ export interface BindOptions {
   maxDepth?: number;
 }
 
+/** 自动绑定结果 */
 export interface BindResult<T> {
+  /** 绑定后的数据 */
   data: T;
+  /** 校验错误列表 */
   errors: string[];
 }
 
 const DEFAULT_MAX_BODY_SIZE = 1024 * 1024; // 1MB
 const DEFAULT_MAX_DEPTH = 10;
 
+/**
+ * 检查对象嵌套深度
+ * @param obj - 待检查对象
+ * @param maxDepth - 最大允许深度
+ * @param current - 当前深度
+ * @returns 是否未超过最大深度
+ */
 function checkDepth(obj: unknown, maxDepth: number, current = 0): boolean {
   if (current > maxDepth) return false;
   if (typeof obj !== "object" || obj === null) return true;
@@ -30,6 +41,10 @@ function checkDepth(obj: unknown, maxDepth: number, current = 0): boolean {
 
 /**
  * 从 JSON body 解析并校验数据
+ * @param ctx - 请求上下文
+ * @param schema - 校验规则
+ * @param options - 绑定选项
+ * @returns 绑定结果
  */
 export async function bindJSON<T = Record<string, unknown>>(
   ctx: Context,
@@ -74,6 +89,10 @@ export async function bindJSON<T = Record<string, unknown>>(
 
 /**
  * 从 Form body (application/x-www-form-urlencoded) 解析并校验
+ * @param ctx - 请求上下文
+ * @param schema - 校验规则
+ * @param options - 绑定选项
+ * @returns 绑定结果
  */
 export async function bindForm<T = Record<string, unknown>>(
   ctx: Context,
@@ -126,6 +145,9 @@ export async function bindForm<T = Record<string, unknown>>(
 
 /**
  * 从 query string 解析并校验
+ * @param ctx - 请求上下文
+ * @param schema - 校验规则
+ * @returns 绑定结果
  */
 export function bindQuery<T = Record<string, unknown>>(
   ctx: Context,

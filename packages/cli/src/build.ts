@@ -1,7 +1,14 @@
 #!/usr/bin/env bun
-// Aeron monorepo build script
+/**
+ * Aeron monorepo 构建脚本
+ *
+ * 遍历所有 packages 子包，使用 bun build 将其 src/index.ts 编译到 dist 目录。
+ * 构建失败时输出错误信息并在最后以非零状态码退出。
+ */
+
 import { $ } from "bun";
 
+/** 需要构建的包名列表 */
 const PACKAGES = [
   "core",
   "database",
@@ -15,10 +22,12 @@ const PACKAGES = [
   "cli",
 ];
 
+/** 仓库根目录绝对路径 */
 const ROOT = new URL("../../..", import.meta.url).pathname;
 
 console.log("Building Aeron packages...\n");
 
+/** 构建失败的包数量 */
 let failed = 0;
 
 for (const pkg of PACKAGES) {

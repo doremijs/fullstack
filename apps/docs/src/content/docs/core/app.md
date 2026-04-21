@@ -11,7 +11,7 @@ description: 使用 createApp 创建 Aeron HTTP 应用
 import { createApp } from "@aeron/core";
 
 const app = createApp({ port: 3000 });
-app.start();
+await app.listen();
 ```
 
 ## 配置选项
@@ -29,22 +29,20 @@ interface AppConfig {
 使用 `app.use()` 注册中间件，按注册顺序执行：
 
 ```typescript
-import { createApp, createRouter } from "@aeron/core";
+import { createApp, createRouter, requestLogger, errorHandler } from "@aeron/core";
 
 const app = createApp({ port: 3000 });
 
-// 注册全局中间件
-app.use(async (ctx, next) => {
-  console.log(`${ctx.method} ${ctx.path}`);
-  await next();
-});
+// 内置中间件（建议最先注册 errorHandler，再注册 requestLogger）
+app.use(errorHandler());
+app.use(requestLogger());
 
-// 注册路由中间件
+// 注册路由
 const router = createRouter();
 router.get("/", async (ctx) => ctx.json({ ok: true }));
-app.use(router.middleware());
+app.use(router);
 
-app.start();
+await app.listen();
 ```
 
 ## 生命周期
@@ -53,17 +51,17 @@ app.start();
 const app = createApp({ port: 3000 });
 
 // 服务器启动后触发
-app.onStart(() => {
+app.lifecycle.onAfterStart(() => {
   console.log("Server started on port 3000");
 });
 
 // 服务器关闭前触发
-app.onStop(async () => {
+app.lifecycle.onBeforeStop(async () => {
   await db.close();
   console.log("Database connection closed");
 });
 
-app.start();
+await app.listen();
 ```
 
 ## 优雅停机
@@ -73,24 +71,24 @@ Aeron 会自动处理 `SIGINT` 和 `SIGTERM` 信号，在关闭前触发 `onStop
 ```typescript
 const app = createApp({ port: 3000 });
 
-app.onStop(async () => {
+app.lifecycle.onBeforeStop(async () => {
   // 等待正在处理的请求完成
   await drainConnections();
   // 关闭数据库连接
   await db.close();
 });
 
-app.start();
+await app.listen();
 ```
 
 ## AeronApp 接口
 
 ```typescript
 interface AeronApp {
-  use(middleware: Middleware): void;
-  onStart(handler: () => void | Promise<void>): void;
-  onStop(handler: () => void | Promise<void>): void;
-  start(): void;
-  stop(): Promise<void>;
+  use(item: Middleware | Router | Plugin): AeronApp;
+  listen(port?: number): Promise<void>;
+  close(): Promise<void>;
+  readonly router: Router;
+  readonly lifecycle: Lifecycle;
 }
 ```

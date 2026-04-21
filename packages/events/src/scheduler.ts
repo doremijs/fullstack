@@ -1,40 +1,63 @@
 /**
- * Simple task scheduler supporting interval and basic cron expressions.
+ * @aeron/events - 简单任务调度器
+ * 支持间隔执行与基础 Cron 表达式解析
  */
 
+/** 调度配置选项 */
 export interface ScheduleOptions {
+  /** 任务名称 */
   name: string;
-  /** Cron expression — parsed into an interval (simplified). */
+  /** Cron 表达式（简化为间隔解析） */
   cron?: string;
-  /** Interval in milliseconds. */
+  /** 执行间隔（毫秒） */
   interval?: number;
-  /** Whether to execute the handler immediately on schedule. */
+  /** 是否在注册时立即执行一次 */
   immediate?: boolean;
 }
 
+/** 已调度任务 */
 export interface ScheduledTask {
+  /** 任务名称 */
   readonly name: string;
+  /** 停止任务 */
   stop(): void;
+  /** 是否正在运行 */
   readonly running: boolean;
 }
 
+/** 调度器接口 */
 export interface Scheduler {
+  /**
+   * 调度任务
+   * @param options 调度配置
+   * @param handler 任务处理器
+   * @returns 已调度任务对象
+   */
   schedule(options: ScheduleOptions, handler: () => Promise<void> | void): ScheduledTask;
+
+  /** 停止所有已调度任务 */
   stopAll(): void;
+
+  /**
+   * 列出所有已调度任务
+   * @returns 任务列表
+   */
   list(): ReadonlyArray<ScheduledTask>;
 }
 
 /**
- * Parse a simplified cron expression into an interval in milliseconds.
+ * 将简化的 Cron 表达式解析为毫秒间隔
  *
- * Supported patterns (subset):
- *  - `* * * * *`        → every minute (60_000)
- *  - `*​/N * * * *`      → every N minutes
- *  - `0 * * * *`        → every hour
- *  - `0 0 * * *`        → every day (24h)
- *  - `0 *​/N * * *`      → every N hours
+ * 支持的子集模式：
+ *  - `* * * * *`        → 每分钟 (60_000)
+ *  - `* /N * * * *`      → 每 N 分钟
+ *  - `0 * * * *`        → 每小时
+ *  - `0 0 * * *`        → 每天 (24h)
+ *  - `0 * /N * * *`      → 每 N 小时
  *
- * For anything else, falls back to 60_000 (1 minute).
+ * 其他格式回退到 60_000（1 分钟）
+ * @param cron Cron 表达式字符串
+ * @returns 间隔毫秒数
  */
 export function parseCronToInterval(cron: string): number {
   const parts = cron.trim().split(/\s+/);
@@ -66,6 +89,11 @@ export function parseCronToInterval(cron: string): number {
   return 60_000;
 }
 
+/**
+ * 创建任务调度器实例
+ * 基于 setInterval 实现，任务错误不会导致调度器崩溃
+ * @returns 调度器实例
+ */
 export function createScheduler(): Scheduler {
   const tasks: ScheduledTask[] = [];
 

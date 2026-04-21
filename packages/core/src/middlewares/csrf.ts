@@ -4,13 +4,23 @@ import { timingSafeEqual } from "node:crypto";
 import type { Context } from "../context";
 import type { Middleware } from "../middleware";
 
+/** CSRF 中间件配置选项 */
 export interface CSRFOptions {
+  /** 请求头名称，默认 x-csrf-token */
   tokenHeader?: string;
+  /** Cookie 名称，默认 _csrf */
   cookieName?: string;
+  /** 安全方法列表，默认 ["GET", "HEAD", "OPTIONS"] */
   safeMethods?: string[];
+  /** Token 长度（字节），默认 32 */
   tokenLength?: number;
 }
 
+/**
+ * 生成随机 Token
+ * @param length - Token 字节长度
+ * @returns 十六进制字符串
+ */
 function generateToken(length: number): string {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
@@ -19,12 +29,23 @@ function generateToken(length: number): string {
     .join("");
 }
 
+/**
+ * 恒定时间比较两个字符串，防止时序攻击
+ * @param a - 字符串 a
+ * @param b - 字符串 b
+ * @returns 是否相等
+ */
 function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   const encoder = new TextEncoder();
   return timingSafeEqual(encoder.encode(a), encoder.encode(b));
 }
 
+/**
+ * 解析 Cookie 字符串
+ * @param header - Cookie 请求头值
+ * @returns Cookie 键值对象
+ */
 function parseCookies(header: string | null): Record<string, string> {
   if (!header) return {};
   const cookies: Record<string, string> = {};
@@ -38,6 +59,11 @@ function parseCookies(header: string | null): Record<string, string> {
   return cookies;
 }
 
+/**
+ * 创建 CSRF 防护中间件
+ * @param options - CSRF 配置选项
+ * @returns Middleware 实例
+ */
 export function csrf(options: CSRFOptions = {}): Middleware {
   const tokenHeader = options.tokenHeader ?? "x-csrf-token";
   const cookieName = options.cookieName ?? "_csrf";
@@ -77,6 +103,13 @@ export function csrf(options: CSRFOptions = {}): Middleware {
   };
 }
 
+/**
+ * 在响应中设置 CSRF Token Cookie
+ * @param response - 原始响应
+ * @param cookieName - Cookie 名称
+ * @param token - Token 值
+ * @returns 附加 Set-Cookie 后的新响应
+ */
 function setTokenCookie(response: Response, cookieName: string, token: string): Response {
   const headers = new Headers(response.headers);
   headers.append("Set-Cookie", `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Strict`);

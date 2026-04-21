@@ -1,13 +1,23 @@
-// @aeron/ai - RAG 知识库管理
+/**
+ * @aeron/ai — RAG 知识库与智能体管理
+ *
+ * 提供基于内存的文档存储、TF-IDF 相似度检索、文本分块，以及智能体注册表能力。
+ * 生产环境建议将知识库替换为向量数据库实现。
+ */
 
+/** 文档 */
 export interface Document {
+  /** 文档唯一标识 */
   id: string;
+  /** 文档内容 */
   content: string;
+  /** 可选的文档元数据 */
   metadata?: Record<string, unknown>;
   /** 预计算的 embedding 向量 */
   embedding?: number[];
 }
 
+/** 文本分块选项 */
 export interface ChunkOptions {
   /** 每个 chunk 的最大字符数 */
   maxChunkSize?: number;
@@ -17,29 +27,58 @@ export interface ChunkOptions {
   separator?: string;
 }
 
+/** 搜索结果 */
 export interface SearchResult {
+  /** 匹配文档 */
   document: Document;
+  /** 相似度得分 */
   score: number;
 }
 
+/** 知识库，提供文档存储、检索和分块能力 */
 export interface KnowledgeBase {
-  /** 添加文档 */
+  /**
+   * 添加文档
+   * @param doc - 文档内容（不含 id）
+   * @returns 生成的文档 ID
+   */
   add(doc: Omit<Document, "id">): string;
-  /** 删除文档 */
+
+  /**
+   * 删除文档
+   * @param id - 文档 ID
+   * @returns 删除成功返回 true
+   */
   remove(id: string): boolean;
-  /** 按内容关键字搜索 */
+
+  /**
+   * 按内容关键字搜索
+   * @param query - 搜索关键词
+   * @param limit - 最大返回结果数，默认 10
+   * @returns 搜索结果数组
+   */
   search(query: string, limit?: number): SearchResult[];
+
   /** 获取所有文档 */
   list(): Document[];
+
   /** 获取文档数量 */
   size(): number;
-  /** 文本分块 */
+
+  /**
+   * 文本分块
+   * @param text - 待分块文本
+   * @param options - 分块选项
+   * @returns 分块后的文本数组
+   */
   chunk(text: string, options?: ChunkOptions): string[];
 }
 
 /**
- * 简单的基于 TF-IDF 的相似度计算（内存实现）。
+ * 计算词频（TF），用于基于 TF-IDF 的相似度计算（内存实现）。
  * 生产环境应接入向量数据库。
+ * @param text - 输入文本
+ * @returns 词频映射表
  */
 function computeTermFrequency(text: string): Map<string, number> {
   const terms = text
@@ -53,6 +92,12 @@ function computeTermFrequency(text: string): Map<string, number> {
   return freq;
 }
 
+/**
+ * 计算两个词频向量的余弦相似度
+ * @param a - 向量 A
+ * @param b - 向量 B
+ * @returns 相似度得分（0 ~ 1）
+ */
 function cosineSimilarity(a: Map<string, number>, b: Map<string, number>): number {
   let dotProduct = 0;
   let normA = 0;
@@ -71,6 +116,10 @@ function cosineSimilarity(a: Map<string, number>, b: Map<string, number>): numbe
   return denominator === 0 ? 0 : dotProduct / denominator;
 }
 
+/**
+ * 创建知识库实例
+ * @returns KnowledgeBase 实例
+ */
 export function createKnowledgeBase(): KnowledgeBase {
   const documents = new Map<string, Document>();
   let idCounter = 0;
@@ -144,7 +193,9 @@ export function createKnowledgeBase(): KnowledgeBase {
 
 // ---- Agent 配置系统 ----
 
+/** 智能体配置 */
 export interface AgentConfig {
+  /** 智能体名称 */
   name: string;
   /** 系统提示词 */
   systemPrompt: string;
@@ -154,19 +205,45 @@ export interface AgentConfig {
   knowledgeBase?: KnowledgeBase;
   /** 记忆配置 */
   memory?: {
+    /** 是否启用短期记忆 */
     shortTerm?: boolean;
+    /** 是否启用长期记忆 */
     longTerm?: boolean;
+    /** 最大记忆条目数 */
     maxItems?: number;
   };
 }
 
+/** 智能体注册表 */
 export interface AgentRegistry {
+  /**
+   * 注册智能体配置
+   * @param config - 智能体配置
+   */
   register(config: AgentConfig): void;
+
+  /**
+   * 获取智能体配置
+   * @param name - 智能体名称
+   * @returns 智能体配置，不存在返回 undefined
+   */
   get(name: string): AgentConfig | undefined;
+
+  /** 列出所有已注册的智能体配置 */
   list(): AgentConfig[];
+
+  /**
+   * 移除智能体配置
+   * @param name - 智能体名称
+   * @returns 移除成功返回 true
+   */
   remove(name: string): boolean;
 }
 
+/**
+ * 创建智能体注册表实例
+ * @returns AgentRegistry 实例
+ */
 export function createAgentRegistry(): AgentRegistry {
   const agents = new Map<string, AgentConfig>();
 

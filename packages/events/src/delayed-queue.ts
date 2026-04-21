@@ -2,27 +2,51 @@
  * In-memory delayed queue — schedule messages for future execution.
  */
 
+/** 延迟消息对象 */
 export interface DelayedMessage<T = unknown> {
+  /** 消息唯一标识 */
   id: string;
+  /** 消息载荷 */
   payload: T;
+  /** 计划执行的时间戳（毫秒） */
   executeAt: number;
+  /** 消息主题 */
   topic: string;
 }
 
+/** 延迟队列接口 */
 export interface DelayedQueue {
+  /** 投递一条延迟消息
+   * @param topic 消息主题
+   * @param payload 消息载荷
+   * @param delayMs 延迟毫秒数
+   * @returns 消息唯一标识 id */
   schedule<T>(topic: string, payload: T, delayMs: number): string;
+  /** 取消指定消息
+   * @param id 消息唯一标识
+   * @returns 是否成功取消 */
   cancel(id: string): boolean;
+  /** 获取当前待处理消息数量
+   * @returns 待处理数量 */
   pending(): number;
+  /** 启动轮询消费
+   * @param pollInterval 轮询间隔毫秒数，默认 1000 */
   start(pollInterval?: number): void;
+  /** 停止轮询消费 */
   stop(): void;
 }
 
+/** 创建内存延迟队列
+ * @param handler 消息到期时的处理函数
+ * @returns DelayedQueue 实例 */
 export function createDelayedQueue(
   handler: (message: DelayedMessage) => Promise<void>,
 ): DelayedQueue {
   const messages: DelayedMessage[] = [];
   let timer: ReturnType<typeof setInterval> | null = null;
 
+  /** 按 executeAt 升序二分查找插入位置并插入消息
+   * @param message 待插入的延迟消息 */
   function insertSorted(message: DelayedMessage): void {
     // Binary-search insert to keep sorted by executeAt ascending
     let lo = 0;

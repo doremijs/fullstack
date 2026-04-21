@@ -1,85 +1,76 @@
 import { describe, expect, test } from "bun:test";
-import { createParamValidator, paramConstraints } from "../param-constraint";
+import { isValidParamType, paramTypes } from "../param-constraint";
 
-describe("paramConstraints", () => {
-  test("id matches numbers", () => {
-    expect(paramConstraints.id.pattern.test("123")).toBe(true);
-    expect(paramConstraints.id.pattern.test("0")).toBe(true);
-    expect(paramConstraints.id.pattern.test("abc")).toBe(false);
-    expect(paramConstraints.id.pattern.test("12.3")).toBe(false);
+describe("paramTypes", () => {
+  test("string accepts any non-slash string", () => {
+    expect(paramTypes.string.pattern.test("hello")).toBe(true);
+    expect(paramTypes.string.pattern.test("hello-world")).toBe(true);
+    expect(paramTypes.string.coerce("hello")).toBe("hello");
+  });
+
+  test("int matches integers and coerces to number", () => {
+    expect(paramTypes.int.pattern.test("42")).toBe(true);
+    expect(paramTypes.int.pattern.test("-3")).toBe(true);
+    expect(paramTypes.int.pattern.test("0")).toBe(true);
+    expect(paramTypes.int.pattern.test("3.14")).toBe(false);
+    expect(paramTypes.int.pattern.test("abc")).toBe(false);
+    expect(paramTypes.int.coerce("42")).toBe(42);
+    expect(paramTypes.int.coerce("-3")).toBe(-3);
+  });
+
+  test("float matches numbers and coerces to number", () => {
+    expect(paramTypes.float.pattern.test("3.14")).toBe(true);
+    expect(paramTypes.float.pattern.test("-0.5")).toBe(true);
+    expect(paramTypes.float.pattern.test("42")).toBe(true);
+    expect(paramTypes.float.pattern.test("abc")).toBe(false);
+    expect(paramTypes.float.coerce("3.14")).toBe(3.14);
+    expect(paramTypes.float.coerce("-0.5")).toBe(-0.5);
+  });
+
+  test("bool matches boolean strings and coerces to boolean", () => {
+    expect(paramTypes.bool.pattern.test("true")).toBe(true);
+    expect(paramTypes.bool.pattern.test("false")).toBe(true);
+    expect(paramTypes.bool.pattern.test("1")).toBe(true);
+    expect(paramTypes.bool.pattern.test("0")).toBe(true);
+    expect(paramTypes.bool.pattern.test("yes")).toBe(false);
+    expect(paramTypes.bool.coerce("true")).toBe(true);
+    expect(paramTypes.bool.coerce("1")).toBe(true);
+    expect(paramTypes.bool.coerce("false")).toBe(false);
+    expect(paramTypes.bool.coerce("0")).toBe(false);
   });
 
   test("uuid matches valid UUIDs", () => {
-    expect(paramConstraints.uuid.pattern.test("550e8400-e29b-41d4-a716-446655440000")).toBe(true);
-    expect(paramConstraints.uuid.pattern.test("not-a-uuid")).toBe(false);
+    expect(paramTypes.uuid.pattern.test("550e8400-e29b-41d4-a716-446655440000")).toBe(true);
+    expect(paramTypes.uuid.pattern.test("not-a-uuid")).toBe(false);
+    expect(paramTypes.uuid.coerce("550e8400-e29b-41d4-a716-446655440000")).toBe(
+      "550e8400-e29b-41d4-a716-446655440000",
+    );
   });
 
-  test("slug matches valid slugs", () => {
-    expect(paramConstraints.slug.pattern.test("hello-world")).toBe(true);
-    expect(paramConstraints.slug.pattern.test("abc123")).toBe(true);
-    expect(paramConstraints.slug.pattern.test("Hello-World")).toBe(false);
-    expect(paramConstraints.slug.pattern.test("with spaces")).toBe(false);
-  });
-
-  test("numeric matches numbers", () => {
-    expect(paramConstraints.numeric.pattern.test("42")).toBe(true);
-    expect(paramConstraints.numeric.pattern.test("-3.14")).toBe(true);
-    expect(paramConstraints.numeric.pattern.test("abc")).toBe(false);
+  test("date matches ISO 8601 strings and coerces to Date", () => {
+    expect(paramTypes.date.pattern.test("2024-01-15T10:30:00Z")).toBe(true);
+    expect(paramTypes.date.pattern.test("2024-01-15T10:30:00.123Z")).toBe(true);
+    expect(paramTypes.date.pattern.test("2024-01-15T10:30:00+08:00")).toBe(true);
+    expect(paramTypes.date.pattern.test("2024-01-15")).toBe(false);
+    const d = paramTypes.date.coerce("2024-01-15T10:30:00Z") as Date;
+    expect(d instanceof Date).toBe(true);
+    expect(d.toISOString()).toBe("2024-01-15T10:30:00.000Z");
   });
 });
 
-describe("createParamValidator", () => {
-  test("validates params with builtin constraints", () => {
-    const validator = createParamValidator();
-    const result = validator.validate(
-      { id: "123", slug: "hello-world" },
-      { id: "id", slug: "slug" },
-    );
-    expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
+describe("isValidParamType", () => {
+  test("returns true for valid types", () => {
+    expect(isValidParamType("string")).toBe(true);
+    expect(isValidParamType("int")).toBe(true);
+    expect(isValidParamType("float")).toBe(true);
+    expect(isValidParamType("bool")).toBe(true);
+    expect(isValidParamType("uuid")).toBe(true);
+    expect(isValidParamType("date")).toBe(true);
   });
 
-  test("reports errors for invalid params", () => {
-    const validator = createParamValidator();
-    const result = validator.validate({ id: "abc" }, { id: "id" });
-    expect(result.valid).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]!.param).toBe("id");
-    expect(result.errors[0]!.value).toBe("abc");
-  });
-
-  test("validates with custom constraint", () => {
-    const validator = createParamValidator();
-    const result = validator.validate(
-      { code: "AB12" },
-      { code: { pattern: /^[A-Z]{2}\d{2}$/, message: "Invalid code" } },
-    );
-    expect(result.valid).toBe(true);
-  });
-
-  test("reports custom constraint error", () => {
-    const validator = createParamValidator();
-    const result = validator.validate(
-      { code: "invalid" },
-      { code: { pattern: /^[A-Z]{2}\d{2}$/, message: "Invalid code" } },
-    );
-    expect(result.valid).toBe(false);
-    expect(result.errors[0]!.message).toBe("Invalid code");
-  });
-
-  test("skips undefined params", () => {
-    const validator = createParamValidator();
-    const result = validator.validate({}, { id: "id" });
-    expect(result.valid).toBe(true);
-  });
-
-  test("multiple param errors", () => {
-    const validator = createParamValidator();
-    const result = validator.validate(
-      { id: "abc", slug: "UPPER CASE" },
-      { id: "id", slug: "slug" },
-    );
-    expect(result.valid).toBe(false);
-    expect(result.errors).toHaveLength(2);
+  test("returns false for invalid types", () => {
+    expect(isValidParamType("slug")).toBe(false);
+    expect(isValidParamType("numeric")).toBe(false);
+    expect(isValidParamType("bigint")).toBe(false);
   });
 });

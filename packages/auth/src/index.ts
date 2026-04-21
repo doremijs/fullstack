@@ -1,6 +1,20 @@
-// @aeron/auth
+/**
+ * @aeron/auth - 认证授权模块统一导出
+ *
+ * 提供完整的认证与授权能力，包括 JWT、密码哈希、Session、API Key、
+ * RBAC/ABAC 权限控制、TOTP 双因素认证、OAuth2/OIDC、多端登录管理、
+ * 策略引擎与行级数据过滤等。
+ */
+
+/** JWT 管理 - 基于 Web Crypto API 的签发与验证 */
 export { createJWT } from "./jwt";
-export type { JWTAlgorithm, JWTPayload, JWTOptions, JWTManager } from "./jwt";
+export type { JWTAlgorithm, JWTPayload, JWTOptions, JWTManager, JWTConfig } from "./jwt";
+
+/** 密码哈希 - 基于 Bun.password 的 bcrypt 实现 */
+export { createPasswordHasher } from "./password";
+export type { PasswordHasher, PasswordHasherOptions } from "./password";
+
+/** Session 管理 - 支持内存存储与自定义 Store */
 export { createSessionManager, createMemorySessionStore } from "./session";
 export type {
   Session,
@@ -8,20 +22,32 @@ export type {
   SessionStore,
   SessionManager,
 } from "./session";
+
+/** API Key 管理 - 生成、哈希与恒定时间验证 */
 export { createApiKeyManager } from "./api-key";
 export type { ApiKeyManager } from "./api-key";
+
+/** 基于角色的访问控制（RBAC）- 默认 deny，必须显式授权 */
 export { createRBAC } from "./rbac";
 export type { RBAC, Role, Permission } from "./rbac";
+
+/** Token 刷新与吊销 - Access Token 与 Refresh Token 分离 */
 export { createTokenRefresh } from "./token-refresh";
 export type {
   TokenPair,
   TokenRefreshManager,
   TokenRefreshOptions,
 } from "./token-refresh";
+
+/** 基于属性的访问控制（ABAC）- 默认 deny，deny 优先于 allow */
 export { createABAC } from "./abac";
 export type { ABAC, Policy, PolicyCondition } from "./abac";
+
+/** TOTP 双因素认证 - 基于 RFC 6238/4226 实现 */
 export { createTOTP } from "./totp";
 export type { TOTPManager, TOTPOptions } from "./totp";
+
+/** OAuth2/OIDC 客户端 - 支持 GitHub/Google 等标准提供商 */
 export { createOAuth } from "./oauth";
 export type {
   OAuthManager,
@@ -30,9 +56,11 @@ export type {
   OAuthUserInfo,
 } from "./oauth";
 
+/** 多端登录管理 - 设备数量限制与溢出策略 */
 export { createMultiDeviceManager } from "./multi-device";
 export type { MultiDeviceManager, DeviceSession, MultiDeviceOptions } from "./multi-device";
 
+/** 策略引擎 - 类 Casbin 的策略模型，支持通配符匹配与条件表达式 */
 export { createPolicyEngine } from "./policy-engine";
 export type {
   PolicyEngine,
@@ -41,5 +69,6 @@ export type {
   PolicyConditionDef,
 } from "./policy-engine";
 
+/** 行级数据过滤 - 根据用户/租户上下文自动生成 WHERE 条件 */
 export { createRowFilter } from "./row-filter";
 export type { RowFilter, RowFilterRule, RowFilterContext } from "./row-filter";

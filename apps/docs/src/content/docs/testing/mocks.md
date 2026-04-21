@@ -100,6 +100,6 @@ db.mockQuery("SELECT * FROM users", [
 ]);
 
 // 测试使用
-const users = await db.from("users").execute();
+const users = await db.query(UserModel).list();
 expect(users).toHaveLength(2);
 ```

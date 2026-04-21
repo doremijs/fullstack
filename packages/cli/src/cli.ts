@@ -1,25 +1,54 @@
 // @aeron/cli - CLI 入口和命令路由
 
+/** 命令选项定义 */
 export interface CommandOption {
+  /** 选项名称 */
   name: string;
+  /** 短别名（单字符） */
   alias?: string;
+  /** 选项说明 */
   description: string;
+  /** 是否必填 */
   required?: boolean;
+  /** 默认值 */
   default?: unknown;
 }
 
+/** 命令定义 */
 export interface Command {
+  /** 命令名称 */
   name: string;
+  /** 命令说明 */
   description: string;
+  /** 命令选项列表 */
   options?: CommandOption[];
+  /** 命令执行函数 */
   action: (args: Record<string, unknown>) => Promise<void> | void;
 }
 
+/** CLI 实例 */
 export interface CLI {
+  /**
+   * 注册命令
+   * @param command - 命令定义
+   * @returns CLI 实例（链式调用）
+   */
   register(command: Command): CLI;
+
+  /**
+   * 运行 CLI
+   * @param argv - 可选的命令行参数数组，默认使用 Bun.argv
+   * @returns Promise<void>
+   */
   run(argv?: string[]): Promise<void>;
 }
 
+/**
+ * 解析命令行参数
+ * @param argv - 参数数组
+ * @param options - 命令选项定义，用于识别别名和默认值
+ * @returns 解析后的参数对象
+ */
 function parseArgv(argv: string[], options?: CommandOption[]): Record<string, unknown> {
   const args: Record<string, unknown> = {};
   const positional: string[] = [];
@@ -84,6 +113,12 @@ function parseArgv(argv: string[], options?: CommandOption[]): Record<string, un
   return args;
 }
 
+/**
+ * 格式化帮助信息
+ * @param name - CLI 名称
+ * @param commands - 已注册的命令映射
+ * @returns 帮助文本
+ */
 function formatHelp(name: string, commands: Map<string, Command>): string {
   const lines: string[] = [`Usage: ${name} <command> [options]`, "", "Commands:"];
   for (const [cmdName, cmd] of commands) {
@@ -94,6 +129,12 @@ function formatHelp(name: string, commands: Map<string, Command>): string {
   return lines.join("\n");
 }
 
+/**
+ * 创建 CLI 实例
+ * @param name - CLI 名称
+ * @param version - 版本号
+ * @returns CLI 实例
+ */
 export function createCLI(name: string, version: string): CLI {
   const commands = new Map<string, Command>();
 
@@ -132,6 +173,10 @@ export function createCLI(name: string, version: string): CLI {
   return cli;
 }
 
+/**
+ * 默认 CLI 运行入口
+ * @returns Promise<void>
+ */
 export function run(): Promise<void> {
   const cli = createCLI("aeron", "0.1.0");
 

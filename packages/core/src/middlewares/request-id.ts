@@ -3,6 +3,12 @@
 import type { Context } from "../context";
 import type { Middleware } from "../middleware";
 
+/**
+ * 创建请求 ID 中间件
+ * 从请求头读取或自动生成 UUID，并注入到 ctx.state 与响应头中
+ * @param headerName - 请求头名称，默认 X-Request-Id
+ * @returns Middleware 实例
+ */
 export function requestId(headerName = "X-Request-Id"): Middleware {
   return async (ctx: Context, next) => {
     const id = ctx.headers.get(headerName) ?? crypto.randomUUID();

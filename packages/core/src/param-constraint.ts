@@ -1,60 +1,74 @@
-// @aeron/core - 路由参数类型约束
+// @aeron/core - 路由参数类型注册表
 
-export interface ParamConstraint {
+/** 支持的参数类型 */
+export type ParamType = "string" | "int" | "float" | "bool" | "uuid" | "date";
+
+/** 参数类型到 TS 类型的映射 */
+export interface ParamTypeMap {
+  /** 字符串 */
+  string: string;
+  /** 整数 */
+  int: number;
+  /** 浮点数 */
+  float: number;
+  /** 布尔值 */
+  bool: boolean;
+  /** UUID */
+  uuid: string;
+  /** 日期 */
+  date: Date;
+}
+
+/** 参数类型定义 */
+export interface ParamTypeDef<T = unknown> {
+  /** 校验正则 */
   pattern: RegExp;
+  /** 类型转换函数 */
+  coerce: (value: string) => T;
+  /** 校验失败提示信息 */
   message?: string;
 }
 
-export const paramConstraints = {
-  /** 数字 ID */
-  id: { pattern: /^\d+$/, message: "Must be a numeric ID" } satisfies ParamConstraint,
-  /** UUID v4 */
+/** 内置参数类型注册表 */
+export const paramTypes: {
+  [K in ParamType]: ParamTypeDef<ParamTypeMap[K]>;
+} = {
+  string: {
+    pattern: /^[^/]+$/,
+    coerce: (v) => v,
+  },
+  int: {
+    pattern: /^-?\d+$/,
+    coerce: (v) => parseInt(v, 10),
+    message: "Must be an integer",
+  },
+  float: {
+    pattern: /^-?\d+(\.\d+)?$/,
+    coerce: (v) => parseFloat(v),
+    message: "Must be a number",
+  },
+  bool: {
+    pattern: /^(true|false|1|0)$/i,
+    coerce: (v) => /^(true|1)$/i.test(v),
+    message: "Must be a boolean",
+  },
   uuid: {
     pattern: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    coerce: (v) => v,
     message: "Must be a valid UUID",
-  } satisfies ParamConstraint,
-  /** slug */
-  slug: {
-    pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-    message: "Must be a valid slug",
-  } satisfies ParamConstraint,
-  /** 非空字符串 */
-  nonEmpty: { pattern: /^.+$/, message: "Must not be empty" } satisfies ParamConstraint,
-  /** 数字(整数或浮点数) */
-  numeric: { pattern: /^-?\d+(\.\d+)?$/, message: "Must be numeric" } satisfies ParamConstraint,
-} as const;
+  },
+  date: {
+    pattern: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/,
+    coerce: (v) => new Date(v),
+    message: "Must be a valid ISO 8601 date",
+  },
+};
 
-export type BuiltinConstraint = keyof typeof paramConstraints;
-
-export interface RouteParamValidator {
-  validate(
-    params: Record<string, string>,
-    constraints: Record<string, ParamConstraint | BuiltinConstraint>,
-  ): { valid: boolean; errors: Array<{ param: string; value: string; message: string }> };
-}
-
-export function createParamValidator(): RouteParamValidator {
-  return {
-    validate(params, constraints) {
-      const errors: Array<{ param: string; value: string; message: string }> = [];
-
-      for (const [param, constraint] of Object.entries(constraints)) {
-        const value = params[param];
-        if (value === undefined) continue;
-
-        const resolved: ParamConstraint =
-          typeof constraint === "string" ? paramConstraints[constraint] : constraint;
-
-        if (!resolved.pattern.test(value)) {
-          errors.push({
-            param,
-            value,
-            message: resolved.message ?? `Parameter "${param}" does not match constraint`,
-          });
-        }
-      }
-
-      return { valid: errors.length === 0, errors };
-    },
-  };
+/**
+ * 判断给定字符串是否为有效的参数类型
+ * @param type - 类型字符串
+ * @returns 是否为有效参数类型
+ */
+export function isValidParamType(type: string): type is ParamType {
+  return type in paramTypes;
 }

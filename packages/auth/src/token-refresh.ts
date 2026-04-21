@@ -3,29 +3,81 @@
 
 import type { JWTManager, JWTPayload } from "./jwt";
 
+/**
+ * Token 对结构
+ * 包含访问令牌和刷新令牌及其过期时间
+ */
 export interface TokenPair {
+  /** 访问令牌（短有效期） */
   accessToken: string;
+  /** 刷新令牌（长有效期） */
   refreshToken: string;
+  /** 访问令牌过期时间（秒） */
   expiresIn: number;
+  /** 刷新令牌过期时间（秒） */
   refreshExpiresIn: number;
 }
 
+/**
+ * Token 刷新管理器配置选项
+ */
 export interface TokenRefreshOptions {
-  accessTokenTTL?: number; // 默认 900 (15分钟)
-  refreshTokenTTL?: number; // 默认 604800 (7天)
-  refreshSecret?: string; // 可选独立 secret，不传则用 jwt 的 secret
+  /** 访问令牌 TTL（秒），默认 900（15 分钟） */
+  accessTokenTTL?: number;
+  /** 刷新令牌 TTL（秒），默认 604800（7 天） */
+  refreshTokenTTL?: number;
+  /** 可选的独立刷新令牌密钥，不传则使用 JWT 的 secret */
+  refreshSecret?: string;
 }
 
+/**
+ * Token 刷新管理器接口
+ * 提供 Token 对的生成、刷新与吊销能力
+ */
 export interface TokenRefreshManager {
+  /**
+   * 生成新的 Access Token 与 Refresh Token 对
+   * @param payload JWT 载荷数据
+   * @param secret 签名密钥
+   * @returns Token 对
+   */
   generatePair(payload: Record<string, unknown>, secret: string): Promise<TokenPair>;
+
+  /**
+   * 用 Refresh Token 换取新的 Token 对
+   * 旧的 Refresh Token 会被吊销（轮换机制）
+   * @param refreshToken 刷新令牌
+   * @param secret 签名密钥
+   * @returns 新的 Token 对
+   */
   refresh(refreshToken: string, secret: string): Promise<TokenPair>;
+
+  /**
+   * 吊销指定 JTI 的 Token
+   * @param jti JWT ID
+   */
   revoke(jti: string): Promise<void>;
+
+  /**
+   * 判断指定 JTI 是否已被吊销
+   * @param jti JWT ID
+   * @returns 已吊销返回 true，否则返回 false
+   */
   isRevoked(jti: string): Promise<boolean>;
 }
 
+/** 默认访问令牌 TTL（秒） */
 const DEFAULT_ACCESS_TTL = 900;
+/** 默认刷新令牌 TTL（秒） */
 const DEFAULT_REFRESH_TTL = 604800;
 
+/**
+ * 创建 Token 刷新管理器实例
+ * 实现 Access/Refresh Token 分离、Token 轮换与吊销机制
+ * @param jwt JWT 管理器实例
+ * @param options Token 刷新配置选项
+ * @returns Token 刷新管理器实例
+ */
 export function createTokenRefresh(
   jwt: JWTManager,
   options: TokenRefreshOptions = {},
@@ -36,6 +88,12 @@ export function createTokenRefresh(
 
   const revokedJTIs = new Set<string>();
 
+  /**
+   * 根据载荷生成 Token 对
+   * @param payload JWT 载荷
+   * @param secret 签名密钥
+   * @returns Token 对
+   */
   async function generatePairFromPayload(
     payload: Record<string, unknown>,
     secret: string,

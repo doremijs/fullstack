@@ -30,6 +30,25 @@ router.get("/example", async (ctx) => {
 });
 ```
 
+### 类型化路径参数
+
+当路由路径使用类型标记时，`ctx.params` 会自动推导为对应类型：
+
+```typescript
+router.get("/users/:id<int>", async (ctx) => {
+  // ctx.params.id 被推导为 number
+  const user = await db.query(UserModel).where("id", "=", ctx.params.id).get();
+  return ctx.json(user);
+});
+
+router.get("/events/:at<date>", async (ctx) => {
+  // ctx.params.at 被推导为 Date
+  return ctx.json({ at: ctx.params.at.toISOString() });
+});
+```
+
+无类型标记的参数默认推导为 `string`。
+
 ## 读取请求体
 
 ```typescript
@@ -128,11 +147,11 @@ router.get("/profile", async (ctx) => {
 ## Context 接口
 
 ```typescript
-interface Context {
+interface Context<TParams extends Record<string, unknown> = Record<string, string>> {
   // 请求信息
   method: string;
   path: string;
-  params: Record<string, string>;
+  params: TParams;
   query: Record<string, string>;
   headers: Headers;
   request: Request;

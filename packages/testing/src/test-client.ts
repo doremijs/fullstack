@@ -1,28 +1,101 @@
-// @aeron/testing - HTTP 测试客户端
+/**
+ * @aeron/testing - HTTP 测试客户端
+ * 提供便捷的 HTTP 请求构建、响应解析与默认头管理能力
+ */
 
+/** 测试响应接口 */
 export interface TestResponse {
+  /** HTTP 状态码 */
   readonly status: number;
+  /** 响应头 */
   readonly headers: Headers;
+  /** 解析后的响应体（JSON 或文本） */
   readonly body: unknown;
+  /** 原始响应文本 */
   readonly text: string;
+  /**
+   * 将响应体解析为指定类型的 JSON
+   * @returns 解析后的对象
+   */
   json<T = unknown>(): T;
 }
 
+/** 请求选项 */
 export interface RequestOptions {
+  /** 附加请求头 */
   headers?: Record<string, string>;
+  /** URL 查询参数 */
   query?: Record<string, string>;
 }
 
+/** 测试客户端接口 */
 export interface TestClient {
+  /**
+   * 发送 GET 请求
+   * @param path 请求路径
+   * @param options 请求选项（可选）
+   * @returns 测试响应
+   */
   get(path: string, options?: RequestOptions): Promise<TestResponse>;
+
+  /**
+   * 发送 POST 请求
+   * @param path 请求路径
+   * @param body 请求体（可选）
+   * @param options 请求选项（可选）
+   * @returns 测试响应
+   */
   post(path: string, body?: unknown, options?: RequestOptions): Promise<TestResponse>;
+
+  /**
+   * 发送 PUT 请求
+   * @param path 请求路径
+   * @param body 请求体（可选）
+   * @param options 请求选项（可选）
+   * @returns 测试响应
+   */
   put(path: string, body?: unknown, options?: RequestOptions): Promise<TestResponse>;
+
+  /**
+   * 发送 PATCH 请求
+   * @param path 请求路径
+   * @param body 请求体（可选）
+   * @param options 请求选项（可选）
+   * @returns 测试响应
+   */
   patch(path: string, body?: unknown, options?: RequestOptions): Promise<TestResponse>;
+
+  /**
+   * 发送 DELETE 请求
+   * @param path 请求路径
+   * @param options 请求选项（可选）
+   * @returns 测试响应
+   */
   delete(path: string, options?: RequestOptions): Promise<TestResponse>;
+
+  /**
+   * 设置单个默认请求头
+   * @param name 头名称
+   * @param value 头值
+   * @returns 当前测试客户端（链式调用）
+   */
   setHeader(name: string, value: string): TestClient;
+
+  /**
+   * 批量设置默认请求头
+   * @param headers 请求头映射
+   * @returns 当前测试客户端（链式调用）
+   */
   setHeaders(headers: Record<string, string>): TestClient;
 }
 
+/**
+ * 构建完整 URL
+ * @param baseUrl 基础 URL
+ * @param path 请求路径
+ * @param query 查询参数（可选）
+ * @returns 完整 URL 字符串
+ */
 function buildUrl(baseUrl: string, path: string, query?: Record<string, string>): string {
   const url = new URL(path, baseUrl);
   if (query) {
@@ -33,6 +106,12 @@ function buildUrl(baseUrl: string, path: string, query?: Record<string, string>)
   return url.toString();
 }
 
+/**
+ * 合并默认头与覆盖头
+ * @param defaults 默认请求头
+ * @param overrides 覆盖请求头（可选）
+ * @returns 合并后的请求头
+ */
 function mergeHeaders(
   defaults: Record<string, string>,
   overrides?: Record<string, string>,
@@ -40,6 +119,11 @@ function mergeHeaders(
   return { ...defaults, ...overrides };
 }
 
+/**
+ * 将标准 Response 转换为 TestResponse
+ * @param response 标准 fetch Response
+ * @returns 测试响应对象
+ */
 async function buildTestResponse(response: Response): Promise<TestResponse> {
   const text = await response.text();
   let body: unknown = text;
@@ -67,9 +151,22 @@ async function buildTestResponse(response: Response): Promise<TestResponse> {
   };
 }
 
+/**
+ * 创建 HTTP 测试客户端
+ * @param baseUrl 基础 URL
+ * @returns 测试客户端实例
+ */
 export function createTestClient(baseUrl: string): TestClient {
   const defaultHeaders: Record<string, string> = {};
 
+  /**
+   * 发送 HTTP 请求
+   * @param method HTTP 方法
+   * @param path 请求路径
+   * @param body 请求体（可选）
+   * @param options 请求选项（可选）
+   * @returns 测试响应
+   */
   async function request(
     method: string,
     path: string,

@@ -3,16 +3,33 @@
 import type { Context } from "../context";
 import type { Middleware } from "../middleware";
 
+/** 限流存储接口 */
 export interface RateLimitStore {
+  /**
+   * 增加计数
+   * @param key - 限流键
+   * @param windowMs - 时间窗口（毫秒）
+   * @returns 当前计数与重置时间
+   */
   increment(key: string, windowMs: number): Promise<{ count: number; resetAt: number }>;
+  /**
+   * 重置计数
+   * @param key - 限流键
+   */
   reset(key: string): Promise<void>;
 }
 
+/** 限流中间件配置选项 */
 export interface RateLimitOptions {
+  /** 时间窗口（毫秒），默认 60000 */
   windowMs?: number;
+  /** 窗口内最大请求数，默认 100 */
   max?: number;
+  /** 触发限流时的响应消息 */
   message?: string;
+  /** 生成限流键的函数 */
   keyFn?: (ctx: Context) => string;
+  /** 自定义存储后端 */
   store?: RateLimitStore;
 }
 
@@ -21,6 +38,10 @@ interface WindowEntry {
   resetAt: number;
 }
 
+/**
+ * 创建内存限流存储（单实例）
+ * @returns RateLimitStore 实例
+ */
 export function createMemoryRateLimitStore(): RateLimitStore {
   const windows = new Map<string, WindowEntry>();
 
@@ -60,6 +81,11 @@ export function createMemoryRateLimitStore(): RateLimitStore {
   };
 }
 
+/**
+ * 默认限流键生成函数（基于客户端 IP）
+ * @param ctx - 请求上下文
+ * @returns IP 字符串
+ */
 function defaultKeyFn(ctx: Context): string {
   return (
     ctx.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -68,6 +94,11 @@ function defaultKeyFn(ctx: Context): string {
   );
 }
 
+/**
+ * 创建限流中间件
+ * @param options - 限流配置选项
+ * @returns Middleware 实例
+ */
 export function rateLimit(options: RateLimitOptions = {}): Middleware {
   const windowMs = options.windowMs ?? 60_000;
   const max = options.max ?? 100;

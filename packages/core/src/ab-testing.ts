@@ -1,34 +1,78 @@
 // @aeron/core - A/B 测试与灰度发布
 
+/** A/B 测试变体 */
 export interface ABTestVariant {
+  /** 变体名称 */
   name: string;
+  /** 权重 */
   weight: number;
+  /** 附加配置 */
   config?: Record<string, unknown>;
 }
 
+/** A/B 测试定义 */
 export interface ABTest {
+  /** 测试名称 */
   name: string;
+  /** 是否启用 */
   enabled: boolean;
+  /** 变体列表 */
   variants: ABTestVariant[];
   /** 用户粘性分配（基于 userId hash） */
   sticky?: boolean;
 }
 
+/** A/B 测试分配结果 */
 export interface ABTestResult {
+  /** 测试名称 */
   testName: string;
+  /** 分配的变体名称 */
   variant: string;
+  /** 附加配置 */
   config?: Record<string, unknown>;
 }
 
+/** A/B 测试管理器接口 */
 export interface ABTestManager {
+  /**
+   * 定义 A/B 测试
+   * @param test - 测试定义
+   */
   define(test: ABTest): void;
+  /**
+   * 为用户分配变体
+   * @param testName - 测试名称
+   * @param userId - 用户标识
+   * @returns 分配结果或 null（测试未启用）
+   */
   assign(testName: string, userId?: string): ABTestResult | null;
+  /**
+   * 判断用户是否命中指定变体
+   * @param testName - 测试名称
+   * @param variantName - 变体名称
+   * @param userId - 用户标识
+   * @returns 是否命中
+   */
   isInVariant(testName: string, variantName: string, userId?: string): boolean;
+  /** 获取所有测试列表 */
   list(): ABTest[];
+  /**
+   * 启用指定测试
+   * @param testName - 测试名称
+   */
   enable(testName: string): void;
+  /**
+   * 禁用指定测试
+   * @param testName - 测试名称
+   */
   disable(testName: string): void;
 }
 
+/**
+ * 计算字符串 hash 值
+ * @param str - 输入字符串
+ * @returns hash 数值
+ */
 function hashCode(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -41,6 +85,7 @@ function hashCode(str: string): number {
 /**
  * 创建 A/B 测试管理器
  * 支持按用户/流量切换、动态开关、权重分配
+ * @returns ABTestManager 实例
  */
 export function createABTestManager(): ABTestManager {
   const tests = new Map<string, ABTest>();

@@ -8,10 +8,20 @@ import type { Middleware, NextFunction } from "./middleware";
  * 类似 Middleware 但更细粒度：before + after 分离
  */
 export interface Interceptor {
+  /** 拦截器名称 */
   name: string;
-  /** handler 执行前，返回 Response 即短路 */
+  /**
+   * handler 执行前，返回 Response 即短路
+   * @param ctx - 请求上下文
+   * @returns 可选的 Response（短路时返回）
+   */
   before?(ctx: Context): Promise<Response | undefined> | Response | undefined;
-  /** handler 执行后，可修改 Response */
+  /**
+   * handler 执行后，可修改 Response
+   * @param ctx - 请求上下文
+   * @param response - 原始响应
+   * @returns 修改后的响应
+   */
   after?(ctx: Context, response: Response): Promise<Response> | Response;
 }
 
@@ -20,19 +30,40 @@ export interface Interceptor {
  * 返回 false 或 Response 即拒绝
  */
 export interface Filter {
+  /** 过滤器名称 */
   name: string;
+  /**
+   * 应用过滤规则
+   * @param ctx - 请求上下文
+   * @returns true 表示通过；false 或 Response 表示拒绝
+   */
   apply(ctx: Context): Promise<boolean | Response> | boolean | Response;
 }
 
+/** 三层管线接口 */
 export interface Pipeline {
+  /**
+   * 添加过滤器
+   * @param filter - 过滤器
+   */
   addFilter(filter: Filter): void;
+  /**
+   * 添加拦截器
+   * @param interceptor - 拦截器
+   */
   addInterceptor(interceptor: Interceptor): void;
+  /**
+   * 添加中间件
+   * @param middleware - 中间件
+   */
   addMiddleware(middleware: Middleware): void;
+  /** 将管线转换为单个中间件 */
   toMiddleware(): Middleware;
 }
 
 /**
  * 创建三层管线：Filter → Interceptor(before) → Middleware → Handler → Interceptor(after)
+ * @returns Pipeline 实例
  */
 export function createPipeline(): Pipeline {
   const filters: Filter[] = [];

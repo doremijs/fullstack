@@ -1,31 +1,54 @@
 // @aeron/events - 分布式事务（Saga 编排）
 
+/** Saga 步骤定义 */
 export interface SagaStep<T = unknown> {
+  /** 步骤名称 */
   name: string;
+  /** 正向执行函数
+   * @param context 当前上下文
+   * @returns 执行后的新上下文 */
   execute: (context: T) => Promise<T>;
+  /** 补偿回滚函数
+   * @param context 当前上下文
+   * @returns 补偿后的新上下文 */
   compensate: (context: T) => Promise<T>;
 }
 
+/** Saga 执行状态 */
 export type SagaStatus = "pending" | "running" | "completed" | "compensating" | "failed";
 
+/** Saga 执行结果 */
 export interface SagaResult<T> {
+  /** 最终状态 */
   status: SagaStatus;
+  /** 最终上下文 */
   context: T;
+  /** 已完成的步骤名称列表 */
   completedSteps: string[];
+  /** 失败步骤名称 */
   failedStep?: string;
+  /** 错误描述 */
   error?: string;
 }
 
+/** Saga 编排器接口 */
 export interface SagaOrchestrator<T> {
+  /** 添加执行步骤
+   * @param step Saga 步骤 */
   addStep(step: SagaStep<T>): void;
+  /** 按顺序执行所有步骤，失败时逆序补偿
+   * @param initialContext 初始上下文
+   * @returns Saga 执行结果 */
   execute(initialContext: T): Promise<SagaResult<T>>;
+  /** 获取已注册的所有步骤名称
+   * @returns 步骤名称数组 */
   getSteps(): string[];
 }
 
 /**
  * 创建 Saga 编排器
  * 按顺序执行步骤，失败时按逆序补偿
- */
+ * @returns SagaOrchestrator 实例 */
 export function createSaga<T>(): SagaOrchestrator<T> {
   const steps: SagaStep<T>[] = [];
 
@@ -80,22 +103,40 @@ export function createSaga<T>(): SagaOrchestrator<T> {
 }
 
 // TCC (Try-Confirm-Cancel) 模式
+
+/** TCC 步骤定义 */
 export interface TCCStep<T = unknown> {
+  /** 步骤名称 */
   name: string;
+  /** Try 阶段：预留资源
+   * @param context 当前上下文
+   * @returns 执行后的新上下文 */
   try: (context: T) => Promise<T>;
+  /** Confirm 阶段：提交资源
+   * @param context 当前上下文
+   * @returns 执行后的新上下文 */
   confirm: (context: T) => Promise<T>;
+  /** Cancel 阶段：回滚资源
+   * @param context 当前上下文
+   * @returns 执行后的新上下文 */
   cancel: (context: T) => Promise<T>;
 }
 
+/** TCC 编排器接口 */
 export interface TCCOrchestrator<T> {
+  /** 添加 TCC 步骤
+   * @param step TCC 步骤 */
   addStep(step: TCCStep<T>): void;
+  /** 执行 TCC 流程：Try → Confirm，Try 失败则 Cancel
+   * @param initialContext 初始上下文
+   * @returns Saga 风格执行结果 */
   execute(initialContext: T): Promise<SagaResult<T>>;
 }
 
 /**
  * 创建 TCC 编排器
  * Try 阶段预留资源 → Confirm 阶段提交 → Cancel 阶段回滚
- */
+ * @returns TCCOrchestrator 实例 */
 export function createTCC<T>(): TCCOrchestrator<T> {
   const steps: TCCStep<T>[] = [];
 

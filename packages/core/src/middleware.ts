@@ -2,12 +2,16 @@
 
 import type { Context } from "./context";
 
+/** 下一个中间件或处理器的调用函数 */
 export type NextFunction = () => Promise<Response>;
+/** 中间件函数类型 */
 export type Middleware = (ctx: Context, next: NextFunction) => Promise<Response>;
 
 /**
  * 组合中间件为洋葱模型执行链。
  * 每个中间件中 next() 只允许调用一次，重复调用抛错。
+ * @param middlewares - 中间件数组
+ * @returns 组合后的执行函数
  */
 export function compose(
   middlewares: Middleware[],

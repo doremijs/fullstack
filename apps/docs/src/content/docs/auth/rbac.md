@@ -58,11 +58,11 @@ const requirePermission = (permission: string): Middleware => {
 };
 
 // 使用
-router.delete("/users/:id",
+router.delete("/users/:id<int>",
   authMiddleware,
   requirePermission("users:delete"),
   async (ctx) => {
-    await db.delete("users").where("id", "=", ctx.params.id).execute();
+    await db.query(UserModel).where("id", "=", ctx.params.id).hardDelete();
     return ctx.json({ ok: true });
   }
 );
@@ -95,8 +95,8 @@ const canEditPost = async (userId: string, postId: string): Promise<boolean> => 
     return true; // 管理员可以编辑所有文章
   }
 
-  const post = await db.from("posts").where("id", "=", postId).first();
-  return post?.user_id === userId; // 只能编辑自己的文章
+  const post = await db.query(PostModel).where("id", "=", postId).get();
+  return post?.userId === userId; // 只能编辑自己的文章
 };
 ```
 

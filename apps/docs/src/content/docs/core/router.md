@@ -25,9 +25,10 @@ router.delete("/users/:id", async (ctx) => ctx.json(await deleteUser(ctx.params.
 使用 `:name` 定义路径参数，通过 `ctx.params` 访问：
 
 ```typescript
-router.get("/users/:id", async (ctx) => {
+router.get("/users/:id<int>", async (ctx) => {
+  // ctx.params.id 被推导为 number
   const { id } = ctx.params;
-  const user = await db.from("users").where("id", "=", id).first();
+  const user = await db.query(UserModel).where("id", "=", id).get();
   return ctx.json(user);
 });
 
@@ -38,6 +39,61 @@ router.get("/orgs/:orgId/repos/:repoId", async (ctx) => {
 });
 ```
 
+## 路径参数类型标记
+
+使用 `:name<type>` 语法为路径参数声明类型，框架会自动推导 TypeScript 类型并在运行时做转换和校验：
+
+```typescript
+router.get("/users/:id<int>", async (ctx) => {
+  // ctx.params.id 被推导为 number，运行时自动 parseInt
+  const user = await db.query(UserModel).where("id", "=", ctx.params.id).get();
+  return ctx.json(user);
+});
+
+router.get("/events/:at<date>", async (ctx) => {
+  // ctx.params.at 被推导为 Date
+  return ctx.json({ at: ctx.params.at.toISOString() });
+});
+
+// 多个类型化参数
+router.get("/users/:userId<int>/posts/:postId<int>", async (ctx) => {
+  // ctx.params.userId → number
+  // ctx.params.postId → number
+  return ctx.json({ userId: ctx.params.userId, postId: ctx.params.postId });
+});
+```
+
+### 支持的内置类型
+
+| 标记 | TypeScript 类型 | 运行时转换 | 默认正则 |
+|------|----------------|-----------|---------|
+| `:name<string>` | `string` | 原样 | `[^/]+` |
+| `:name<int>` | `number` | `parseInt` | `\d+` |
+| `:name<float>` | `number` | `parseFloat` | `-?\d+(\.\d+)?` |
+| `:name<bool>` | `boolean` | `v === "true"` | `true\|false\|1\|0` |
+| `:name<uuid>` | `string` | 原样 | UUID v4 |
+| `:name<date>` | `Date` | `new Date(v)` | ISO 8601 |
+
+无类型标记的参数（如 `:id`）默认推导为 `string`。
+
+### 自定义正则约束
+
+在类型标记后附加 `(regex)` 可覆盖默认正则：
+
+```typescript
+// 年份必须是 4 位数字
+router.get("/archive/:year<int>(\d{4})", async (ctx) => {
+  return ctx.json({ year: ctx.params.year });
+});
+
+// 代码必须是大写两位字母
+router.get("/items/:code<string>(^[A-Z]{2}$)", async (ctx) => {
+  return ctx.json({ code: ctx.params.code });
+});
+```
+
+自定义正则只影响校验，不改变 TypeScript 推导类型。当参数值不匹配正则时，请求会自动返回 400 `VALIDATION_ERROR`。
+
 ## 查询参数
 
 通过 `ctx.query` 访问查询字符串：
@@ -46,11 +102,11 @@ router.get("/orgs/:orgId/repos/:repoId", async (ctx) => {
 router.get("/users", async (ctx) => {
   const { page = "1", limit = "20", search } = ctx.query;
   const users = await db
-    .from("users")
+    .query(UserModel)
     .where("name", "LIKE", `%${search}%`)
     .limit(Number(limit))
     .offset((Number(page) - 1) * Number(limit))
-    .execute();
+    .list();
   return ctx.json({ users, page: Number(page), limit: Number(limit) });
 });
 ```
@@ -100,8 +156,8 @@ v1Router.get("/users", handler);
 v2Router.get("/users", newHandler);
 
 // 将子路由挂载到前缀路径
-apiRouter.use("/v1", v1Router.middleware());
-apiRouter.use("/v2", v2Router.middleware());
+apiRouter.merge(v1Router);
+apiRouter.merge(v2Router);
 ```
 
 ## 路由中间件
@@ -125,24 +181,23 @@ router.get("/protected", async (ctx) => ctx.json(ctx.state.user));
 
 ```typescript
 const app = createApp({ port: 3000 });
-app.use(router.middleware());
-app.start();
+app.use(router);
+await app.listen();
 ```
 
 ## Router 接口
 
 ```typescript
 interface Router {
-  get(path: string, ...handlers: RouteHandler[]): void;
-  post(path: string, ...handlers: RouteHandler[]): void;
-  put(path: string, ...handlers: RouteHandler[]): void;
-  patch(path: string, ...handlers: RouteHandler[]): void;
-  delete(path: string, ...handlers: RouteHandler[]): void;
-  use(path: string, middleware: Middleware): void;
-  use(middleware: Middleware): void;
-  resource(path: string, handlers: ResourceHandlers): void;
-  middleware(): Middleware;
+  get<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
+  post<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
+  put<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
+  patch<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
+  delete<Path extends string>(path: Path, handler: RouteHandler<InferParams<Path>>, ...middleware: Middleware[]): Router;
+  use(...middleware: Middleware[]): Router;
+  resource(prefix: string, handlers: ResourceHandlers, ...middleware: Middleware[]): Router;
+  merge(router: Router): Router;
 }
 
-type RouteHandler = (ctx: Context) => Response | Promise<Response>;
+type RouteHandler<TParams extends Record<string, unknown> = Record<string, string>> = (ctx: Context<TParams>) => Response | Promise<Response>;
 ```

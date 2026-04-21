@@ -1,7 +1,13 @@
-// @aeron/openapi - API 版本管理（Header 版本）
+/**
+ * @aeron/openapi — API 版本管理（Header 版本）
+ *
+ * 提供基于 Accept header 或 X-API-Version header 的 API 版本解析与中间件。
+ * 支持版本兼容性检查、废弃版本标记和默认版本回退。
+ */
 
 import type { Middleware } from "@aeron/core";
 
+/** API 版本中间件选项 */
 export interface APIVersionOptions {
   /** 默认版本 */
   defaultVersion: string;
@@ -14,8 +20,10 @@ export interface APIVersionOptions {
 }
 
 /**
- * 从 Accept header 解析 API 版本。
- * 格式: application/vnd.{prefix}+json;version={N}
+ * 从 Accept header 解析 API 版本
+ * @param accept - Accept header 值
+ * @param vendorPrefix - vendor 前缀，默认 "api"
+ * @returns 解析到的版本号字符串，解析失败返回 null
  */
 export function parseVersionFromAccept(accept: string, vendorPrefix = "api"): string | null {
   const regex = new RegExp(`application\\/vnd\\.${vendorPrefix}\\+json;\\s*version=(\\d+)`);
@@ -24,9 +32,9 @@ export function parseVersionFromAccept(accept: string, vendorPrefix = "api"): st
 }
 
 /**
- * API 版本中间件。
- * 从 Accept header 或 X-API-Version header 中解析版本号。
- * 将版本注入 ctx.state.set("apiVersion", version)。
+ * 创建 API 版本中间件
+ * @param options - API 版本配置选项
+ * @returns Middleware 中间件函数
  */
 export function apiVersion(options: APIVersionOptions): Middleware {
   const {

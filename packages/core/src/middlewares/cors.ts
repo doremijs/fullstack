@@ -3,15 +3,28 @@
 import type { Context } from "../context";
 import type { Middleware } from "../middleware";
 
+/** CORS 配置选项 */
 export interface CorsOptions {
+  /** 允许的源：字符串、字符串数组或自定义判断函数 */
   origin?: string | string[] | ((origin: string) => boolean);
+  /** 允许的 HTTP 方法 */
   methods?: string[];
+  /** 允许的请求头 */
   allowedHeaders?: string[];
+  /** 暴露给客户端的响应头 */
   exposedHeaders?: string[];
+  /** 是否允许携带凭证 */
   credentials?: boolean;
+  /** 预检请求缓存时间（秒） */
   maxAge?: number;
 }
 
+/**
+ * 判断请求源是否被允许
+ * @param requestOrigin - 请求中的 Origin
+ * @param option - CORS 配置中的 origin
+ * @returns 是否允许
+ */
 function isOriginAllowed(requestOrigin: string, option: CorsOptions["origin"]): boolean {
   if (option === undefined) {
     return false; // 默认 deny
@@ -25,6 +38,11 @@ function isOriginAllowed(requestOrigin: string, option: CorsOptions["origin"]): 
   return option(requestOrigin);
 }
 
+/**
+ * 创建 CORS 中间件
+ * @param options - CORS 配置选项
+ * @returns Middleware 实例
+ */
 export function cors(options: CorsOptions = {}): Middleware {
   // 安全检查：禁止 credentials + wildcard origin
   if (options.credentials && options.origin === "*") {

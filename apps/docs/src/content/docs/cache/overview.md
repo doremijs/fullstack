@@ -10,20 +10,17 @@ description: 使用 createCache 添加高性能缓存支持
 ```typescript
 import { createCache, createMemoryAdapter } from "@aeron/cache";
 
-const cache = createCache({
-  adapter: createMemoryAdapter(),
-  ttl: 300,  // 默认 TTL：300 秒
-});
+const cache = createCache(createMemoryAdapter());
 ```
 
 ## 基本操作
 
 ```typescript
-// 设置缓存（使用默认 TTL）
+// 设置缓存（无 TTL，永久有效）
 await cache.set("user:1", { id: 1, name: "Alice" });
 
 // 设置缓存（自定义 TTL，秒）
-await cache.set("session:abc", token, 3600);
+await cache.set("session:abc", token, { ttl: 3600 });
 
 // 获取缓存
 const user = await cache.get<User>("user:1");
@@ -34,25 +31,25 @@ if (user) {
 }
 
 // 删除缓存
-await cache.delete("user:1");
+await cache.del("user:1");
 
 // 检查是否存在
 const exists = await cache.has("user:1");
 
 // 清空所有缓存
-await cache.clear();
+await cache.flush();
 ```
 
-## 缓存穿透保护（getOrSet）
+## 缓存穿透保护（remember）
 
 ```typescript
 // 如果缓存命中直接返回，否则执行函数并缓存结果
-const user = await cache.getOrSet(
+const user = await cache.remember(
   `user:${id}`,
+  300,  // TTL 秒
   async () => {
-    return db.from("users").where("id", "=", id).first();
-  },
-  300  // TTL 秒
+    return db.query(UserModel).where("id", "=", id).get();
+  }
 );
 ```
 
@@ -62,14 +59,14 @@ const user = await cache.getOrSet(
 router.get("/users/:id", async (ctx) => {
   const { id } = ctx.params;
 
-  const user = await cache.getOrSet(
+  const user = await cache.remember(
     `user:${id}`,
+    600, // 缓存 10 分钟
     async () => {
-      const u = await db.from("users").where("id", "=", id).first();
+      const u = await db.query(UserModel).where("id", "=", id).get();
       if (!u) throw new NotFoundError("用户不存在");
       return u;
-    },
-    600 // 缓存 10 分钟
+    }
   );
 
   return ctx.json(user);
@@ -78,9 +75,9 @@ router.get("/users/:id", async (ctx) => {
 // 更新时使缓存失效
 router.put("/users/:id", async (ctx) => {
   const { id } = ctx.params;
-  const body = await ctx.body();
-  await db.update("users").set(body).where("id", "=", id).execute();
-  await cache.delete(`user:${id}`);  // 清除缓存
+  const body = await ctx.request.json();
+  await db.query(UserModel).where("id", "=", id).update(body);
+  await cache.del(`user:${id}`);  // 清除缓存
   return ctx.json({ ok: true });
 });
 ```
@@ -90,10 +87,11 @@ router.put("/users/:id", async (ctx) => {
 ```typescript
 interface Cache {
   get<T>(key: string): Promise<T | null>;
-  set(key: string, value: unknown, ttl?: number): Promise<void>;
-  delete(key: string): Promise<void>;
+  set(key: string, value: unknown, options?: { ttl?: number; tags?: string[] }): Promise<void>;
+  del(key: string): Promise<void>;
   has(key: string): Promise<boolean>;
-  clear(): Promise<void>;
-  getOrSet<T>(key: string, fn: () => Promise<T>, ttl?: number): Promise<T>;
+  flush(): Promise<void>;
+  tags(tagNames: string[]): TaggedCache;
+  remember<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T>;
 }
 ```

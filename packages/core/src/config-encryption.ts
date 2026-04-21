@@ -1,5 +1,6 @@
 // @aeron/core - 敏感配置加密存储
 
+/** 配置加密器选项 */
 export interface ConfigEncryptionOptions {
   /** 加密密钥（至少 32 字节） */
   key: string;
@@ -7,9 +8,25 @@ export interface ConfigEncryptionOptions {
   algorithm?: string;
 }
 
+/** 配置加密器接口 */
 export interface ConfigEncryptor {
+  /**
+   * 加密字符串
+   * @param value - 明文
+   * @returns 密文（带 ENC: 前缀）
+   */
   encrypt(value: string): Promise<string>;
+  /**
+   * 解密字符串
+   * @param encrypted - 密文（带 ENC: 前缀）
+   * @returns 明文
+   */
   decrypt(encrypted: string): Promise<string>;
+  /**
+   * 判断字符串是否已加密
+   * @param value - 待判断字符串
+   * @returns 是否已加密
+   */
   isEncrypted(value: string): boolean;
 }
 
@@ -18,6 +35,8 @@ const ENCRYPTED_PREFIX = "ENC:";
 /**
  * 创建配置加密器
  * 使用 AES-256-GCM 加密敏感配置值
+ * @param options - 加密器选项
+ * @returns ConfigEncryptor 实例
  */
 export function createConfigEncryptor(options: ConfigEncryptionOptions): ConfigEncryptor {
   const keyBytes = new TextEncoder().encode(options.key.padEnd(32, "0").slice(0, 32));

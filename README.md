@@ -52,8 +52,8 @@ router.get("/", async (ctx) => {
 });
 
 const app = createApp({ port: 3000 });
-app.use(router.middleware());
-app.start();
+app.use(router);
+await app.listen();
 ```
 
 ### 集成认证
@@ -65,8 +65,18 @@ import { createJWT, createRBAC } from "@aeron/auth";
 const jwt = createJWT({ secret: process.env.JWT_SECRET! });
 const rbac = createRBAC();
 
-rbac.addRole("admin", ["read", "write", "delete"]);
-rbac.addRole("user", ["read"]);
+rbac.addRole({
+  name: "admin",
+  permissions: [
+    { resource: "users", action: "read" },
+    { resource: "users", action: "write" },
+    { resource: "users", action: "delete" },
+  ],
+});
+rbac.addRole({
+  name: "user",
+  permissions: [{ resource: "users", action: "read" }],
+});
 
 const router = createRouter();
 
@@ -80,16 +90,25 @@ router.get("/protected", async (ctx) => {
 ### 集成数据库
 
 ```typescript
-import { createQueryBuilder } from "@aeron/database";
+import { createDatabase, defineModel, column } from "@aeron/database";
 
-const db = createQueryBuilder({ url: process.env.DATABASE_URL! });
+const UserModel = defineModel("users", {
+  id: column.bigint({ primary: true, autoIncrement: true }),
+  email: column.varchar({ length: 255 }),
+  name: column.varchar({ length: 255 }),
+});
+
+const db = createDatabase({
+  url: process.env.DATABASE_URL!,
+  executor: async () => [],
+});
 
 const users = await db
-  .from("users")
-  .select(["id", "name", "email"])
+  .query(UserModel)
+  .select("id", "name", "email")
   .where("active", "=", true)
   .limit(10)
-  .execute();
+  .list();
 ```
 
 ### 集成缓存
@@ -97,12 +116,9 @@ const users = await db
 ```typescript
 import { createCache, createMemoryAdapter } from "@aeron/cache";
 
-const cache = createCache({
-  adapter: createMemoryAdapter(),
-  ttl: 300,
-});
+const cache = createCache(createMemoryAdapter());
 
-await cache.set("key", { data: "value" });
+await cache.set("key", { data: "value" }, { ttl: 300 });
 const result = await cache.get("key");
 ```
 

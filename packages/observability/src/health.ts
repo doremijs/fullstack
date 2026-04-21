@@ -1,27 +1,47 @@
 // @aeron/observability — Health Check
 
+/** 单项健康检查结果 */
 export interface CheckResult {
+  /** 检查状态：ok 为正常，error 为异常 */
   status: "ok" | "error";
+  /** 异常时的描述信息 */
   message?: string;
+  /** 检查耗时，单位毫秒 */
   duration?: number;
 }
 
+/** 整体健康状态 */
 export interface HealthStatus {
+  /** 聚合状态：ok 全部正常，degraded 部分异常，error 全部异常 */
   status: "ok" | "degraded" | "error";
+  /** 各检查项的结果映射 */
   checks: Record<string, CheckResult>;
+  /** 服务运行时长，单位毫秒 */
   uptime: number;
 }
 
+/** 健康检查器接口 */
 export interface HealthCheck {
+  /** 注册一项健康检查
+   * @param name 检查项名称
+   * @param checker 异步检查函数，返回 true 表示正常，返回字符串表示异常原因 */
   addCheck(name: string, checker: () => Promise<boolean | string>): void;
+  /** 存活探针，简单返回 ok */
   live(): { status: "ok" };
+  /** 就绪探针，并行执行所有注册的检查项
+   * @returns 聚合健康状态 */
   ready(): Promise<HealthStatus>;
 }
 
+/** 健康检查配置选项 */
 export interface HealthCheckOptions {
+  /** 服务启动时间戳，用于计算 uptime，默认取当前时间 */
   startTime?: number;
 }
 
+/** 创建健康检查器
+ * @param options 可选配置
+ * @returns HealthCheck 实例 */
 export function createHealthCheck(options?: HealthCheckOptions): HealthCheck {
   const startTime = options?.startTime ?? Date.now();
   const checks = new Map<string, () => Promise<boolean | string>>();

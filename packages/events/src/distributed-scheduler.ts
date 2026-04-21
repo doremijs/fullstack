@@ -1,13 +1,20 @@
 // @aeron/events - 分布式任务调度（防重复执行，抢锁机制）
 
+/** 分布式任务定义 */
 export interface DistributedTask {
+  /** 任务唯一标识 */
   id: string;
+  /** 任务名称 */
   name: string;
+  /** Cron 表达式（可选） */
   cron?: string;
+  /** 任务执行函数 */
   handler: () => Promise<void>;
+  /** 任务超时时间（毫秒，可选） */
   timeout?: number;
 }
 
+/** 分布式调度器配置选项 */
 export interface DistributedSchedulerOptions {
   /** 实例 ID */
   instanceId?: string;
@@ -17,25 +24,64 @@ export interface DistributedSchedulerOptions {
   renewInterval?: number;
 }
 
+/** 任务锁信息 */
 export interface TaskLock {
+  /** 任务 ID */
   taskId: string;
+  /** 持有锁的实例 ID */
   instanceId: string;
+  /** 获取锁的时间戳 */
   acquiredAt: number;
+  /** 锁过期时间戳 */
   expiresAt: number;
 }
 
+/** 分布式调度器接口 */
 export interface DistributedScheduler {
+  /**
+   * 注册任务
+   * @param task 分布式任务定义
+   */
   register(task: DistributedTask): void;
+
+  /**
+   * 尝试获取任务锁
+   * @param taskId 任务 ID
+   * @returns 获取成功返回 true，否则返回 false
+   */
   tryAcquire(taskId: string): Promise<boolean>;
+
+  /**
+   * 释放任务锁
+   * @param taskId 任务 ID
+   */
   release(taskId: string): void;
+
+  /**
+   * 执行指定任务
+   * @param taskId 任务 ID
+   * @returns 执行结果，包含是否成功、错误信息和耗时
+   */
   execute(taskId: string): Promise<{ success: boolean; error?: string; duration: number }>;
+
+  /**
+   * 获取当前所有锁信息
+   * @returns 锁列表
+   */
   getLocks(): TaskLock[];
+
+  /**
+   * 获取已注册的任务 ID 列表
+   * @returns 任务 ID 列表
+   */
   getRegistered(): string[];
 }
 
 /**
  * 创建分布式任务调度器
  * 使用内存锁实现（生产环境应替换为 Redis 分布式锁）
+ * @param options 分布式调度器配置选项
+ * @returns 分布式调度器实例
  */
 export function createDistributedScheduler(
   options?: DistributedSchedulerOptions,

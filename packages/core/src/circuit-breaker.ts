@@ -1,32 +1,56 @@
 // @aeron/core - 熔断器
 
+/** 熔断器状态 */
 export type CircuitState = "closed" | "open" | "half-open";
 
+/** 熔断器配置选项 */
 export interface CircuitBreakerOptions {
+  /** 失败阈值，默认 5 */
   failureThreshold?: number;
+  /** 熔断后重置超时（毫秒），默认 30000 */
   resetTimeout?: number;
+  /** 半开状态最大尝试次数，默认 1 */
   halfOpenMax?: number;
+  /** 状态变更回调 */
   onStateChange?: (from: CircuitState, to: CircuitState) => void;
 }
 
+/** 熔断器接口 */
 export interface CircuitBreaker {
+  /**
+   * 执行受保护函数
+   * @param fn - 异步函数
+   * @returns 函数返回值
+   */
   execute<T>(fn: () => Promise<T>): Promise<T>;
+  /** 获取当前状态 */
   getState(): CircuitState;
+  /** 获取统计信息 */
   getStats(): {
     state: CircuitState;
     failures: number;
     successes: number;
     lastFailure?: number;
   };
+  /** 重置熔断器 */
   reset(): void;
 }
 
+/**
+ * 创建熔断器打开错误
+ * @returns Error 实例
+ */
 export function createCircuitOpenError(): Error {
   const error = new Error("Circuit breaker is open");
   error.name = "CircuitOpenError";
   return error;
 }
 
+/**
+ * 创建熔断器
+ * @param options - 熔断器配置选项
+ * @returns CircuitBreaker 实例
+ */
 export function createCircuitBreaker(options?: CircuitBreakerOptions): CircuitBreaker {
   const failureThreshold = options?.failureThreshold ?? 5;
   const resetTimeout = options?.resetTimeout ?? 30_000;

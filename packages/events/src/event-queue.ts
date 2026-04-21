@@ -1,14 +1,22 @@
 // @aeron/events - 事件队列化处理
 
+/** 队列中的事件对象 */
 export interface QueuedEvent<T = unknown> {
+  /** 事件唯一标识 */
   id: string;
+  /** 事件名称 */
   name: string;
+  /** 事件载荷 */
   payload: T;
+  /** 优先级（数值越大优先级越高） */
   priority: number;
+  /** 入队时间戳 */
   enqueuedAt: number;
+  /** 处理完成时间戳（可选） */
   processedAt?: number;
 }
 
+/** 事件队列配置选项 */
 export interface EventQueueOptions {
   /** 最大队列长度 */
   maxSize?: number;
@@ -18,20 +26,66 @@ export interface EventQueueOptions {
   timeout?: number;
 }
 
+/** 事件队列接口 */
 export interface EventQueue {
+  /**
+   * 将事件加入队列
+   * @param name 事件名称
+   * @param payload 事件载荷
+   * @param priority 优先级，默认 0
+   * @returns 事件唯一标识
+   */
   enqueue<T>(name: string, payload: T, priority?: number): string;
+
+  /**
+   * 批量处理队列中的事件
+   * @param handler 事件处理函数
+   */
   process(handler: (event: QueuedEvent) => Promise<void>): Promise<void>;
+
+  /**
+   * 获取当前队列长度
+   * @returns 队列长度
+   */
   size(): number;
+
+  /**
+   * 获取待处理的事件列表
+   * @returns 待处理事件列表
+   */
   pending(): QueuedEvent[];
+
+  /**
+   * 清空队列但不处理
+   */
   drain(): Promise<void>;
+
+  /**
+   * 清空队列
+   */
   clear(): void;
+
+  /**
+   * 暂停队列处理
+   */
   pause(): void;
+
+  /**
+   * 恢复队列处理
+   */
   resume(): void;
+
+  /**
+   * 判断队列是否处于暂停状态
+   * @returns 暂停返回 true，否则返回 false
+   */
   isPaused(): boolean;
 }
 
 /**
  * 创建事件队列（优先级排序 + 批量消费）
+ * @param options 事件队列配置选项
+ * @returns 事件队列实例
  */
 export function createEventQueue(options?: EventQueueOptions): EventQueue {
   const maxSize = options?.maxSize ?? 10000;

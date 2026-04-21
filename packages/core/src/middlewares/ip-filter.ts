@@ -2,6 +2,7 @@
 
 import type { Middleware } from "../middleware";
 
+/** IP 过滤配置选项 */
 export interface IPFilterOptions {
   /** 白名单模式 - 只允许这些 IP */
   allowlist?: string[];
@@ -13,6 +14,11 @@ export interface IPFilterOptions {
   statusCode?: number;
 }
 
+/**
+ * 默认获取客户端 IP 的方法
+ * @param req - Request 对象
+ * @returns IP 字符串或 null
+ */
 function defaultGetIP(req: Request): string | null {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
@@ -23,6 +29,12 @@ function defaultGetIP(req: Request): string | null {
   return null;
 }
 
+/**
+ * 判断 IP 是否匹配模式（支持 CIDR 与通配符）
+ * @param ip - IP 地址
+ * @param pattern - 匹配模式
+ * @returns 是否匹配
+ */
 function matchIP(ip: string, pattern: string): boolean {
   // CIDR 匹配
   if (pattern.includes("/")) {
@@ -36,6 +48,12 @@ function matchIP(ip: string, pattern: string): boolean {
   return ip === pattern;
 }
 
+/**
+ * CIDR 匹配
+ * @param ip - IP 地址
+ * @param cidr - CIDR 表示
+ * @returns 是否匹配
+ */
 function matchCIDR(ip: string, cidr: string): boolean {
   const [network, bits] = cidr.split("/");
   if (!network || !bits) return false;
@@ -50,6 +68,11 @@ function matchCIDR(ip: string, cidr: string): boolean {
   return (ipNum & maskBits) === (networkNum & maskBits);
 }
 
+/**
+ * 将 IPv4 字符串转为数值
+ * @param ip - IP 地址
+ * @returns 数值或 null
+ */
 function ipToNumber(ip: string): number | null {
   const parts = ip.split(".");
   if (parts.length !== 4) return null;
@@ -62,6 +85,11 @@ function ipToNumber(ip: string): number | null {
   return num >>> 0;
 }
 
+/**
+ * 创建 IP 黑白名单中间件
+ * @param options - 配置选项
+ * @returns Middleware 实例
+ */
 export function ipFilter(options: IPFilterOptions = {}): Middleware {
   const { allowlist, denylist, getIP = defaultGetIP, statusCode = 403 } = options;
 

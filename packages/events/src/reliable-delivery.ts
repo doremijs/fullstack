@@ -1,39 +1,102 @@
-// @aeron/events - 可靠投递（持久化 + ACK 确认）
+/**
+ * @aeron/events - 可靠投递（持久化 + ACK 确认）
+ * 追踪消息状态，支持失败重试与死信队列
+ */
 
+/** 可靠消息记录 */
 export interface ReliableMessage {
+  /** 消息唯一标识 */
   id: string;
+  /** 消息主题 */
   topic: string;
+  /** 消息体 */
   body: unknown;
+  /** 消息状态：pending 待发送，sent 已发送，acked 已确认，failed 失败，dead 死信 */
   status: "pending" | "sent" | "acked" | "failed" | "dead";
+  /** 已尝试次数 */
   attempts: number;
+  /** 最大尝试次数 */
   maxAttempts: number;
+  /** 创建时间戳 */
   createdAt: number;
+  /** 最后尝试时间戳（可选） */
   lastAttemptAt?: number;
+  /** 错误信息（可选） */
   error?: string;
 }
 
+/** 可靠投递配置选项 */
 export interface ReliableDeliveryOptions {
   /** 最大重试次数 */
   maxAttempts?: number;
-  /** 重试间隔（ms） */
+  /** 重试间隔（毫秒） */
   retryInterval?: number;
-  /** ACK 超时（ms） */
+  /** ACK 超时（毫秒） */
   ackTimeout?: number;
 }
 
+/** 可靠投递管理器接口 */
 export interface ReliableDelivery {
+  /**
+   * 发送消息
+   * @param topic 消息主题
+   * @param body 消息体
+   * @returns 消息 ID
+   */
   send(topic: string, body: unknown): Promise<string>;
+
+  /**
+   * 确认消息已送达
+   * @param messageId 消息 ID
+   * @returns 确认成功返回 true，消息不存在或已确认返回 false
+   */
   ack(messageId: string): boolean;
+
+  /**
+   * 否定确认（标记为失败）
+   * @param messageId 消息 ID
+   * @param error 错误信息（可选）
+   * @returns 操作成功返回 true，消息不存在返回 false
+   */
   nack(messageId: string, error?: string): boolean;
+
+  /**
+   * 重试所有失败的消息
+   * @returns 实际重试的消息数量
+   */
   retry(): Promise<number>;
+
+  /**
+   * 获取待处理的消息列表（pending + sent）
+   * @returns 消息列表
+   */
   getPending(): ReliableMessage[];
+
+  /**
+   * 获取失败的消息列表
+   * @returns 消息列表
+   */
   getFailed(): ReliableMessage[];
+
+  /**
+   * 获取死信消息列表
+   * @returns 消息列表
+   */
   getDead(): ReliableMessage[];
+
+  /**
+   * 获取消息统计信息
+   * @returns 各状态消息数量统计
+   */
   stats(): { pending: number; sent: number; acked: number; failed: number; dead: number };
 }
 
 /**
- * 创建可靠投递管理器
+ * 创建可靠投递管理器实例
+ * 追踪消息生命周期，支持 ACK/NACK 与失败重试
+ * @param sender 底层发送函数
+ * @param options 可靠投递配置选项
+ * @returns 可靠投递管理器实例
  */
 export function createReliableDelivery(
   sender: (topic: string, body: unknown) => Promise<void>,

@@ -4,12 +4,19 @@ import { timingSafeEqual } from "node:crypto";
 import type { Context } from "../context";
 import type { Middleware } from "../middleware";
 
+/** HMAC 签名配置选项 */
 export interface HMACOptions {
+  /** 签名密钥 */
   secret: string;
+  /** 哈希算法，默认 SHA-256 */
   algorithm?: "SHA-256" | "SHA-384" | "SHA-512";
+  /** 签名请求头名称，默认 x-signature */
   header?: string;
+  /** 时间戳请求头名称，默认 x-timestamp */
   timestampHeader?: string;
+  /** Nonce 请求头名称，默认 x-nonce */
   nonceHeader?: string;
+  /** 签名最大有效期（毫秒），默认 5 分钟 */
   maxAge?: number;
 }
 
@@ -19,19 +26,44 @@ const ALGO_MAP: Record<string, string> = {
   "SHA-512": "SHA-512",
 };
 
+/**
+ * 将 ArrayBuffer 转为十六进制字符串
+ * @param buffer - ArrayBuffer
+ * @returns 十六进制字符串
+ */
 function bufferToHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
+/**
+ * 恒定时间比较字符串
+ * @param a - 字符串 a
+ * @param b - 字符串 b
+ * @returns 是否相等
+ */
 function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   const encoder = new TextEncoder();
   return timingSafeEqual(encoder.encode(a), encoder.encode(b));
 }
 
+/**
+ * 创建 HMAC 签名器
+ * @param options - HMAC 配置选项
+ * @returns 包含签名、校验与中间件的对象
+ */
 export function createHMACSigner(options: HMACOptions): {
+  /**
+   * 生成请求签名
+   * @param method - HTTP 方法
+   * @param path - 请求路径
+   * @param body - 请求体
+   * @param timestamp - 时间戳
+   * @param nonce - 随机数
+   * @returns 签名结果对象
+   */
   sign(
     method: string,
     path: string,
@@ -39,7 +71,13 @@ export function createHMACSigner(options: HMACOptions): {
     timestamp?: number,
     nonce?: string,
   ): Promise<{ signature: string; timestamp: number; nonce: string }>;
+  /**
+   * 校验请求签名
+   * @param request - Request 对象
+   * @returns 校验结果
+   */
   verify(request: Request): Promise<{ valid: boolean; reason?: string }>;
+  /** 获取 HMAC 校验中间件 */
   middleware(): Middleware;
 } {
   const algorithm = options.algorithm ?? "SHA-256";

@@ -1,44 +1,84 @@
-// @aeron/database - 连接池管理
+// @aeron/database — 连接池管理
+// 提供通用连接复用、空闲回收、等待队列与统计能力
 
+/**
+ * 连接池配置选项。
+ */
 export interface ConnectionPoolOptions {
   /** 最大连接数 */
   max?: number;
   /** 最小空闲连接数 */
   min?: number;
-  /** 空闲连接超时（ms） */
+  /** 空闲连接超时（毫秒） */
   idleTimeout?: number;
-  /** 获取连接超时（ms） */
+  /** 获取连接超时（毫秒） */
   acquireTimeout?: number;
-  /** 连接最大存活时间（ms） */
+  /** 连接最大存活时间（毫秒） */
   maxLifetime?: number;
 }
 
+/**
+ * 连接池统计信息。
+ */
 export interface PoolStats {
+  /** 当前总连接数 */
   total: number;
+  /** 活跃连接数 */
   active: number;
+  /** 空闲连接数 */
   idle: number;
+  /** 等待队列长度 */
   waiting: number;
+  /** 最大连接数限制 */
   maxSize: number;
 }
 
+/**
+ * 连接池接口。
+ * @template T — 连接对象类型
+ */
 export interface ConnectionPool<T> {
+  /** 获取连接（可能等待） */
   acquire(): Promise<T>;
+  /**
+   * 释放连接回池。
+   * @param conn — 连接对象
+   */
   release(conn: T): void;
+  /**
+   * 销毁连接（从池中移除）。
+   * @param conn — 连接对象
+   */
   destroy(conn: T): void;
+  /** 获取当前统计信息 */
   stats(): PoolStats;
+  /** 排空并关闭连接池 */
   drain(): Promise<void>;
+  /** 当前连接池大小 */
   size(): number;
 }
 
+/**
+ * 池内连接包装对象。
+ * @template T — 连接对象类型
+ */
 interface PooledConnection<T> {
+  /** 实际连接对象 */
   conn: T;
+  /** 创建时间戳 */
   createdAt: number;
+  /** 最后使用时间戳 */
   lastUsed: number;
+  /** 是否处于活跃状态 */
   active: boolean;
 }
 
 /**
- * 创建通用连接池
+ * 创建通用连接池。
+ * @template T — 连接对象类型
+ * @param factory — 连接工厂（创建、销毁、可选校验）
+ * @param options — 连接池配置
+ * @returns ConnectionPool 实例
  */
 export function createConnectionPool<T>(
   factory: {
@@ -62,6 +102,10 @@ export function createConnectionPool<T>(
   }[] = [];
   let closed = false;
 
+  /**
+   * 查找可用的空闲连接。
+   * @returns 可用连接包装对象，或 undefined
+   */
   function getIdleConnection(): PooledConnection<T> | undefined {
     const now = Date.now();
     for (const pc of connections) {
@@ -72,6 +116,9 @@ export function createConnectionPool<T>(
     return undefined;
   }
 
+  /**
+   * 清理过期或超时的空闲连接。
+   */
   function cleanup(): void {
     const now = Date.now();
     for (let i = connections.length - 1; i >= 0; i--) {

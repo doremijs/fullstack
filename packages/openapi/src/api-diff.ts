@@ -1,22 +1,41 @@
-// @aeron/openapi - 接口变更 Diff
+/**
+ * @aeron/openapi — 接口变更 Diff
+ *
+ * 提供两个 OpenAPI 规范之间的差异计算与 Markdown 报告生成能力。
+ * 可识别新增、删除、修改和废弃端点，并检测破坏性变更。
+ */
 
+/** 单条差异记录 */
 export interface APIDiffEntry {
+  /** 变更类型 */
   type: "added" | "removed" | "modified" | "deprecated";
+  /** API 路径 */
   path: string;
+  /** HTTP 方法 */
   method: string;
+  /** 变更描述 */
   description?: string;
+  /** 是否为破坏性变更 */
   breaking: boolean;
+  /** 额外详情 */
   details?: Record<string, unknown>;
 }
 
+/** Diff 结果 */
 export interface APIDiffResult {
+  /** 差异记录列表 */
   entries: APIDiffEntry[];
+  /** 是否包含破坏性变更 */
   hasBreaking: boolean;
+  /** 变更统计摘要 */
   summary: { added: number; removed: number; modified: number; deprecated: number };
 }
 
 /**
  * 计算两个 OpenAPI spec 之间的 Diff
+ * @param oldSpec - 旧版 OpenAPI 规范
+ * @param newSpec - 新版 OpenAPI 规范
+ * @returns Diff 结果
  */
 export function computeAPIDiff(
   oldSpec: Record<string, unknown>,
@@ -106,6 +125,9 @@ export function computeAPIDiff(
 
 /**
  * 检测是否有破坏性变更
+ * @param oldOp - 旧版操作定义
+ * @param newOp - 新版操作定义
+ * @returns 是否存在破坏性变更
  */
 function hasBreakingChange(
   oldOp: Record<string, unknown>,
@@ -136,6 +158,8 @@ function hasBreakingChange(
 
 /**
  * 生成 Diff 报告（Markdown）
+ * @param diff - Diff 结果
+ * @returns Markdown 格式报告文本
  */
 export function generateDiffReport(diff: APIDiffResult): string {
   const lines: string[] = [];

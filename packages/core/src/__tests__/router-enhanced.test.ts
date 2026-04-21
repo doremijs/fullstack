@@ -152,3 +152,29 @@ describe("Router - compile() conflict detection", () => {
     expect(() => router.compile()).toThrow("Duplicate route detected: GET /api/users");
   });
 });
+
+describe("Router - typed params with namedRoute & url()", () => {
+  test("namedRoute strips type annotations", () => {
+    const router = createRouter();
+    router.namedRoute("user.show", "GET", "/users/:id<int>", dummyHandler);
+
+    expect(router.url("user.show", { id: "42" })).toBe("/users/42");
+  });
+
+  test("namedRoute with typed params stores stripped path", () => {
+    const router = createRouter();
+    router.namedRoute("post.show", "GET", "/posts/:slug<string>", dummyHandler);
+
+    const routes = router.routes();
+    expect(routes[0]!.path).toBe("/posts/:slug<string>");
+    expect(routes[0]!.strippedPath).toBe("/posts/:slug");
+    expect(routes[0]!.params).toEqual([{ name: "slug", type: "string" }]);
+  });
+
+  test("url() substitutes multiple typed params", () => {
+    const router = createRouter();
+    router.namedRoute("post.comment", "GET", "/posts/:postId<int>/comments/:commentId<int>", dummyHandler);
+
+    expect(router.url("post.comment", { postId: "1", commentId: "2" })).toBe("/posts/1/comments/2");
+  });
+});

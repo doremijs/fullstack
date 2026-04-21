@@ -1,20 +1,41 @@
-// @aeron/database - Relation Definition
+// @aeron/database — 关联定义
+// 提供 hasOne / hasMany / belongsTo / belongsToMany 关联定义与 JOIN / 预加载 SQL 生成
 
 import type { ModelDefinition } from "./model";
 
+/**
+ * 关联类型。
+ */
 export type RelationType = "hasOne" | "hasMany" | "belongsTo" | "belongsToMany";
 
+/**
+ * 关联定义，描述两个模型之间的关联关系。
+ */
 export interface RelationDefinition {
+  /** 关联类型 */
   type: RelationType;
+  /** 关联的目标模型 */
   model: ModelDefinition;
+  /** 外键字段名（在关联模型或中间表中） */
   foreignKey: string;
+  /** 本地键字段名（当前模型中的关联字段，默认 id） */
   localKey: string;
-  // belongsToMany specific
+  // belongsToMany 专用字段
+  /** 中间表表名（仅 belongsToMany） */
   pivotTable?: string;
+  /** 中间表中指向当前模型的外键（仅 belongsToMany） */
   pivotForeignKey?: string;
+  /** 中间表中指向关联模型的外键（仅 belongsToMany） */
   pivotRelatedKey?: string;
 }
 
+/**
+ * 定义模型关联。
+ * @param type — 关联类型
+ * @param model — 关联目标模型
+ * @param options — 关联配置（外键、本地键、中间表等）
+ * @returns 关联定义对象
+ */
 export function defineRelation(
   type: RelationType,
   model: ModelDefinition,
@@ -50,6 +71,13 @@ export function defineRelation(
   return def;
 }
 
+/**
+ * 根据关联定义构建 LEFT JOIN SQL 片段。
+ * @param baseTable — 基础表名
+ * @param relation — 关联定义
+ * @param alias — 关联表别名（可选）
+ * @returns JOIN SQL 字符串
+ */
 export function buildJoinSQL(
   baseTable: string,
   relation: RelationDefinition,
@@ -82,6 +110,13 @@ export function buildJoinSQL(
   }
 }
 
+/**
+ * 根据关联定义构建预加载（eager load）查询 SQL。
+ * @param _baseTable — 基础表名（当前未使用，保留扩展）
+ * @param relation — 关联定义
+ * @param parentIds — 父模型主键值数组
+ * @returns SQL 文本与参数数组
+ */
 export function buildEagerLoadSQL(
   _baseTable: string,
   relation: RelationDefinition,

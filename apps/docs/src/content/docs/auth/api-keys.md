@@ -19,6 +19,18 @@ const apiKeys = createAPIKeyManager({
 ## 生成 API 密钥
 
 ```typescript
+const ApiKeyModel = defineModel("api_keys", {
+  id: column.bigint({ primary: true, autoIncrement: true }),
+  userId: column.bigint(),
+  name: column.varchar({ length: 255 }),
+  keyHash: column.varchar({ length: 255 }),
+  scopes: column.json<string[]>(),
+  revoked: column.boolean({ default: false }),
+  createdAt: column.timestamp(),
+  lastUsedAt: column.timestamp({ nullable: true }),
+  revokedAt: column.timestamp({ nullable: true }),
+});
+
 router.post("/api-keys", authMiddleware, async (ctx) => {
   const userId = ctx.state.user.sub;
   const { name, scopes } = await ctx.body<{ name: string; scopes: string[] }>();
@@ -26,13 +38,14 @@ router.post("/api-keys", authMiddleware, async (ctx) => {
   const { key, hash } = await apiKeys.generate();
 
   // 只存储哈希值，不存储原始密钥
-  await db.insert("api_keys", {
-    user_id: userId,
+  await db.query(ApiKeyModel).insert({
+    userId,
     name,
-    key_hash: hash,
-    scopes: JSON.stringify(scopes),
-    created_at: new Date(),
-  }).execute();
+    keyHash: hash,
+    scopes,
+    revoked: false,
+    createdAt: new Date(),
+  });
 
   // 只在创建时返回一次原始密钥
   return ctx.json({ key, name, scopes }, 201);
@@ -49,20 +62,19 @@ const apiKeyAuth: Middleware = async (ctx, next) => {
   }
 
   const hash = apiKeys.hash(key);
-  const apiKey = await db.from("api_keys")
-    .where("key_hash", "=", hash)
+  const apiKey = await db.query(ApiKeyModel)
+    .where("keyHash", "=", hash)
     .where("revoked", "=", false)
-    .first();
+    .get();
 
   if (!apiKey) {
     throw new UnauthorizedError("API 密钥无效");
   }
 
   // 更新最后使用时间
-  await db.update("api_keys")
-    .set({ last_used_at: new Date() })
+  await db.query(ApiKeyModel)
     .where("id", "=", apiKey.id)
-    .execute();
+    .update({ lastUsedAt: new Date() });
 
   ctx.state.apiKey = apiKey;
   ctx.state.userId = apiKey.user_id;
@@ -73,14 +85,13 @@ const apiKeyAuth: Middleware = async (ctx, next) => {
 ## 撤销 API 密钥
 
 ```typescript
-router.delete("/api-keys/:id", authMiddleware, async (ctx) => {
+router.delete("/api-keys/:id<int>", authMiddleware, async (ctx) => {
   const userId = ctx.state.user.sub;
 
-  await db.update("api_keys")
-    .set({ revoked: true, revoked_at: new Date() })
+  await db.query(ApiKeyModel)
     .where("id", "=", ctx.params.id)
-    .where("user_id", "=", userId)  // 只能撤销自己的密钥
-    .execute();
+    .where("userId", "=", userId)  // 只能撤销自己的密钥
+    .update({ revoked: true, revokedAt: new Date() });
 
   return ctx.json({ ok: true });
 });

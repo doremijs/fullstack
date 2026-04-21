@@ -2,6 +2,7 @@
  * Domain event registry — ORM lifecycle hook style.
  */
 
+/** 领域事件类型，对应实体生命周期各阶段 */
 export type DomainEventType =
   | "beforeCreate"
   | "afterCreate"
@@ -10,22 +11,46 @@ export type DomainEventType =
   | "beforeDelete"
   | "afterDelete";
 
+/** 领域事件对象 */
 export interface DomainEvent<T = unknown> {
+  /** 事件类型 */
   type: DomainEventType;
+  /** 实体名称 */
   entity: string;
+  /** 事件载荷数据 */
   payload: T;
+  /** 事件发生时间戳 */
   timestamp: number;
 }
 
+/** 领域事件处理器 */
 export type DomainEventHandler<T = unknown> = (event: DomainEvent<T>) => Promise<void> | void;
 
+/** 领域事件注册表接口 */
 export interface DomainEventRegistry {
+  /** 注册指定实体与事件类型的处理器
+   * @param entity 实体名称
+   * @param type 事件类型
+   * @param handler 事件处理器
+   * @returns 取消注册函数 */
   register<T>(entity: string, type: DomainEventType, handler: DomainEventHandler<T>): () => void;
+  /** 触发指定实体与事件类型的事件，顺序执行所有处理器
+   * @param entity 实体名称
+   * @param type 事件类型
+   * @param payload 事件载荷 */
   trigger<T>(entity: string, type: DomainEventType, payload: T): Promise<void>;
+  /** 查询某实体已注册的处理器数量
+   * @param entity 实体名称
+   * @param type 可选的事件类型过滤，不传则统计该实体全部类型
+   * @returns 处理器数量 */
   listHandlers(entity: string, type?: DomainEventType): number;
+  /** 移除某实体的所有处理器，或全部清空
+   * @param entity 实体名称，不传则清空所有实体 */
   removeAll(entity?: string): void;
 }
 
+/** 创建领域事件注册表
+ * @returns DomainEventRegistry 实例 */
 export function createDomainEventRegistry(): DomainEventRegistry {
   // key format: "entity:type"
   const handlers = new Map<string, DomainEventHandler<unknown>[]>();

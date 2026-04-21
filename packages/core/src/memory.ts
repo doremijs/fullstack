@@ -1,13 +1,20 @@
 // @aeron/core - 内存控制与资源监控
 
+/** 内存信息 */
 export interface MemoryInfo {
+  /** 已用堆内存（字节） */
   heapUsed: number;
+  /** 总堆内存（字节） */
   heapTotal: number;
+  /** 常驻集大小（字节） */
   rss: number;
+  /** 外部内存（字节） */
   external: number;
+  /** 堆内存使用率（0-1） */
   usagePercent: number;
 }
 
+/** 内存控制器配置选项 */
 export interface MemoryControlOptions {
   /** 内存使用率告警阈值（0-1） */
   warningThreshold?: number;
@@ -21,15 +28,22 @@ export interface MemoryControlOptions {
   onCritical?: (info: MemoryInfo) => void;
 }
 
+/** 内存控制器接口 */
 export interface MemoryController {
+  /** 获取当前内存信息 */
   getInfo(): MemoryInfo;
+  /** 内存是否健康 */
   isHealthy(): boolean;
+  /** 启动监控 */
   start(): void;
+  /** 停止监控 */
   stop(): void;
 }
 
 /**
  * 创建内存控制器
+ * @param options - 配置选项
+ * @returns MemoryController 实例
  */
 export function createMemoryController(options?: MemoryControlOptions): MemoryController {
   const warningThreshold = options?.warningThreshold ?? 0.8;

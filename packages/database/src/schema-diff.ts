@@ -1,40 +1,77 @@
-// @aeron/database - 自动检测 Schema 差异
+// @aeron/database — 自动检测 Schema 差异
+// 提供表/列的增删改检测与迁移 SQL 生成能力
 
+/**
+ * 列结构定义。
+ */
 export interface ColumnSchema {
+  /** 列名 */
   name: string;
+  /** 数据库类型 */
   type: string;
+  /** 是否允许为空 */
   nullable?: boolean;
+  /** 默认值（字符串形式） */
   defaultValue?: string;
+  /** 是否为主键 */
   primaryKey?: boolean;
 }
 
+/**
+ * 表结构定义。
+ */
 export interface TableSchema {
+  /** 表名 */
   name: string;
+  /** 列定义数组 */
   columns: ColumnSchema[];
 }
 
+/**
+ * Schema 差异结果。
+ */
 export interface SchemaDiff {
+  /** 新增的表名列表 */
   addedTables: string[];
+  /** 移除的表名列表 */
   removedTables: string[];
+  /** 发生变更的表差异列表 */
   modifiedTables: TableDiff[];
 }
 
+/**
+ * 单表差异详情。
+ */
 export interface TableDiff {
+  /** 表名 */
   table: string;
+  /** 新增的列 */
   addedColumns: ColumnSchema[];
+  /** 移除的列名 */
   removedColumns: string[];
+  /** 发生变更的列差异 */
   modifiedColumns: ColumnDiff[];
 }
 
+/**
+ * 单列差异详情。
+ */
 export interface ColumnDiff {
+  /** 列名 */
   column: string;
+  /** 变更项列表（如 type、nullable、default） */
   changes: string[];
+  /** 变更前的值 */
   from: Partial<ColumnSchema>;
+  /** 变更后的值 */
   to: Partial<ColumnSchema>;
 }
 
 /**
- * 比较两个 Schema 的差异
+ * 比较两个 Schema 的差异。
+ * @param current — 当前数据库 Schema
+ * @param target — 目标 Schema（如代码定义）
+ * @returns SchemaDiff 差异对象
  */
 export function diffSchemas(current: TableSchema[], target: TableSchema[]): SchemaDiff {
   const currentNames = new Set(current.map((t) => t.name));
@@ -61,6 +98,12 @@ export function diffSchemas(current: TableSchema[], target: TableSchema[]): Sche
   return { addedTables, removedTables, modifiedTables };
 }
 
+/**
+ * 比较两张表的列差异。
+ * @param current — 当前表结构
+ * @param target — 目标表结构
+ * @returns TableDiff 差异对象
+ */
 function diffTable(current: TableSchema, target: TableSchema): TableDiff {
   const currentCols = new Map(current.columns.map((c) => [c.name, c]));
   const targetCols = new Map(target.columns.map((c) => [c.name, c]));
@@ -102,7 +145,9 @@ function diffTable(current: TableSchema, target: TableSchema): TableDiff {
 }
 
 /**
- * 从 diff 生成 migration SQL
+ * 从 Schema 差异生成迁移 SQL（up / down）。
+ * @param diff — Schema 差异结果
+ * @returns up 与 down 两个方向的 SQL 数组
  */
 export function generateMigrationSQL(diff: SchemaDiff): { up: string[]; down: string[] } {
   const up: string[] = [];

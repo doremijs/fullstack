@@ -12,30 +12,45 @@ import type {
   OpenAPIResponse,
 } from "./generator";
 
+/** 路由元数据，用于描述单条路由的 OpenAPI 文档信息 */
 export interface RouteMetadata {
+  /** 路由路径 */
   path: string;
+  /** HTTP 方法 */
   method: string;
+  /** 接口摘要 */
   summary?: string;
+  /** 接口详细描述 */
   description?: string;
+  /** 标签分类 */
   tags?: string[];
+  /** 操作唯一标识 */
   operationId?: string;
+  /** 路径/查询/头参数定义 */
   parameters?: OpenAPIParameter[];
+  /** 请求体定义 */
   requestBody?: OpenAPIRequestBody;
+  /** 响应定义 */
   responses?: Record<string, OpenAPIResponse>;
+  /** 安全要求 */
   security?: Array<Record<string, string[]>>;
+  /** 是否已废弃 */
   deprecated?: boolean;
 }
 
 /**
- * 定义单条路由的 OpenAPI 元数据。
- * 返回原样元数据，可用于后续批量注入生成器。
+ * 定义单条路由的 OpenAPI 元数据
+ * @param metadata - 路由元数据对象
+ * @returns 原样返回的元数据对象，便于链式使用
  */
 export function defineRouteDoc(metadata: RouteMetadata): RouteMetadata {
   return metadata;
 }
 
 /**
- * 将一组路由元数据批量注入到 OpenAPIGenerator 中。
+ * 将一组路由元数据批量注入到 OpenAPIGenerator 中
+ * @param routes - 路由元数据数组
+ * @param generator - OpenAPI 生成器实例
  */
 export function routesToOpenAPI(routes: RouteMetadata[], generator: OpenAPIGenerator): void {
   for (const route of routes) {
@@ -59,7 +74,10 @@ export function routesToOpenAPI(routes: RouteMetadata[], generator: OpenAPIGener
 }
 
 /**
- * 自动将 Router 中已注册的所有路由同步到 OpenAPIGenerator。
+ * 自动将 Router 中已注册的所有路由同步到 OpenAPIGenerator
+ * @param router - Aeron 路由实例
+ * @param generator - OpenAPI 生成器实例
+ *
  * 会读取每条路由的 metadata?.openapi 作为详细文档；
  * 如果没有声明 openapi 元数据，则生成一个仅含默认 200 响应的基础 operation。
  */

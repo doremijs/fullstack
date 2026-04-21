@@ -1,7 +1,10 @@
 // @aeron/core - 内容协商（Content Negotiation）
 
+/** 协商结果 */
 export interface NegotiationResult {
+  /** 响应类型 */
   type: "json" | "html" | "text" | "xml";
+  /** Content-Type 值 */
   contentType: string;
 }
 
@@ -14,10 +17,17 @@ const MEDIA_TYPES: Record<string, NegotiationResult> = {
 };
 
 interface AcceptEntry {
+  /** MIME 类型 */
   type: string;
+  /** 质量因子 */
   quality: number;
 }
 
+/**
+ * 解析 Accept 请求头
+ * @param accept - Accept 头值
+ * @returns 按质量排序的 AcceptEntry 列表
+ */
 function parseAcceptHeader(accept: string): AcceptEntry[] {
   return accept
     .split(",")
@@ -40,6 +50,9 @@ function parseAcceptHeader(accept: string): AcceptEntry[] {
 /**
  * 根据 Accept header 选择最合适的响应类型。
  * 默认返回 JSON。
+ * @param acceptHeader - Accept 请求头值
+ * @param supported - 服务端支持的类型列表
+ * @returns 协商结果
  */
 export function negotiate(
   acceptHeader: string | null,

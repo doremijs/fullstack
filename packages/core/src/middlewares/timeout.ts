@@ -2,11 +2,20 @@
 
 import type { Middleware } from "../middleware";
 
+/** 超时中间件配置选项 */
 export interface TimeoutOptions {
+  /** 超时时间（毫秒），默认 30000 */
   ms?: number;
+  /** 超时响应消息，默认 "Request Timeout" */
   message?: string;
 }
 
+/**
+ * 创建请求超时中间件
+ * 超过指定时间未返回则返回 408 响应
+ * @param options - 超时配置选项
+ * @returns Middleware 实例
+ */
 export function timeout(options: TimeoutOptions = {}): Middleware {
   const ms = options.ms ?? 30_000;
   const message = options.message ?? "Request Timeout";

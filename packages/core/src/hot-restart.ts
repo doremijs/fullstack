@@ -1,5 +1,6 @@
 // @aeron/core - 热重启（不中断连接升级进程）
 
+/** 热重启配置选项 */
 export interface HotRestartOptions {
   /** 优雅停止超时（ms） */
   gracefulTimeout?: number;
@@ -9,6 +10,7 @@ export interface HotRestartOptions {
   onAfterRestart?: () => Promise<void> | void;
 }
 
+/** 热重启管理器接口 */
 export interface HotRestart {
   /** 触发热重启 */
   restart(): Promise<void>;
@@ -21,6 +23,8 @@ export interface HotRestart {
 /**
  * 创建热重启管理器
  * 利用 Bun.serve().reload() 实现不中断连接的进程升级
+ * @param options - 热重启配置选项
+ * @returns HotRestart 实例
  */
 export function createHotRestart(options?: HotRestartOptions): HotRestart {
   const gracefulTimeout = options?.gracefulTimeout ?? 30000;

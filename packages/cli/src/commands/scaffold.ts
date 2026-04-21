@@ -1,7 +1,17 @@
-// @aeron/cli - 项目初始化脚手架（scaffold）
+/**
+ * @aeron/cli — 项目初始化脚手架（scaffold）
+ *
+ * 提供 create 命令，用于生成新的 Aeron 项目目录结构，
+ * 包含 package.json、tsconfig.json、入口文件、Dockerfile 等基础文件。
+ */
 
 import type { Command } from "../cli";
 
+/**
+ * 生成 package.json 模板内容
+ * @param name - 项目名称
+ * @returns package.json 内容字符串
+ */
 const PACKAGE_JSON_TEMPLATE = (name: string): string =>
   JSON.stringify(
     {
@@ -24,6 +34,7 @@ const PACKAGE_JSON_TEMPLATE = (name: string): string =>
     2,
   );
 
+/** tsconfig.json 模板内容 */
 const TSCONFIG_TEMPLATE = JSON.stringify(
   {
     compilerOptions: {
@@ -45,6 +56,10 @@ const TSCONFIG_TEMPLATE = JSON.stringify(
   2,
 );
 
+/**
+ * 入口文件模板内容
+ * 使用 {app_name} 作为占位符，后续会被替换为实际项目名
+ */
 const INDEX_TEMPLATE = `// ${"{app_name}"} - powered by Aeron
 import { createApp, createRouter } from "@aeron/core";
 
@@ -59,13 +74,13 @@ router.get("/health", async (ctx) => {
 });
 
 const app = createApp({ port: 3000 });
-app.router.get("/", async (ctx) => ctx.json({ message: "Hello Aeron!" }));
-app.router.get("/health", async (ctx) => ctx.json({ status: "ok" }));
+app.use(router);
 
 await app.listen();
 console.log("Server running on http://localhost:3000");
 `;
 
+/** .gitignore 模板内容 */
 const GITIGNORE_TEMPLATE = `node_modules/
 dist/
 .env
@@ -74,6 +89,7 @@ dist/
 *.log
 `;
 
+/** .env.example 模板内容 */
 const ENV_EXAMPLE_TEMPLATE = `# Server
 PORT=3000
 NODE_ENV=development
@@ -85,6 +101,7 @@ DATABASE_URL=postgres://localhost:5432/myapp
 JWT_SECRET=change-me-in-production
 `;
 
+/** Dockerfile 模板内容 */
 const DOCKERFILE_TEMPLATE = `FROM oven/bun:1 AS base
 WORKDIR /app
 
@@ -101,12 +118,21 @@ EXPOSE 3000
 CMD ["bun", "run", "src/index.ts"]
 `;
 
+/** 脚手架选项 */
 export interface ScaffoldOptions {
+  /** 项目名称 */
   name: string;
+  /** 目标目录 */
   directory: string;
+  /** 项目模板类型，minimal 为基础模板，full 包含路由和服务目录 */
   template?: "minimal" | "full";
 }
 
+/**
+ * 执行脚手架，创建项目文件和目录
+ * @param options - 脚手架配置选项
+ * @returns 已创建的文件/目录路径列表
+ */
 export async function scaffold(options: ScaffoldOptions): Promise<string[]> {
   const { name, directory, template = "minimal" } = options;
   const created: string[] = [];
@@ -152,6 +178,10 @@ export async function scaffold(options: ScaffoldOptions): Promise<string[]> {
   return created;
 }
 
+/**
+ * 创建 create 命令
+ * @returns create 命令实例
+ */
 export function createScaffoldCommand(): Command {
   return {
     name: "create",

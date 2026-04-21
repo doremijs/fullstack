@@ -57,15 +57,25 @@ router.get("/auth/github/callback", async (ctx) => {
   // 获取用户信息
   const userInfo = await github.getUserInfo(tokens.accessToken);
 
+const UserModel = defineModel("users", {
+  id: column.bigint({ primary: true, autoIncrement: true }),
+  githubId: column.varchar({ length: 255 }),
+  name: column.varchar({ length: 255 }),
+  email: column.varchar({ length: 255 }),
+  avatar: column.varchar({ length: 2048 }),
+  role: column.varchar({ length: 50 }),
+});
+
   // 查找或创建用户
-  let user = await db.from("users").where("github_id", "=", userInfo.id).first();
+  let user = await db.query(UserModel).where("githubId", "=", userInfo.id).get();
   if (!user) {
-    user = await db.insert("users", {
-      github_id: userInfo.id,
+    user = await db.query(UserModel).insert({
+      githubId: userInfo.id,
       name: userInfo.name,
       email: userInfo.email,
       avatar: userInfo.avatar_url,
-    }).returning("*").first();
+      role: "user",
+    }, { returning: true });
   }
 
   // 签发应用 JWT

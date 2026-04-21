@@ -3,6 +3,7 @@ import { createApp } from "../app";
 import { NotFoundError } from "../errors";
 import type { Middleware } from "../middleware";
 import type { Plugin } from "../plugin";
+import { createRouter } from "../router";
 
 let appToClose: ReturnType<typeof createApp> | null = null;
 
@@ -41,6 +42,17 @@ describe("createApp", () => {
     const app = createApp();
     const result = app.use(plugin);
     expect(result).toBe(app);
+  });
+
+  test("use() accepts router and merges routes", () => {
+    const app = createApp();
+    const router = createRouter();
+    router.get("/external", (ctx) => ctx.text("from-router"));
+
+    const result = app.use(router);
+    expect(result).toBe(app);
+    expect(app.router.routes()).toHaveLength(1);
+    expect(app.router.routes()[0]!.path).toBe("/external");
   });
 });
 

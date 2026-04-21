@@ -1,33 +1,53 @@
 // @aeron/core - 配置系统
 
+/** 配置字段定义 */
 export interface ConfigFieldDef {
+  /** 字段类型 */
   type: "string" | "number" | "boolean";
+  /** 可选枚举值 */
   options?: readonly unknown[];
+  /** 默认值 */
   default?: unknown;
+  /** 对应环境变量名 */
   env?: string;
+  /** 是否必填 */
   required?: boolean;
+  /** 是否为密钥（需加密存储） */
   secret?: boolean;
+  /** 是否为敏感信息（日志脱敏） */
   sensitive?: boolean;
 }
 
+/** 配置结构定义（支持嵌套） */
 export interface ConfigSchema {
   [key: string]: ConfigFieldDef | ConfigSchema;
 }
 
+/** 配置加载器选项 */
 export interface ConfigLoaderOptions {
+  /** 配置文件基础路径 */
   basePath?: string;
+  /** 当前环境名 */
   env?: string;
 }
 
+/** 安全预检选项 */
 export interface SecurityCheckOptions {
+  /** 必需的密钥环境变量列表 */
   requiredSecrets?: string[];
+  /** 密钥最小长度 */
   minSecretLength?: number;
+  /** 生产环境是否要求 HTTPS */
   requireHTTPS?: boolean;
+  /** 生产环境是否禁止 DEBUG */
   disallowDebug?: boolean;
 }
 
+/** 安全预检结果 */
 export interface SecurityCheckResult {
+  /** 是否通过 */
   passed: boolean;
+  /** 错误信息列表 */
   errors: string[];
 }
 
@@ -42,7 +62,13 @@ function isFieldDef(value: unknown): value is ConfigFieldDef {
   );
 }
 
-// 从类型字符串转换实际值
+/**
+ * 从类型字符串转换实际值
+ * @param raw - 原始字符串
+ * @param type - 目标类型
+ * @param key - 配置键名（用于报错）
+ * @returns 转换后的值
+ */
 function coerceValue(
   raw: string,
   type: ConfigFieldDef["type"],
@@ -66,6 +92,14 @@ function coerceValue(
   }
 }
 
+/**
+ * 解析单个字段值（按优先级：环境变量 > 覆盖值 > 默认值）
+ * @param fieldDef - 字段定义
+ * @param key - 完整键名
+ * @param env - 环境变量对象
+ * @param overrides - 覆盖值对象
+ * @returns 解析后的值
+ */
 function resolveField(
   fieldDef: ConfigFieldDef,
   key: string,
@@ -123,6 +157,14 @@ function resolveField(
   return value;
 }
 
+/**
+ * 递归解析配置结构
+ * @param schema - 配置结构
+ * @param env - 环境变量
+ * @param prefix - 键名前缀
+ * @param overrides - 覆盖值
+ * @returns 解析后的配置对象
+ */
 function resolveSchema(
   schema: ConfigSchema,
   env: Record<string, string | undefined>,
@@ -155,6 +197,7 @@ type ExtractFieldType<T> = T extends { options: readonly (infer O)[] }
         ? boolean
         : unknown;
 
+/** 从 ConfigSchema 推导出的配置值类型 */
 export type ConfigValue<T extends ConfigSchema = ConfigSchema> = {
   [K in keyof T]: T[K] extends ConfigFieldDef
     ? ExtractFieldType<T[K]> | undefined
@@ -163,6 +206,12 @@ export type ConfigValue<T extends ConfigSchema = ConfigSchema> = {
       : unknown;
 };
 
+/**
+ * 根据 schema 创建配置对象（仅从环境变量解析）
+ * @param schema - 配置结构
+ * @param env - 环境变量，默认 process.env
+ * @returns 类型安全的配置对象
+ */
 export function createConfig<T extends ConfigSchema>(
   schema: T,
   env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
@@ -172,6 +221,12 @@ export function createConfig<T extends ConfigSchema>(
 
 // --- 深度合并 ---
 
+/**
+ * 深度合并两个对象
+ * @param target - 目标对象
+ * @param source - 源对象
+ * @returns 合并后的新对象
+ */
 function deepMerge(
   target: Record<string, unknown>,
   source: Record<string, unknown>,
@@ -201,6 +256,11 @@ function deepMerge(
 
 // --- JSON 配置文件加载 ---
 
+/**
+ * 加载 JSON 配置文件
+ * @param filePath - 文件路径
+ * @returns JSON 对象，文件不存在返回 null
+ */
 async function loadJsonFile(filePath: string): Promise<Record<string, unknown> | null> {
   const file = Bun.file(filePath);
   if (!(await file.exists())) {
@@ -211,6 +271,11 @@ async function loadJsonFile(filePath: string): Promise<Record<string, unknown> |
 
 // --- CLI 参数解析 ---
 
+/**
+ * 解析命令行参数
+ * @param args - 参数数组，默认 Bun.argv.slice(2)
+ * @returns 解析后的键值对象
+ */
 export function parseArgs(args?: string[]): Record<string, unknown> {
   const argv = args ?? Bun.argv.slice(2);
   const result: Record<string, unknown> = {};
@@ -252,6 +317,13 @@ export function parseArgs(args?: string[]): Record<string, unknown> {
 
 // --- 分环境配置加载 ---
 
+/**
+ * 加载分环境配置（base.json + {env}.json）
+ * @param schema - 配置结构
+ * @param options - 加载选项
+ * @param env - 环境变量
+ * @returns 类型安全的配置对象
+ */
 export async function loadConfig<T extends ConfigSchema>(
   schema: T,
   options?: ConfigLoaderOptions,
@@ -275,6 +347,12 @@ export async function loadConfig<T extends ConfigSchema>(
 
 // --- 安全预检 ---
 
+/**
+ * 执行安全预检
+ * @param options - 预检选项
+ * @param env - 环境变量
+ * @returns 预检结果
+ */
 export function securityPrecheck(
   options: SecurityCheckOptions,
   env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
@@ -316,6 +394,13 @@ export function securityPrecheck(
 
 // --- 敏感字段脱敏 ---
 
+/**
+ * 对配置对象中的敏感字段进行脱敏
+ * @param schema - 配置结构
+ * @param config - 配置值对象
+ * @param mask - 脱敏掩码，默认 "***"
+ * @returns 脱敏后的配置对象
+ */
 export function sanitizeConfig(
   schema: ConfigSchema,
   config: Record<string, unknown>,

@@ -36,8 +36,8 @@ AeronError
 ```typescript
 import { NotFoundError, ValidationError, UnauthorizedError } from "@aeron/core";
 
-router.get("/users/:id", async (ctx) => {
-  const user = await db.from("users").where("id", "=", ctx.params.id).first();
+router.get("/users/:id<int>", async (ctx) => {
+  const user = await db.query(UserModel).where("id", "=", ctx.params.id).get();
 
   if (!user) {
     throw new NotFoundError("用户不存在");

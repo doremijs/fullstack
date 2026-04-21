@@ -1,28 +1,70 @@
-// @aeron/openapi - 旧版本兼容与废弃通知 + 向后兼容策略
+/**
+ * @aeron/openapi — 旧版本兼容与废弃通知 + 向后兼容策略
+ *
+ * 提供 API 废弃声明管理、Sunset / Deprecation header 生成以及兼容性守卫能力。
+ */
 
+/** 废弃通知 */
 export interface DeprecationNotice {
+  /** API 路径 */
   path: string;
+  /** HTTP 方法 */
   method: string;
+  /** 开始废弃的版本 */
   version: string;
+  /** 计划下线日期（ISO 8601） */
   sunsetDate?: string;
+  /** 替代接口地址 */
   replacement?: string;
+  /** 额外说明信息 */
   message?: string;
 }
 
+/** 废弃管理器，负责记录废弃接口并生成相关响应头 */
 export interface DeprecationManager {
+  /**
+   * 注册废弃通知
+   * @param notice - 废弃通知详情
+   */
   deprecate(notice: DeprecationNotice): void;
+
+  /**
+   * 查询接口是否已废弃
+   * @param method - HTTP 方法
+   * @param path - API 路径
+   * @returns 对应的废弃通知，未废弃返回 undefined
+   */
   isDeprecated(method: string, path: string): DeprecationNotice | undefined;
+
+  /** 列出所有已注册的废弃通知 */
   list(): DeprecationNotice[];
-  /** 生成 Sunset / Deprecation headers */
+
+  /**
+   * 生成 Sunset / Deprecation headers
+   * @param method - HTTP 方法
+   * @param path - API 路径
+   * @returns 响应头键值对
+   */
   headers(method: string, path: string): Record<string, string>;
-  /** 检查是否已过 sunset 日期 */
+
+  /**
+   * 检查是否已过 sunset 日期
+   * @param method - HTTP 方法
+   * @param path - API 路径
+   * @returns 是否已过期
+   */
   isSunset(method: string, path: string): boolean;
-  /** 生成废弃通知文档 */
+
+  /**
+   * 生成废弃通知 Markdown 文档
+   * @returns Markdown 格式报告
+   */
   report(): string;
 }
 
 /**
- * 创建废弃管理器
+ * 创建废弃管理器实例
+ * @returns DeprecationManager 实例
  */
 export function createDeprecationManager(): DeprecationManager {
   const notices: DeprecationNotice[] = [];

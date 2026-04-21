@@ -6,26 +6,72 @@ import type { Middleware } from "./middleware";
 import type { Plugin } from "./plugin";
 import { type CompiledRoutes, type Router, createRouter } from "./router";
 
+/**
+ * 判断给定对象是否为 Router 实例
+ * @param item - 待判断的对象
+ * @returns 若 item 为 Router 则返回 true
+ */
+function isRouter(item: unknown): item is Router {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    "compile" in item &&
+    "routes" in item &&
+    typeof (item as Router).compile === "function" &&
+    typeof (item as Router).routes === "function"
+  );
+}
+
+/** 应用配置选项 */
 export interface AppConfig {
+  /** 监听端口，默认 3000 */
   port?: number;
+  /** 监听主机名，默认 0.0.0.0 */
   hostname?: string;
 }
 
+/** 应用可访问地址条目 */
 export interface AppUrl {
+  /** 地址标签 */
   label: string;
+  /** 地址路径 */
   path: string;
 }
 
+/** Aeron 应用实例接口 */
 export interface AeronApp {
+  /** 路由实例 */
   readonly router: Router;
+  /** 生命周期管理器 */
   readonly lifecycle: Lifecycle;
+  /** 已注册的可访问地址列表 */
   readonly urls: ReadonlyArray<AppUrl>;
-  use(item: Plugin | Middleware): AeronApp;
+  /**
+   * 注册插件、中间件或路由
+   * @param item - Plugin、Middleware 或 Router
+   * @returns 当前应用实例，支持链式调用
+   */
+  use(item: Plugin | Middleware | Router): AeronApp;
+  /**
+   * 启动 HTTP 服务
+   * @param port - 可选覆盖端口
+   */
   listen(port?: number): Promise<void>;
+  /** 优雅关闭服务 */
   close(): Promise<void>;
+  /**
+   * 添加可访问地址（用于启动后打印）
+   * @param label - 地址标签
+   * @param path - 路径
+   */
   addUrl(label: string, path: string): void;
 }
 
+/**
+ * 创建 Aeron 应用实例
+ * @param config - 应用配置
+ * @returns AeronApp 实例
+ */
 export function createApp(config?: AppConfig): AeronApp {
   const router = createRouter();
   const lifecycle = createLifecycle();
@@ -38,6 +84,11 @@ export function createApp(config?: AppConfig): AeronApp {
   let isClosing = false;
   let sigTermHandler: (() => void) | null = null;
 
+  /**
+   * 默认错误处理函数
+   * @param error - 捕获到的错误对象
+   * @returns 统一格式的 Response
+   */
   function defaultErrorHandler(error: unknown): Response {
     if (error instanceof AeronError) {
       return new Response(JSON.stringify({ error: error.errorCode, message: error.message }), {
@@ -58,6 +109,11 @@ export function createApp(config?: AppConfig): AeronApp {
     );
   }
 
+  /**
+   * 包装编译后的路由处理器，增加关闭状态与错误捕获
+   * @param compiled - 编译后的路由表
+   * @returns 包装后的路由表
+   */
   function wrapRoutes(compiled: CompiledRoutes): CompiledRoutes {
     const wrapped: CompiledRoutes = {};
 
@@ -74,6 +130,11 @@ export function createApp(config?: AppConfig): AeronApp {
     return wrapped;
   }
 
+  /**
+   * 包装单个请求处理器，统计活跃请求并统一捕获异常
+   * @param handler - 原始请求处理器
+   * @returns 包装后的处理器
+   */
   function wrapHandler(
     handler: (req: Request) => Response | Promise<Response>,
   ): (req: Request) => Promise<Response> {
@@ -99,9 +160,11 @@ export function createApp(config?: AppConfig): AeronApp {
       return urls;
     },
 
-    use(item: Plugin | Middleware): AeronApp {
+    use(item: Plugin | Middleware | Router): AeronApp {
       if (typeof item === "function") {
         globalMiddleware.push(item);
+      } else if (isRouter(item)) {
+        app.router.merge(item);
       } else if (typeof item === "object" && item !== null && "name" in item && "install" in item) {
         plugins.push(item);
       }

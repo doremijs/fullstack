@@ -17,7 +17,7 @@ router.get("/users", async (ctx) => {
   const limit = Number(ctx.query.limit ?? 20);
 
   const result = await paginator.paginate(
-    db.from("users").where("active", "=", true).orderBy("created_at", "DESC"),
+    db.query(UserModel).where("active", "=", true).orderBy("createdAt", "DESC"),
     { page, limit }
   );
 
@@ -61,8 +61,8 @@ router.get("/feed", async (ctx) => {
   const limit = Number(ctx.query.limit ?? 20);
 
   const result = await paginator.cursorPaginate(
-    db.from("posts").where("published", "=", true).orderBy("created_at", "DESC"),
-    { cursor, limit, cursorField: "created_at" }
+    db.query(PostModel).where("published", "=", true).orderBy("createdAt", "DESC"),
+    { cursor, limit, cursorField: "createdAt" }
   );
 
   return ctx.json({

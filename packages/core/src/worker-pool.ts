@@ -1,16 +1,24 @@
 // @aeron/core - Worker Pool（Bun Worker Threads）
 
+/** Worker 任务 */
 export interface WorkerTask<T = unknown> {
+  /** 任务类型 */
   type: string;
+  /** 任务载荷 */
   payload: T;
 }
 
+/** Worker 执行结果 */
 export interface WorkerResult<T = unknown> {
+  /** 是否成功 */
   success: boolean;
+  /** 返回数据 */
   data?: T;
+  /** 错误信息 */
   error?: string;
 }
 
+/** Worker 线程池配置选项 */
 export interface WorkerPoolOptions {
   /** Worker 脚本路径 */
   workerURL: string | URL;
@@ -27,8 +35,13 @@ interface PooledWorker {
   busy: boolean;
 }
 
+/** Worker 线程池接口 */
 export interface WorkerPool {
-  /** 提交任务 */
+  /**
+   * 提交任务到线程池
+   * @param task - 工作任务
+   * @returns 执行结果
+   */
   execute<T = unknown, R = unknown>(task: WorkerTask<T>): Promise<WorkerResult<R>>;
   /** 获取活跃 Worker 数量 */
   size(): number;
@@ -38,6 +51,11 @@ export interface WorkerPool {
   terminate(): void;
 }
 
+/**
+ * 创建 Worker 线程池
+ * @param options - 线程池配置选项
+ * @returns WorkerPool 实例
+ */
 export function createWorkerPool(options: WorkerPoolOptions): WorkerPool {
   const {
     workerURL,

@@ -21,17 +21,25 @@ const webhooks = createWebhookManager({
 ## 注册 Webhook
 
 ```typescript
+const WebhookModel = defineModel("webhooks", {
+  id: column.bigint({ primary: true, autoIncrement: true }),
+  userId: column.bigint(),
+  url: column.varchar({ length: 2048 }),
+  events: column.json<string[]>(),
+  secret: column.varchar({ length: 255 }),
+});
+
 // 用户通过 API 注册 Webhook
 router.post("/webhooks", authMiddleware, async (ctx) => {
   const { url, events } = await ctx.body<{ url: string; events: string[] }>();
   const userId = ctx.state.user.sub;
 
-  await db.insert("webhooks", {
-    user_id: userId,
+  await db.query(WebhookModel).insert({
+    userId,
     url,
-    events: JSON.stringify(events),
+    events,
     secret: generateWebhookSecret(),
-  }).execute();
+  });
 
   return ctx.json({ registered: true }, 201);
 });
@@ -42,9 +50,9 @@ router.post("/webhooks", authMiddleware, async (ctx) => {
 ```typescript
 // 当有事件发生时触发所有订阅了该事件的 Webhook
 async function triggerWebhooks(eventType: string, payload: unknown) {
-  const subscribers = await db.from("webhooks")
+  const subscribers = await db.query(WebhookModel)
     .whereRaw("events::jsonb @> $1", [JSON.stringify([eventType])])
-    .execute();
+    .list();
 
   await Promise.allSettled(
     subscribers.map(sub =>

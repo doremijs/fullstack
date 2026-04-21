@@ -45,38 +45,21 @@ logger.error("数据库查询失败", { error: err.message, query: "SELECT..." }
 
 ## 请求日志中间件
 
+`@aeron/core` 已内置开箱即用的 `requestLogger`，默认输出结构化 JSON 日志，也支持传入 `@aeron/observability` 的 Logger：
+
 ```typescript
+import { requestLogger, errorHandler } from "@aeron/core";
 import { createLogger } from "@aeron/observability";
-import type { Middleware } from "@aeron/core";
 
-export function createRequestLogger(logger: ReturnType<typeof createLogger>): Middleware {
-  return async (ctx, next) => {
-    const start = Date.now();
-    const requestId = crypto.randomUUID();
-    ctx.state.requestId = requestId;
+const logger = createLogger({ level: "info" });
 
-    try {
-      await next();
-      logger.info("HTTP 请求", {
-        method: ctx.method,
-        path: ctx.path,
-        status: 200,
-        latency: Date.now() - start,
-        requestId,
-      });
-    } catch (err) {
-      logger.error("HTTP 请求失败", {
-        method: ctx.method,
-        path: ctx.path,
-        error: (err as Error).message,
-        latency: Date.now() - start,
-        requestId,
-      });
-      throw err;
-    }
-  };
-}
+const app = createApp({ port: 3000 });
+
+app.use(errorHandler({ logger }));
+app.use(requestLogger({ logger }));
 ```
+
+`requestLogger` 会自动记录方法、路径、状态码和耗时。无需手写中间件。
 
 ## 子 Logger（携带固定上下文）
 
@@ -98,7 +81,7 @@ const logger = createLogger({ level: "info" });
 
 // 临时开启 debug 模式（生产环境排查问题）
 router.post("/admin/log-level", adminOnly, async (ctx) => {
-  const { level } = await ctx.body<{ level: string }>();
+  const { level } = await ctx.request.json() as { level: string };
   logger.setLevel(level);
   return ctx.json({ level });
 });
