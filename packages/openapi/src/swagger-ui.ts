@@ -1,7 +1,13 @@
-// @aeron/openapi - Swagger UI 内嵌页面
+/**
+ * @aeron/openapi — Swagger UI 内嵌页面
+ *
+ * 提供基于 CDN 的 Swagger UI 生成、路由处理器和插件。
+ * 无需本地依赖，直接通过 CDN 加载 Swagger UI。
+ */
 
 import type { AeronApp, Plugin } from "@aeron/core";
 
+/** Swagger UI 配置选项 */
 export interface SwaggerUIOptions {
   /** OpenAPI JSON 端点路径 */
   specUrl?: string;
@@ -14,8 +20,9 @@ export interface SwaggerUIOptions {
 }
 
 /**
- * 生成 Swagger UI HTML 页面。
- * 使用 CDN 加载 Swagger UI，不需要本地依赖。
+ * 生成 Swagger UI HTML 页面
+ * @param options - Swagger UI 配置选项
+ * @returns 完整 HTML 字符串
  */
 export function generateSwaggerUI(options: SwaggerUIOptions = {}): string {
   const { specUrl = "/openapi.json", title = "API Documentation", version = "5.17.14" } = options;
@@ -42,6 +49,11 @@ export function generateSwaggerUI(options: SwaggerUIOptions = {}): string {
 </html>`;
 }
 
+/**
+ * HTML 属性转义，防止 XSS
+ * @param s - 原始字符串
+ * @returns 转义后的安全字符串
+ */
 function escapeHtmlAttr(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -51,8 +63,9 @@ function escapeHtmlAttr(s: string): string {
 }
 
 /**
- * 创建 Swagger UI 路由处理器。
- * 返回一个 handler 可以直接用于路由。
+ * 创建 Swagger UI 路由处理器
+ * @param options - Swagger UI 配置选项
+ * @returns 返回 HTML 响应的 handler 函数
  */
 export function createSwaggerUIHandler(options: SwaggerUIOptions = {}): () => Response {
   const html = generateSwaggerUI(options);
@@ -63,7 +76,10 @@ export function createSwaggerUIHandler(options: SwaggerUIOptions = {}): () => Re
 }
 
 /**
- * 创建 Swagger UI 插件。
+ * 创建 Swagger UI 插件
+ * @param options - Swagger UI 配置选项
+ * @returns Aeron 插件实例
+ *
  * 自动注册 /docs 路由并在启动时打印访问地址。
  */
 export function createSwaggerUIPlugin(options: SwaggerUIOptions = {}): Plugin {

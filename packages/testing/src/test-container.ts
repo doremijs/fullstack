@@ -1,5 +1,9 @@
-// @aeron/testing - Test Container 数据库隔离
+/**
+ * @aeron/testing - Test Container 数据库隔离
+ * 提供内存测试数据库与测试生命周期 Fixture，支持 SQL 执行、保存点、回滚与自动清理
+ */
 
+/** 测试容器配置选项 */
 export interface TestContainerOptions {
   /** 数据库类型 */
   type: "postgres" | "mysql" | "sqlite";
@@ -9,6 +13,7 @@ export interface TestContainerOptions {
   autoCleanup?: boolean;
 }
 
+/** 测试数据库实例接口 */
 export interface TestDatabase {
   /** 获取连接 URL */
   url(): string;
@@ -26,13 +31,19 @@ export interface TestDatabase {
   cleanup(): Promise<void>;
 }
 
+/** 测试容器工厂接口 */
 export interface TestContainerFactory {
+  /** 创建测试数据库实例
+   * @param options 测试容器配置选项（可选）
+   * @returns 测试数据库实例 */
   create(options?: TestContainerOptions): TestDatabase;
 }
 
 /**
  * 创建内存测试数据库（SQLite 模式）
- * 用于单元测试的数据库隔离
+ * 用于单元测试的数据库隔离，基于内存 Map 模拟表与行数据
+ * @param options 测试容器配置选项（可选）
+ * @returns 测试数据库实例
  */
 export function createTestDatabase(options?: TestContainerOptions): TestDatabase {
   const initSQL = options?.initSQL ?? [];
@@ -128,10 +139,16 @@ export function createTestDatabase(options?: TestContainerOptions): TestDatabase
 
 /**
  * 创建测试数据库包装器（用于 bun:test beforeEach/afterEach）
+ * 每个测试用例开始时自动创建 savepoint，结束后回滚，实现测试间数据隔离
+ * @param options 测试容器配置选项（可选）
+ * @returns 包含 db、setup 和 teardown 的对象，可在测试框架中直接解构使用
  */
 export function createTestDatabaseFixture(options?: TestContainerOptions): {
+  /** 测试数据库实例 */
   db: TestDatabase;
+  /** 测试前置钩子：创建 savepoint */
   setup(): Promise<void>;
+  /** 测试后置钩子：回滚到 savepoint */
   teardown(): Promise<void>;
 } {
   const db = createTestDatabase(options);

@@ -1,9 +1,21 @@
 /**
  * @aeron/auth - 认证授权模块统一导出
  *
- * 提供完整的认证与授权能力，包括 JWT、密码哈希、Session、API Key、
- * RBAC/ABAC 权限控制、TOTP 双因素认证、OAuth2/OIDC、多端登录管理、
- * 策略引擎与行级数据过滤等。
+ * 提供完整的认证与授权能力，包括：
+ * - JWT 签发与验证（createJWT）
+ * - 密码哈希（createPasswordHasher）
+ * - Session 管理（createSessionManager / createMemorySessionStore）
+ * - API Key 管理（createApiKeyManager）
+ * - RBAC 基于角色的访问控制（createRBAC）
+ * - ABAC 基于属性的访问控制（createABAC）
+ * - TOTP 双因素认证（createTOTP）
+ * - OAuth2/OIDC 客户端（createOAuth）
+ * - Token 刷新与吊销（createTokenRefresh）
+ * - 多端登录管理（createMultiDeviceManager）
+ * - 策略引擎（createPolicyEngine）
+ * - 行级数据过滤（createRowFilter）
+ *
+ * 安全原则：默认 deny、算法白名单、密钥最小长度、恒定时间比较、Access/Refresh 分离。
  */
 
 /** JWT 管理 - 基于 Web Crypto API 的签发与验证 */

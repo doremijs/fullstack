@@ -1,5 +1,6 @@
 // @aeron/core - 12-Factor 配置驱动
 
+/** 12-Factor 配置结构 */
 export interface TwelveFactorConfig {
   /** 应用名称 */
   appName: string;
@@ -17,14 +18,19 @@ export interface TwelveFactorConfig {
   extra: Record<string, string>;
 }
 
+/** 12-Factor 配置加载结果 */
 export interface TwelveFactorResult {
+  /** 解析后的配置 */
   config: TwelveFactorConfig;
+  /** 警告信息列表 */
   warnings: string[];
 }
 
 /**
  * 从环境变量加载 12-Factor 标准配置
  * 遵循 12-Factor App 的配置规范：所有配置从环境变量读取
+ * @param env - 环境变量对象，默认 process.env
+ * @returns 配置与警告信息
  */
 export function loadTwelveFactorConfig(
   env?: Record<string, string | undefined>,
@@ -69,6 +75,9 @@ export function loadTwelveFactorConfig(
 
 /**
  * 验证必要的环境变量是否已设置
+ * @param required - 必需的环境变量名列表
+ * @param env - 环境变量对象，默认 process.env
+ * @returns 验证结果
  */
 export function validateEnvVars(
   required: string[],

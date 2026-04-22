@@ -1,5 +1,8 @@
-// @aeron/database — 关联定义
-// 提供 hasOne / hasMany / belongsTo / belongsToMany 关联定义与 JOIN / 预加载 SQL 生成
+/**
+ * @aeron/database — 关联定义
+ * 提供 hasOne / hasMany / belongsTo / belongsToMany 关联定义与 JOIN / 预加载 SQL 生成
+ * 所有关联均基于外键与本地键显式配置，无运行时反射或隐式推断
+ */
 
 import type { ModelDefinition } from "./model";
 

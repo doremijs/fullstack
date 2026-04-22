@@ -1,4 +1,8 @@
-// @aeron/cache - 内存缓存适配器
+/**
+ * @aeron/cache - 内存缓存适配器
+ * 基于 Map 实现，支持 TTL 过期、通配符模式匹配与自动清理
+ * 适用于单进程场景，作为 Redis 的本地降级或测试替代
+ */
 
 import type { CacheAdapter } from "./cache";
 

@@ -1,4 +1,16 @@
-// @aeron/cache - 缓存模块统一导出
+/**
+ * @aeron/cache - 缓存模块统一导出
+ *
+ * 提供 Aeron 框架的缓存基础设施，包括：
+ * - 统一缓存接口与工厂（createCache）
+ * - 内存缓存适配器（createMemoryAdapter）
+ * - 分布式锁（createLock）
+ * - TTL 抖动防雪崩（jitterTTL / withJitter）
+ * - 二级缓存 L1 + L2（createL2Cache）
+ * - 缓存击穿/雪崩防护（createStampedeProtection）
+ *
+ * 所有组件基于 CacheAdapter 接口构建，支持内存、Redis 等多种底层存储。
+ */
 
 // 核心缓存接口与工厂
 export { createCache } from "./cache";

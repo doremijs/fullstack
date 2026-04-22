@@ -1,6 +1,6 @@
 /**
  * @aeron/testing - 测试应用工具
- * 提供测试应用启动、随机端口分配与生命周期管理能力
+ * 提供 Aeron 应用实例的测试启动、随机端口分配与生命周期管理能力
  */
 
 import type { AeronApp } from "@aeron/core";

@@ -1,5 +1,8 @@
-// @aeron/auth - OAuth2/OIDC 客户端
-// state 参数防 CSRF，exchangeCode 用 POST 换取 token
+/**
+ * @aeron/auth - OAuth2/OIDC 客户端
+ * 支持标准 OAuth2 授权码流程，state 参数防 CSRF，exchangeCode 用 POST 换取 token
+ * 内置 GitHub 与 Google 提供商预设配置
+ */
 
 /**
  * OAuth2 提供商配置

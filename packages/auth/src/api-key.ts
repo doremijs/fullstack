@@ -1,5 +1,8 @@
-// @aeron/auth - API Key 管理
-// API Key 必须哈希后存储，不允许明文持久化
+/**
+ * @aeron/auth - API Key 管理
+ * 提供 API Key 的生成、哈希与恒定时间校验能力
+ * API Key 必须哈希后存储，不允许明文持久化；校验使用恒定时间比较防止时序攻击
+ */
 
 /**
  * API Key 管理器接口

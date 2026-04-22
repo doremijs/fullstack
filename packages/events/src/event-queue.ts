@@ -1,4 +1,8 @@
-// @aeron/events - 事件队列化处理
+/**
+ * @aeron/events - 事件队列化处理
+ * 提供优先级排序、批量消费、超时控制与失败重试的内存事件队列
+ * 适用于异步任务缓冲、流量削峰与有序事件处理场景
+ */
 
 /** 队列中的事件对象 */
 export interface QueuedEvent<T = unknown> {

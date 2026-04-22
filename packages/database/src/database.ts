@@ -1,5 +1,8 @@
-// @aeron/database — 数据库管理器
-// 提供基于 Model 的链式查询、原始 SQL 执行、事务与连接生命周期管理
+/**
+ * @aeron/database — 数据库管理器
+ * 提供基于 Model 的链式查询、原始 SQL 执行、事务与连接生命周期管理
+ * 支持 Bun.sql（PostgreSQL）与 bun:sqlite（SQLite）两种原生驱动
+ */
 
 import type { ModelDefinition } from "./model";
 import { createQueryBuilder } from "./query-builder";
@@ -304,40 +307,32 @@ function createQueryExecutor<T>(
 }
 
 /**
- * 基于 Bun.sql / bun:sqlite 创建原生 SQL 执行器。
- * 自动识别 SQLite 与 PostgreSQL URL 并选择对应驱动。
- * @param url — 数据库连接 URL
+ * 基于 Bun.SQL 创建原生 SQL 执行器。
+ * Bun 1.2+ 的 SQL 类同时支持 PostgreSQL 与 SQLite URL。
+ * @param url — 数据库连接 URL（如 "postgres://..." 或 "sqlite://..."）
  * @returns SQL 执行器
  */
 function createBunSqlExecutor(url: string): SqlExecutor {
-  // SQLite via bun:sqlite
-  if (url.startsWith("sqlite://") || url.startsWith("file:")) {
-    // @ts-ignore - bun:sqlite is only available in Bun runtime
-    const { Database } = require("bun:sqlite");
-    const dbPath = url.replace(/^sqlite:\/\//, "");
-    const sqlite = new Database(dbPath, { create: true });
+  // Bun 1.2+ 将 SQL 暴露为全局类（Bun.SQL 或 globalThis.SQL）
+  // @ts-ignore - Bun.SQL is only available in Bun 1.2+ runtime
+  const SQLClass: new (url: string) => { unsafe: (text: string, params?: unknown[]) => Promise<unknown> } =
+    (globalThis as any).SQL ?? (globalThis as any).Bun?.SQL;
 
-    return async (text, params) => {
-      // query-builder generates PostgreSQL-style $1, $2 placeholders
-      // SQLite uses ? for positional parameters
-      const sqliteText = text.replace(/\$\d+/g, "?");
-      const stmt = sqlite.query(sqliteText);
-      const result = params && params.length > 0 ? stmt.all(...(params as any[])) : stmt.all();
-      return Array.isArray(result) ? result : [];
-    };
+  if (typeof SQLClass !== "function") {
+    throw new Error(
+      "Bun.SQL is not available. Please upgrade to Bun 1.2+. " +
+        "Alternatively, provide a custom executor via config.executor.",
+    );
   }
 
-  // PostgreSQL via bun:sql
-  // @ts-ignore - bun:sql is only available in Bun runtime
-  const { SQL } = require("bun");
-  const sql = new SQL(url);
+  const sql = new SQLClass(url);
 
   return async (text, params) => {
-    if (!params || params.length === 0) {
-      const result = await sql.unsafe(text);
-      return Array.isArray(result) ? result : [];
-    }
-    const result = await sql.unsafe(text, params as any[]);
+    const result =
+      params && params.length > 0
+        ? await sql.unsafe(text, params as any[])
+        : await sql.unsafe(text);
+
     return Array.isArray(result) ? result : [];
   };
 }

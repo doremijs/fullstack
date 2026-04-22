@@ -1,5 +1,7 @@
-// @aeron/database — Seed 数据填充
-// 提供可排序、可按名称筛选的种子数据运行器
+/**
+ * @aeron/database — Seed 数据填充
+ * 提供可排序、可按名称筛选的种子数据运行器，用于初始化测试或演示数据
+ */
 
 import type { SqlExecutor } from "./database";
 

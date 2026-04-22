@@ -1,4 +1,8 @@
-// @aeron/observability - 审计日志
+/**
+ * @aeron/observability - 审计日志
+ * 提供防篡改的审计记录存储，基于 SHA-256 哈希链保证记录完整性
+ * 支持按 actor/action/resource/time 多维度查询与哈希链验证
+ */
 
 export interface AuditEntry {
   id: string;

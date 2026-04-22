@@ -1,4 +1,20 @@
-// @aeron/events
+/**
+ * @aeron/events - 事件与任务模块统一导出
+ *
+ * 提供 Aeron 框架的异步事件与任务调度基础设施，包括：
+ * - 类型安全的事件总线（createEventBus / defineEvent）
+ * - 任务调度器与 Cron 解析（createScheduler / parseCronToInterval）
+ * - 内存消息队列（createMemoryQueue）
+ * - 延迟队列（createDelayedQueue）
+ * - 领域事件注册表（createDomainEventRegistry）
+ * - 事件溯源存储（createMemoryEventStore）
+ * - MQ 适配器与工厂（createMemoryMQAdapter / createMQAdapterFactory）
+ * - 可靠投递（createReliableDelivery）
+ * - 分布式调度器（createDistributedScheduler）
+ * - 任务监控器（createTaskMonitor）
+ * - 优先级事件队列（createEventQueue）
+ * - Saga 与 TCC 分布式事务编排（createSaga / createTCC）
+ */
 
 /** 创建内存事件总线与事件定义工具 */
 export { createEventBus, defineEvent } from "./event-bus";

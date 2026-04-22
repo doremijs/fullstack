@@ -1,4 +1,7 @@
-// @aeron/testing - 数据库测试隔离
+/**
+ * @aeron/testing - 数据库测试隔离
+ * 提供事务隔离、保存点管理与测试生命周期钩子，实现测试间数据自动回滚
+ */
 
 /** 数据库隔离配置选项 */
 export interface DBIsolationOptions {

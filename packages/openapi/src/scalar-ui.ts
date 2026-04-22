@@ -1,7 +1,13 @@
-// @aeron/openapi - Scalar 内嵌页面
+/**
+ * @aeron/openapi — Scalar 内嵌页面
+ *
+ * 提供基于 CDN 的 Scalar API 参考文档 UI 生成、路由处理器和插件。
+ * 无需本地依赖，直接通过 CDN 加载 Scalar。
+ */
 
 import type { AeronApp, Plugin } from "@aeron/core";
 
+/** Scalar UI 配置选项 */
 export interface ScalarUIOptions {
   /** OpenAPI JSON 端点路径 */
   specUrl?: string;
@@ -14,8 +20,9 @@ export interface ScalarUIOptions {
 }
 
 /**
- * 生成 Scalar HTML 页面。
- * 使用 CDN 加载 Scalar，不需要本地依赖。
+ * 生成 Scalar HTML 页面
+ * @param options - Scalar UI 配置选项
+ * @returns 完整 HTML 字符串
  */
 export function generateScalarUI(options: ScalarUIOptions = {}): string {
   const { specUrl = "/openapi.json", title = "API Documentation", version = "latest" } = options;
@@ -39,6 +46,11 @@ export function generateScalarUI(options: ScalarUIOptions = {}): string {
 </html>`;
 }
 
+/**
+ * HTML 属性转义，防止 XSS
+ * @param s - 原始字符串
+ * @returns 转义后的安全字符串
+ */
 function escapeHtmlAttr(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -48,8 +60,9 @@ function escapeHtmlAttr(s: string): string {
 }
 
 /**
- * 创建 Scalar 路由处理器。
- * 返回一个 handler 可以直接用于路由。
+ * 创建 Scalar 路由处理器
+ * @param options - Scalar UI 配置选项
+ * @returns 返回 HTML 响应的 handler 函数
  */
 export function createScalarUIHandler(options: ScalarUIOptions = {}): () => Response {
   const html = generateScalarUI(options);
@@ -60,7 +73,10 @@ export function createScalarUIHandler(options: ScalarUIOptions = {}): () => Resp
 }
 
 /**
- * 创建 Scalar UI 插件。
+ * 创建 Scalar UI 插件
+ * @param options - Scalar UI 配置选项
+ * @returns Aeron 插件实例
+ *
  * 自动注册 /docs 路由并在启动时打印访问地址。
  */
 export function createScalarUIPlugin(options: ScalarUIOptions = {}): Plugin {

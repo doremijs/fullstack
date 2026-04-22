@@ -1,4 +1,7 @@
-// @aeron/cache - 缓存雪崩防护（TTL 抖动）
+/**
+ * @aeron/cache - 缓存雪崩防护（TTL 抖动）
+ * 给 TTL 添加随机偏移，打散大量缓存的集中过期时间，防止请求瞬间涌向数据库
+ */
 
 import type { CacheAdapter } from "./cache";
 

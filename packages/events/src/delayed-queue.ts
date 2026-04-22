@@ -1,5 +1,7 @@
 /**
- * In-memory delayed queue — schedule messages for future execution.
+ * @aeron/events - 内存延迟队列
+ * 支持按时间计划投递消息，基于二分查找维护有序消息列表
+ * 适用于定时任务、延迟通知、超时处理等场景
  */
 
 /** 延迟消息对象 */

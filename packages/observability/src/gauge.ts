@@ -1,4 +1,8 @@
-// @aeron/observability — Gauge Metric Type
+/**
+ * @aeron/observability — Gauge Metric Type
+ * 仪表盘指标接口，支持按标签维度记录瞬时值（set/inc/dec）
+ * 标签通过稳定键序列化后存储，保证相同标签组合的一致性
+ */
 
 /** 仪表盘（Gauge）指标接口，支持按标签维度记录瞬时值 */
 export interface Gauge {

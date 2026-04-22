@@ -1,4 +1,8 @@
-// @aeron/observability - 错误上报（Sentry / 钉钉告警 / Webhook）
+/**
+ * @aeron/observability - 错误上报（Sentry / 钉钉告警 / Webhook）
+ * 提供多通道错误上报能力，支持采样率控制、忽略模式与环境/服务标识
+ * 内置 Sentry、钉钉 Webhook、通用 Webhook 三种告警通道
+ */
 
 export interface ErrorReporterConfig {
   /** 上报通道 */

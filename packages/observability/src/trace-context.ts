@@ -1,4 +1,8 @@
-// @aeron/observability - W3C TraceContext 传播
+/**
+ * @aeron/observability - W3C TraceContext 传播
+ * 提供 W3C traceparent/tracestate 与 B3（Zipkin）两种链路上下文传播格式
+ * 用于在 HTTP 请求间传递和提取分布式追踪信息，保证链路连续性
+ */
 
 import type { SpanContext } from "./tracing";
 

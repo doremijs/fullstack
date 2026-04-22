@@ -1,4 +1,8 @@
-// @aeron/observability - 审计日志查询与导出
+/**
+ * @aeron/observability - 审计日志查询与导出
+ * 提供审计日志的 CSV/JSON Lines 格式导出，以及分页查询能力
+ * 适用于审计报告生成、合规检查与离线分析场景
+ */
 
 import type { AuditEntry, AuditStore } from "./audit";
 

@@ -1,4 +1,8 @@
-// @aeron/observability — Health Check
+/**
+ * @aeron/observability — Health Check
+ * 提供存活探针（live）与就绪探针（ready），支持并行执行多项自定义检查
+ * 自动聚合检查结果为 ok / degraded / error 三种整体状态，并计算服务运行时长
+ */
 
 /** 单项健康检查结果 */
 export interface CheckResult {

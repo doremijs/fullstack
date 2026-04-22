@@ -1,4 +1,8 @@
-// @aeron/observability - Grafana Dashboard JSON 模板生成
+/**
+ * @aeron/observability - Grafana Dashboard JSON 模板生成
+ * 提供 Grafana Dashboard 与面板的程序化生成能力，支持阈值告警着色
+ * 内置 HTTP 服务预设模板（请求速率、P99 延迟、错误率、活跃连接数）
+ */
 
 /** Grafana 面板配置 */
 export interface GrafanaPanelConfig {

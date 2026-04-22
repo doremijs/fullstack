@@ -1,0 +1,22 @@
+{
+  "name": "aeron-e",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --hot src/main.ts"
+  },
+  "dependencies": {
+    "@aeron/ai": "workspace:*",
+    "@aeron/auth": "workspace:*",
+    "@aeron/cache": "workspace:*",
+    "@aeron/core": "workspace:*",
+    "@aeron/database": "workspace:*",
+    "@aeron/events": "workspace:*",
+    "@aeron/observability": "workspace:*"
+  },
+  "devDependencies": {
+    "@aeron/testing": "workspace:*",
+    "bun-types": "latest"
+  }
+}

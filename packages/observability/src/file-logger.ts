@@ -1,4 +1,8 @@
-// @aeron/observability — File Logger with Rotation
+/**
+ * @aeron/observability — File Logger with Rotation
+ * 提供基于文件的结构化日志输出，支持按大小自动轮转与历史文件保留策略
+ * 内部复用 createLogger 实现，继承其级别过滤与脱敏能力
+ */
 
 import { appendFileSync, existsSync, renameSync, statSync, unlinkSync } from "node:fs";
 import { type LogEntry, type LogLevel, type Logger, createLogger } from "./logger";

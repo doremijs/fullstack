@@ -2,6 +2,7 @@
 
 import type { Middleware } from "../middleware";
 
+/** XSS 防护配置选项 */
 export interface XSSOptions {
   /** 是否设置 X-XSS-Protection header (legacy, 默认 true) */
   xssProtection?: boolean;
@@ -16,6 +17,8 @@ export interface XSSOptions {
 /**
  * HTML 实体转义，防止 XSS 注入。
  * 使用 Bun.escapeHTML() 当可用，否则 fallback。
+ * @param input - 原始字符串
+ * @returns 转义后的字符串
  */
 export function escapeHTML(input: string): string {
   if (typeof Bun !== "undefined" && typeof Bun.escapeHTML === "function") {
@@ -31,6 +34,8 @@ export function escapeHTML(input: string): string {
 
 /**
  * 检测字符串中是否含有潜在 XSS 载荷
+ * @param input - 待检测字符串
+ * @returns 是否含有 XSS 载荷
  */
 export function detectXSS(input: string): boolean {
   const patterns = [
@@ -50,6 +55,8 @@ export function detectXSS(input: string): boolean {
 /**
  * XSS 安全头中间件。
  * 添加 security headers 并可选地检测请求参数中的 XSS 载荷。
+ * @param options - XSS 配置选项
+ * @returns Middleware 实例
  */
 export function xssProtection(options: XSSOptions = {}): Middleware {
   const {

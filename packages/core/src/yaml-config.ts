@@ -1,16 +1,22 @@
 // @aeron/core - YAML 配置文件支持
 
 /**
- * 简单的 YAML 解析器（支持基本的 key-value、嵌套对象、数组）
- * 不引入第三方 YAML 库，满足配置文件的基本需求
+ * 解析 YAML 字符串为 JavaScript 对象。
+ * 这是一个轻量级实现，不引入第三方 YAML 库，支持基本的 key-value、嵌套对象与数组，满足配置文件的基本需求。
+ * @param text - 原始 YAML 文本内容
+ * @returns 解析后的对象，键为字符串，值为未知类型
  */
 export function parseYAML(text: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   const lines = text.split("\n");
   const stack: {
+    /** 当前层级的缩进字符数 */
     indent: number;
+    /** 当前层级的目标对象 */
     obj: Record<string, unknown>;
+    /** 父级对象（用于数组回溯） */
     parentObj?: Record<string, unknown>;
+    /** 父级键名（用于数组回溯） */
     parentKey?: string;
   }[] = [{ indent: -1, obj: result }];
 
@@ -67,6 +73,12 @@ export function parseYAML(text: string): Record<string, unknown> {
   return result;
 }
 
+/**
+ * 将原始字符串解析为对应的 JavaScript 值。
+ * 支持布尔值、null、带引号字符串与数字的自动推断。
+ * @param raw - 原始字符串值
+ * @returns 推断后的 JavaScript 值
+ */
 function parseValue(raw: string): unknown {
   if (raw === "true") return true;
   if (raw === "false") return false;
@@ -85,7 +97,11 @@ function parseValue(raw: string): unknown {
 }
 
 /**
- * 将对象序列化为 YAML 格式
+ * 将 JavaScript 对象序列化为 YAML 格式字符串。
+ * 支持嵌套对象、数组、null 与需要转义的字符串值。
+ * @param obj - 待序列化的对象
+ * @param indent - 当前缩进层级，默认为 0（内部递归使用）
+ * @returns 序列化后的 YAML 文本
  */
 export function stringifyYAML(obj: Record<string, unknown>, indent = 0): string {
   const lines: string[] = [];
@@ -117,7 +133,11 @@ export function stringifyYAML(obj: Record<string, unknown>, indent = 0): string 
 }
 
 /**
- * 从 YAML 文件加载配置
+ * 从指定路径的 YAML 文件加载配置。
+ * 使用 Bun.file() 读取文件内容，并通过 parseYAML 解析为对象。
+ * @param filePath - YAML 文件的绝对或相对路径
+ * @returns 解析后的配置对象
+ * @throws 当文件不存在时抛出错误
  */
 export async function loadYAMLConfig(filePath: string): Promise<Record<string, unknown>> {
   const file = Bun.file(filePath);

@@ -140,7 +140,7 @@ export function createDeprecationManager(): DeprecationManager {
   };
 }
 
-// 向后兼容策略
+/** 向后兼容策略配置 */
 export interface CompatibilityPolicy {
   /** 版本兼容窗口（保留多少个旧版本） */
   versionWindow: number;
@@ -152,6 +152,7 @@ export interface CompatibilityPolicy {
   blockAfterSunset: boolean;
 }
 
+/** 默认兼容性策略 */
 export const DEFAULT_COMPATIBILITY_POLICY: CompatibilityPolicy = {
   versionWindow: 2,
   sunsetDays: 90,
@@ -160,12 +161,21 @@ export const DEFAULT_COMPATIBILITY_POLICY: CompatibilityPolicy = {
 };
 
 /**
- * 创建兼容性策略中间件参数
+ * 创建兼容性守卫
+ * @param deprecationManager - 废弃管理器实例
+ * @param policy - 可选的自定义兼容性策略
+ * @returns 包含 check 方法的对象，用于在请求处理前判断接口可用性
  */
 export function createCompatibilityGuard(
   deprecationManager: DeprecationManager,
   policy: Partial<CompatibilityPolicy> = {},
 ): {
+  /**
+   * 检查指定接口的兼容性状态
+   * @param method - HTTP 方法
+   * @param path - API 路径
+   * @returns 兼容性检查结果
+   */
   check(
     method: string,
     path: string,

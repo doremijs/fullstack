@@ -1,5 +1,8 @@
-// @aeron/database — 读写分离 / 多数据源切换
-// 提供写库路由、读库负载均衡与多数据源管理能力
+/**
+ * @aeron/database — 读写分离 / 多数据源切换
+ * 提供写库路由、读库负载均衡与多数据源管理能力
+ * 支持 round-robin 与 random 两种读库负载均衡策略
+ */
 
 import type { SqlExecutor } from "./database";
 

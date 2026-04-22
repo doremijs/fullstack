@@ -1,4 +1,8 @@
-// @aeron/observability — Structured Logger
+/**
+ * @aeron/observability — Structured Logger
+ * 提供结构化 JSON 日志输出、级别过滤、子记录器继承与自动脱敏能力
+ * 支持通过 enabled 开关完全禁用（返回 no-op 记录器），禁用时不产生任何副作用
+ */
 
 /** 日志级别，从低到高依次为 debug < info < warn < error < fatal */
 export type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";

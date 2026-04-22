@@ -1,5 +1,8 @@
-// @aeron/database — 查询构建器
-// 提供不可变状态、链式调用的 SQL 构建能力，支持 SELECT / INSERT / UPDATE / DELETE 及软删除
+/**
+ * @aeron/database — 查询构建器
+ * 提供不可变状态、链式调用的 SQL 构建能力，支持 SELECT / INSERT / UPDATE / DELETE 及软删除
+ * 所有链式方法返回新的不可变实例，保证线程安全与可预测性
+ */
 
 import type { ModelDefinition } from "./model";
 

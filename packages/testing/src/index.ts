@@ -1,4 +1,17 @@
-// @aeron/testing
+/**
+ * @aeron/testing - 测试工具包
+ *
+ * 提供 Aeron 框架的测试基础设施，包括：
+ * - HTTP 测试客户端（createTestClient）
+ * - 测试应用生命周期管理（createTestApp）
+ * - 数据库事务隔离与自动回滚（createDBIsolation / withTransaction）
+ * - 内存测试数据库与 Fixture（createTestDatabase / createTestDatabaseFixture）
+ * - 安全回归测试套件（createSecurityTestSuite）
+ * - 测试数据工厂（defineFactory / sequence / oneOf / uuid）
+ * - Fixture 管理器（createFixtureManager）
+ *
+ * 所有工具基于 bun:test 设计，强调函数式、显式依赖与测试隔离。
+ */
 
 /** 创建测试应用实例 */
 export { createTestApp } from "./test-app";

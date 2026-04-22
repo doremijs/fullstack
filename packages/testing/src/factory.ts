@@ -1,4 +1,7 @@
-// @aeron/testing - 测试数据工厂
+/**
+ * @aeron/testing - 测试数据工厂
+ * 提供类型安全的测试数据生成、字段覆盖与序列/随机/UUID 辅助生成器
+ */
 
 /** 字段生成器类型：固定值或工厂函数 */
 type FieldGenerator<T> = T | (() => T);

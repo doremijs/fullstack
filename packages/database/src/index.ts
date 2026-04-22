@@ -1,5 +1,21 @@
-// @aeron/database — 数据库包统一入口
-// 导出所有模块的公共 API，供上层应用与框架使用
+/**
+ * @aeron/database — 数据库包统一入口
+ *
+ * 提供 Aeron 框架的数据层基础设施，包括：
+ * - 数据库核心：配置、创建、执行器与查询入口（createDatabase）
+ * - 模型定义：列类型、模型工厂与类型推导（defineModel / column）
+ * - 查询构建器：链式条件、排序、分组、聚合、批量插入等（createQueryBuilder）
+ * - 迁移管理：版本化数据库结构变更（createMigrationRunner）
+ * - 关联定义：一对一、一对多、多对多及 JOIN / 预加载 SQL 生成（defineRelation）
+ * - 种子数据：初始化测试或演示数据（createSeedRunner）
+ * - 事务管理：嵌套事务、Savepoint、隔离级别（createTransactionManager）
+ * - 驱动适配器：多数据库方言抽象（createDriverAdapter）
+ * - 读写分离：自动路由读/写 SQL，支持多数据源（createReadWriteSplit）
+ * - 连接池：通用连接复用、空闲回收、等待队列与统计（createConnectionPool）
+ * - Schema 差异：表/列的增删改检测与迁移 SQL 生成（SchemaDiff）
+ *
+ * 全部基于 Bun.sql / bun:sqlite 构建，强调标签模板字面量、编译期类型安全与无 class 设计。
+ */
 
 // 数据库核心：配置、创建、执行器与查询入口
 export { createDatabase } from "./database";

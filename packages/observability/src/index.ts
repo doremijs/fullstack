@@ -1,4 +1,24 @@
-// @aeron/observability
+/**
+ * @aeron/observability - 可观测性模块统一导出
+ *
+ * 提供 Aeron 框架的完整可观测性基础设施，包括：
+ * - 结构化日志记录器（createLogger）
+ * - Prometheus 兼容指标收集器（createMetrics）
+ * - 健康检查服务（createHealthCheck）
+ * - 分布式追踪器（createTracer）
+ * - 文件日志与轮转（createFileLogger）
+ * - 防篡改审计日志（createAuditLog）
+ * - W3C TraceContext / B3 传播器（createW3CTraceContextPropagator / createB3Propagator）
+ * - 审计日志导出与分页查询（createAuditExporter）
+ * - 异步批量写入器（createAsyncWriter）
+ * - 远端日志系统钩子（createLogHook）
+ * - OpenTelemetry 兼容追踪器（createOTelTracer / createConsoleExporter）
+ * - 链路追踪导出器（createTraceExporter）
+ * - Grafana Dashboard 模板生成（createGrafanaDashboard / createHttpDashboard）
+ * - 错误上报与多通道告警（createErrorReporter / createSentryChannel / createDingTalkChannel / createWebhookChannel）
+ *
+ * 所有组件默认支持关闭（no-op），关闭时不产生副作用。
+ */
 
 /** 创建结构化日志记录器 */
 export { createLogger } from "./logger";
