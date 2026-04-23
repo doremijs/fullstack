@@ -40,6 +40,19 @@ const exists = await cache.has("user:1");
 await cache.flush();
 ```
 
+## 标签缓存
+
+```typescript
+// 获取带标签的缓存视图
+const tagged = cache.tags(["users", "active"]);
+
+// 设置缓存并自动关联到标签
+await tagged.set("user:1", { id: 1, name: "Alice" }, { ttl: 300 });
+
+// 清除该标签关联的所有缓存键
+await tagged.flush();
+```
+
 ## 缓存穿透保护（remember）
 
 ```typescript
@@ -47,6 +60,18 @@ await cache.flush();
 const user = await cache.remember(
   `user:${id}`,
   300,  // TTL 秒
+  async () => {
+    return db.query(UserModel).where("id", "=", id).get();
+  }
+);
+```
+
+## 缓存击穿防护（singleflight）
+
+```typescript
+// 对同一 key 的并发请求只执行一次工厂函数
+const user = await cache.singleflight(
+  `user:${id}`,
   async () => {
     return db.query(UserModel).where("id", "=", id).get();
   }
@@ -93,5 +118,21 @@ interface Cache {
   flush(): Promise<void>;
   tags(tagNames: string[]): TaggedCache;
   remember<T>(key: string, ttl: number, factory: () => Promise<T>): Promise<T>;
+  singleflight<T>(key: string, factory: () => Promise<T>): Promise<T>;
+}
+
+interface TaggedCache {
+  get<T = unknown>(key: string): Promise<T | null>;
+  set(key: string, value: unknown, options?: Omit<CacheOptions, "tags">): Promise<void>;
+  flush(): Promise<void>;
 }
 ```
+
+## 其他缓存工具
+
+`@ventostack/cache` 还提供了以下独立工具：
+
+- **`createLock(adapter)`** — 基于缓存适配器的分布式锁
+- **`createL2Cache(l2Adapter, options?)`** — 本地 L1 + 远端 L2 二级缓存
+- **`createStampedeProtection(getter, setter, options?)`** — 缓存击穿/雪崩防护（singleflight + XFetch）
+- **`jitterTTL(baseTTL, jitterPercent?)`** / **`withJitter(adapter, options?)`** — TTL 抖动防雪崩

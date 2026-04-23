@@ -68,11 +68,11 @@ await alertManager.fire({
 ## 启动告警检查
 
 ```typescript
-app.onStart(() => {
+app.lifecycle.onAfterStart(() => {
   alertManager.start(60_000); // 每分钟检查一次
 });
 
-app.onStop(async () => {
+app.lifecycle.onBeforeStop(async () => {
   alertManager.stop();
 });
 ```

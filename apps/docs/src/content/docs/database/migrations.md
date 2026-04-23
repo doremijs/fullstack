@@ -103,7 +103,7 @@ status.forEach(({ migration, executed, executedAt }) => {
 ```typescript
 const app = createApp({ port: 3000 });
 
-app.onStart(async () => {
+app.lifecycle.onBeforeStart(async () => {
   console.log("运行数据库迁移...");
   await migrator.up();
   console.log("数据库迁移完成");

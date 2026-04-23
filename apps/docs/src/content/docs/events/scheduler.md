@@ -46,12 +46,12 @@ scheduler.cron("daily-report", "0 8 * * *", async () => {
   await generateDailyReport();
 });
 
-app.onStart(async () => {
+app.lifecycle.onAfterStart(async () => {
   scheduler.start();
   console.log("调度器已启动");
 });
 
-app.onStop(async () => {
+app.lifecycle.onBeforeStop(async () => {
   await scheduler.stop();
   console.log("调度器已停止");
 });

@@ -79,7 +79,7 @@ const cache = createCache({
 const adapter = createRedisAdapter({ url: REDIS_URL });
 const cache = createCache({ adapter });
 
-app.onStop(async () => {
+app.lifecycle.onBeforeStop(async () => {
   await adapter.close();
 });
 ```

@@ -61,7 +61,7 @@ console.log({
 
 ```typescript
 // 应用停止时关闭
-app.onStop(async () => {
+app.lifecycle.onBeforeStop(async () => {
   await pool.close();
 });
 ```

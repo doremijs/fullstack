@@ -13,7 +13,7 @@ import {
   ClientError,      // 4xx 错误基类
   ServerError,      // 5xx 错误基类
   NotFoundError,    // 404
-  ValidationError,  // 422（通常）
+  ValidationError,  // 400
   UnauthorizedError, // 401
   ForbiddenError,   // 403
 } from "@ventostack/core";
@@ -25,7 +25,7 @@ import {
 VentoStackError
 ├── ClientError (4xx)
 │   ├── NotFoundError (404)
-│   ├── ValidationError (422)
+│   ├── ValidationError (400)
 │   ├── UnauthorizedError (401)
 │   └── ForbiddenError (403)
 └── ServerError (5xx)
@@ -47,10 +47,10 @@ router.get("/users/:id<int>", async (ctx) => {
 });
 
 router.post("/users", async (ctx) => {
-  const body = await ctx.body<{ email: string }>();
+  const body = await ctx.request.json();
 
   if (!body.email || !body.email.includes("@")) {
-    throw new ValidationError("邮箱格式无效", { field: "email" });
+    throw new ValidationError("邮箱格式无效");
   }
 
   const user = await createUser(body);
@@ -63,33 +63,23 @@ router.post("/users", async (ctx) => {
 建议在应用入口注册全局错误处理中间件：
 
 ```typescript
-import { VentoStackError, ClientError, ServerError } from "@ventostack/core";
-import type { Middleware } from "@ventostack/core";
-
-const errorHandler: Middleware = async (ctx, next) => {
-  try {
-    await next();
-  } catch (err) {
-    if (err instanceof VentoStackError) {
-      return ctx.json(
-        {
-          error: err.message,
-          code: err.code,
-          ...(err instanceof ValidationError ? { details: err.details } : {})
-        },
-        err.statusCode
-      );
-    }
-
-    // 未预期的错误
-    console.error("Unhandled error:", err);
-    return ctx.json({ error: "内部服务器错误" }, 500);
-  }
-};
+import { errorHandler } from "@ventostack/core";
 
 const app = createApp({ port: 3000 });
-app.use(errorHandler); // 第一个注册，捕获所有后续错误
+
+// 建议作为第一个中间件注册，捕获所有后续错误
+app.use(errorHandler());
+
+// 传入自定义 logger
+app.use(errorHandler({ logger }));
+
+// 静默模式（测试环境禁用日志）
+app.use(errorHandler({ silent: true }));
 ```
+
+`errorHandler` 中间件统一捕获未处理异常：
+- `VentoStackError` 返回结构化响应（包含 `errorCode` 和 `message`）
+- 其他错误返回 500，且不暴露内部错误细节
 
 ## 自定义错误类型
 
@@ -125,11 +115,13 @@ router.post("/checkout", async (ctx) => {
 
 ```typescript
 // VentoStackError 基类
-new VentoStackError(message: string, statusCode: number, code?: string)
+new VentoStackError(message: string, statusCode: number, errorCode: string)
 
 // 预定义错误
 new NotFoundError(message?: string)        // 404, "NOT_FOUND"
 new UnauthorizedError(message?: string)    // 401, "UNAUTHORIZED"
 new ForbiddenError(message?: string)       // 403, "FORBIDDEN"
-new ValidationError(message: string, details?: unknown) // 422, "VALIDATION_ERROR"
+new ValidationError(message?: string)      // 400, "VALIDATION_ERROR"
+new ClientError(message?: string, code?: number, errorCode?: string) // 400, "CLIENT_ERROR"
+new ServerError(message?: string, code?: number, errorCode?: string) // 500, "SERVER_ERROR"
 ```

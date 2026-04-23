@@ -66,7 +66,7 @@ await app.listen();
 
 ## 优雅停机
 
-VentoStack 会自动处理 `SIGINT` 和 `SIGTERM` 信号，在关闭前触发 `onStop` 回调：
+VentoStack 在关闭流程里会触发 `onBeforeStop` 回调：
 
 ```typescript
 const app = createApp({ port: 3000 });
