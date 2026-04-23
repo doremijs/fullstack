@@ -1,6 +1,16 @@
-# VentoStack 框架
+<p align="center">
+  <img src="./assets/logo.webp" alt="VentoStack" width="240">
+</p>
 
-[English](./README_en.md)
+<h1 align="center">VentoStack 框架</h1>
+
+<p align="center">
+  <a href="./README_en.md">English</a>
+</p>
+
+<p align="center">
+  基于 Bun 运行时的高性能全栈后端框架
+</p>
 
 VentoStack 是一个基于 Bun 运行时构建的全栈后端框架，专为高性能和极致开发体验而设计。它遵循函数式优先的设计原则——无 class、无装饰器、显式依赖注入。
 

@@ -1,4 +1,16 @@
-# VentoStack Framework
+<p align="center">
+  <img src="./assets/logo.webp" alt="VentoStack" width="240">
+</p>
+
+<h1 align="center">VentoStack Framework</h1>
+
+<p align="center">
+  <a href="./README.md">简体中文</a>
+</p>
+
+<p align="center">
+  A high-performance fullstack backend framework built for the Bun runtime
+</p>
 
 VentoStack is a Bun-native fullstack backend framework built for performance and developer experience. It follows functional-first design principles with no classes, no decorators, and explicit dependencies.
 
