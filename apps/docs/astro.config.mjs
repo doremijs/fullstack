@@ -4,8 +4,8 @@ import { defineConfig } from 'astro/config'
 export default defineConfig({
   integrations: [
     starlight({
-      title: 'VentoStack Framework',
-      description: 'Bun 原生全栈后端框架文档',
+      title: 'VentoStack FullStack Framework',
+      description: 'Bun 原生全栈框架文档',
       defaultLocale: 'root',
       locales: {
         root: {
