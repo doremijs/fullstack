@@ -27,17 +27,52 @@ config.host     // string
 config.debug    // boolean
 ```
 
+### 枚举约束（options）
+
+使用 `options` 限定字段的允许取值，TypeScript 会自动推导出 **union 类型**：
+
+```typescript
+const config = createConfig({
+  logLevel: {
+    type: "string",
+    env: "LOG_LEVEL",
+    default: "info",
+    options: ["debug", "info", "warn", "error"],
+  },
+  mode: {
+    type: "number",
+    options: [1, 2, 3],
+  },
+}, process.env);
+
+// 类型自动推导为字面量 union
+config.logLevel // "debug" | "info" | "warn" | "error"
+config.mode     // 1 | 2 | 3 | undefined
+```
+
+运行时若传入的值不在 `options` 范围内，会立即抛出错误：
+
+```
+Config "logLevel": value "verbose" is not in allowed options [debug, info, warn, error]
+```
+
 ## 支持的字段类型
 
 ```typescript
 type ConfigFieldDef = {
   type: "string" | "number" | "boolean";
-  env?: string;        // 环境变量名
-  default?: unknown;   // 默认值
-  required?: boolean;  // 是否必填（无默认值时）
-  sensitive?: boolean; // 敏感字段（日志中脱敏）
+  env?: string;              // 环境变量名
+  default?: string | number | boolean; // 默认值（类型必须与 type 一致）
+  required?: boolean;        // 是否必填（无默认值时）
+  sensitive?: boolean;       // 敏感字段（日志中脱敏）
+  options?: readonly string[] | readonly number[] | readonly boolean[]; // 允许取值范围
 };
 ```
+
+**类型推导规则：**
+- 设置了 `default` 或 `required: true` 的字段，类型中**不含** `undefined`
+- 未设置 `default` 且 `required` 为 `false` 的字段，类型中**包含** `undefined`
+- 设置了 `options` 的字段，类型自动推导为 `options` 的 **union 类型**（如 `"debug" | "info" | "error"`）
 
 ## 分环境配置文件
 
@@ -69,15 +104,40 @@ config/
 
 ## YAML 配置文件
 
-使用 `loadYAMLConfig` 加载 YAML 格式的配置：
+`loadYAMLConfig` 支持 `schema` 和环境变量占位符，推荐把它当成 YAML 版的 `loadConfig` 使用。
 
 ```typescript
 import { loadYAMLConfig, parseYAML } from "@ventostack/core";
 
-// 从文件加载
-const config = await loadYAMLConfig("./config/app.yaml");
+const schema = {
+  server: {
+    host: { type: "string", required: true },
+    port: { type: "number", required: true },
+  },
+  database: {
+    url: { type: "string", required: true },
+    pool: { type: "number", default: 10 },
+  },
+} as const;
 
-// 解析 YAML 字符串
+// 从文件加载并做 schema 校验
+const config = await loadYAMLConfig("./config/app.yaml", schema, {
+  SERVER_HOST: "127.0.0.1",
+});
+
+// YAML 中的占位符会被替换
+// app.yaml:
+// server:
+//   host: "{SERVER_HOST}"
+//   port: 3000
+// database:
+//   url: postgres://localhost/mydb
+//   pool: 10
+//
+// config.server.host === "127.0.0.1"
+// config.server.port === 3000
+
+// 解析 YAML 字符串时仍然可以拿到原始对象
 const parsed = parseYAML(`
 server:
   port: 3000
@@ -88,6 +148,11 @@ database:
 `);
 // parsed.server.port === 3000
 ```
+
+说明：
+- 占位符格式是 `{SERVER_HOST}`
+- 第三个参数 `env` 会覆盖当前 `process.env` 里的同名变量
+- 如果占位符找不到对应环境变量，`loadYAMLConfig` 会抛错
 
 ## 配置热更新
 
@@ -125,7 +190,7 @@ watcher.stop();
 import { createConfigEncryptor } from "@ventostack/core";
 
 const encryptor = createConfigEncryptor({
-  key: process.env.ENCRYPTION_KEY!, // 至少 32 字节
+  key: process.env.ENCRYPTION_KEY!, // 32 字节
 });
 
 // 加密配置值
@@ -143,9 +208,17 @@ encryptor.isEncrypted("plain");   // false
 
 ## 12-Factor 配置
 
-遵循 [12-Factor App](https://12factor.net/config) 规范，从环境变量加载配置：
+[12-Factor App](https://12factor.net/config) 是一套由 Heroku 提出的云原生应用最佳实践。其中第 III 条「配置」原则要求：**所有与环境相关的配置（数据库地址、API 密钥、端口号等）必须存储在环境变量中，而绝不能硬编码在源代码里**。
+
+这样做的好处：
+- 同一份代码可以部署到开发、测试、生产等不同环境
+- 敏感信息（密码、密钥）不会出现在代码仓库中
+- 配置变更无需重新编译或发布代码
+
+VentoStack 内置了对 12-Factor 规范的完整支持：
 
 ```typescript
+
 import { loadTwelveFactorConfig, validateEnvVars } from "@ventostack/core";
 
 // 验证必要的环境变量
@@ -186,20 +259,42 @@ const args = parseArgs(process.argv.slice(2));
 import { securityPrecheck } from "@ventostack/core";
 
 const result = securityPrecheck({
-  requireHttps: true,          // 生产环境必须 HTTPS
-  checkWeakSecrets: true,      // 检查弱密钥
-  sensitiveFields: ["JWT_SECRET", "DATABASE_URL"],
+  requiredSecrets: ["JWT_SECRET", "DATABASE_URL"], // 这些环境变量必须存在且非空
+  minSecretLength: 32, // 这些密钥至少要有 32 字符
+  requireHTTPS: true, // 仅在 production 下要求 PROTOCOL / APP_PROTOCOL = https
+  disallowDebug: true, // 仅在 production 下禁止 DEBUG=1 或 DEBUG=true
 });
 
 if (!result.passed) {
-  console.error("安全检查失败:", result.violations);
+  console.error("安全检查失败:", result.errors);
   process.exit(1);
 }
 ```
 
+说明：
+- `requiredSecrets` 会逐个检查环境变量是否存在
+- `minSecretLength` 只对 `requiredSecrets` 中声明的变量生效
+- `requireHTTPS` 会读取 `PROTOCOL` 或 `APP_PROTOCOL`
+- `disallowDebug` 只在生产环境生效，开发环境不拦截
+
 ## 配置脱敏
 
-使用 `sanitizeConfig` 对配置进行脱敏处理（用于日志输出）：
+当配置字段标记了 `sensitive: true` 时，`createConfig` / `loadConfig` / `loadYAMLConfig` 返回的配置对象在 `console.log(config)` 或 `util.inspect(config)` 时会自动脱敏。
+
+如果你只想安全地读取某一个字段，可以用 `safeConfig(config)`：
+
+```typescript
+import { safeConfig } from "@ventostack/core";
+
+const masked = safeConfig(config);
+
+console.log(safeConfig.jwtSecret); // "***"
+console.log(safeConfig.host); // 原值
+```
+
+`safeConfig(config)` 会返回一个新的安全快照，不会修改原始配置对象。
+
+如果你只想打印某个手工组装的普通对象，再用 `sanitizeConfig`：
 
 ```typescript
 import { sanitizeConfig } from "@ventostack/core";
@@ -221,3 +316,8 @@ const sanitized = sanitizeConfig(schema, config);
 
 console.log("当前配置:", sanitized); // 安全输出
 ```
+
+说明：
+- `config.jwtSecret` 直接读取时仍然是原值，方便业务逻辑使用
+- 如果你要写日志，优先打印整个配置对象，或者先用 `safeConfig(config)`
+- `safeConfig(config)` 更适合配置对象，`sanitizeConfig` 更适合你自己额外组装的普通对象

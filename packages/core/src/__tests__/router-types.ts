@@ -158,4 +158,36 @@ router.get("/hinted", hintedConfig, (ctx) => {
   return new Response(String(page));
 });
 
+// ---------- response schema 类型约束测试 ----------
+
+// 1. ctx.json 的 data 必须符合 response schema 声明的类型
+router.get("/typed-response", defineRouteConfig({
+  responses: {
+    200: {
+      page: { type: "int" },
+      limit: { type: "int" },
+    },
+  },
+}), (ctx) => {
+  // 正确：page 和 limit 都是 number
+  return ctx.json({ page: 1, limit: 10 });
+});
+
+router.get("/bad-response", defineRouteConfig({
+  responses: {
+    200: {
+      page: { type: "int" },
+      limit: { type: "int" },
+    },
+  },
+}), (ctx) => {
+  // @ts-expect-error limit 声明为 int，返回 string 应该报错
+  return ctx.json({ page: 1, limit: "10" });
+});
+
+// 2. 无 schema 的路由不应约束 ctx.json 的类型
+router.get("/free-response", (ctx) => {
+  return ctx.json({ anything: "goes" });
+});
+
 export {};

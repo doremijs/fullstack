@@ -107,6 +107,9 @@ export function createFileLogger(options: FileLoggerOptions): FileLogger {
     child(defaultMeta) {
       return inner.child(defaultMeta);
     },
+    setLevel(level) {
+      inner.setLevel(level);
+    },
     async rotate(): Promise<void> {
       rotateSync();
     },

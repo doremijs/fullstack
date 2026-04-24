@@ -1,6 +1,6 @@
 // @ventostack/core - 内置错误处理中间件
 
-import { VentoStackError } from "../errors";
+import { VentoStackError, ValidationError } from "../errors";
 import type { Context } from "../context";
 import type { Middleware } from "../middleware";
 import type { LoggerLike } from "./logger";
@@ -57,7 +57,11 @@ export function errorHandler(options?: ErrorHandlerOptions): Middleware {
           errorCode: error.errorCode,
           message: error.message,
         });
-        return ctx.json({ error: error.errorCode, message: error.message }, error.code);
+        const body: Record<string, unknown> = { error: error.errorCode, message: error.message };
+        if (error instanceof ValidationError && error.details) {
+          body.details = error.details;
+        }
+        return ctx.json(body, error.code);
       }
 
       logger.error("unhandled error", {

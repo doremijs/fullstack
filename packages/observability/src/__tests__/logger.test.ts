@@ -56,6 +56,44 @@ describe("createLogger", () => {
     expect(entries[0].level).toBe("fatal");
   });
 
+  test("setLevel raises the minimum level at runtime", () => {
+    const entries: LogEntry[] = [];
+    const logger = createLogger({ level: "debug", output: (e) => entries.push(e) });
+
+    logger.debug("debug-before");
+    logger.info("info-before");
+    logger.setLevel("warn");
+    logger.debug("debug-after");
+    logger.info("info-after");
+    logger.warn("warn-after");
+    logger.error("error-after");
+
+    expect(entries.map((e) => e.message)).toEqual([
+      "debug-before",
+      "info-before",
+      "warn-after",
+      "error-after",
+    ]);
+  });
+
+  test("setLevel lowers the minimum level at runtime", () => {
+    const entries: LogEntry[] = [];
+    const logger = createLogger({ level: "warn", output: (e) => entries.push(e) });
+
+    logger.debug("debug-before");
+    logger.info("info-before");
+    logger.warn("warn-before");
+    logger.setLevel("debug");
+    logger.debug("debug-after");
+    logger.info("info-after");
+
+    expect(entries.map((e) => e.message)).toEqual([
+      "warn-before",
+      "debug-after",
+      "info-after",
+    ]);
+  });
+
   test("includes meta in log entry", () => {
     const entries: LogEntry[] = [];
     const logger = createLogger({ output: (e) => entries.push(e) });
@@ -97,6 +135,20 @@ describe("createLogger", () => {
 
     expect(entries[0].a).toBe(1);
     expect(entries[0].b).toBe(2);
+  });
+
+  test("child logger follows runtime level changes", () => {
+    const entries: LogEntry[] = [];
+    const logger = createLogger({ level: "debug", output: (e) => entries.push(e) });
+    const child = logger.child({ service: "auth" });
+
+    child.info("before");
+    logger.setLevel("error");
+    child.warn("after-warn");
+    child.error("after-error");
+
+    expect(entries.map((e) => e.message)).toEqual(["before", "after-error"]);
+    expect(entries[1]!.service).toBe("auth");
   });
 });
 

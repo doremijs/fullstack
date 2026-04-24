@@ -1,0 +1,130 @@
+# VentoStack — 测试环境中间件服务
+# 一键启动所有文档中涉及的外部依赖服务
+#
+# 使用方法:
+#   docker compose -f docker-compose.test.yml up -d
+#   docker compose -f docker-compose.test.yml down
+#
+# 服务列表:
+#   - PostgreSQL  (端口: 15432) — 数据库 / ORM / 迁移测试
+#   - Redis       (端口: 16379) — Session / Cache / 分布式锁测试
+#   - Kafka       (端口: 19092) — MQ 适配器 / 事件总线测试
+#   - Jaeger      (端口: 16686) — 分布式追踪 / OpenTelemetry 测试
+#   - MailHog     (端口: 18025) — 邮件告警 / Webhook 测试
+
+version: "3.9"
+
+services:
+  # PostgreSQL — 数据库层测试
+  postgres:
+    image: postgres:16-alpine
+    container_name: ventostack-test-postgres
+    environment:
+      POSTGRES_USER: vento
+      POSTGRES_PASSWORD: ventostack
+      POSTGRES_DB: ventostack_test
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vento -d ventostack_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - ventostack-test
+
+  # Redis — Session / Cache / 分布式锁测试
+  redis:
+    image: redis:7-alpine
+    container_name: ventostack-test-redis
+    ports:
+      - "16379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - ventostack-test
+
+  # Kafka (Redpanda — 轻量兼容版) — MQ 适配器测试
+  kafka:
+    image: redpandadata/redpanda:v24.2.1
+    container_name: ventostack-test-kafka
+    command:
+      - redpanda
+      - start
+      - --smp
+      - "1"
+      - --memory
+      - 512M
+      - --overprovisioned
+      - --node-id
+      - "0"
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://kafka:9092,external://localhost:19092
+      - --pandaproxy-addr
+      - internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr
+      - internal://kafka:8082,external://localhost:18082
+      - --schema-registry-addr
+      - internal://0.0.0.0:8081,external://0.0.0.0:18081
+    ports:
+      - "19092:19092"
+      - "18082:18082"
+      - "18081:18081"
+      - "19644:9644"
+    volumes:
+      - kafka_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ventostack-test
+
+  # Jaeger — 分布式追踪 / OpenTelemetry 测试
+  jaeger:
+    image: jaegertracing/jaeger:1.60
+    container_name: ventostack-test-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"   # UI
+      - "14317:4317"    # OTLP gRPC
+      - "14318:4318"    # OTLP HTTP
+    networks:
+      - ventostack-test
+
+  # MailHog — 邮件 / Webhook 测试
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: ventostack-test-mailhog
+    ports:
+      - "18025:1025"    # SMTP
+      - "18026:8025"    # Web UI
+    networks:
+      - ventostack-test
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  kafka_data:
+    driver: local
+
+networks:
+  ventostack-test:
+    driver: bridge

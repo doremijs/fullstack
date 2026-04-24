@@ -64,13 +64,20 @@ export class NotFoundError extends ClientError {
 
 /** 参数校验错误（400） */
 export class ValidationError extends ClientError {
+  /** 校验错误详情，例如字段级错误信息 */
+  readonly details: Record<string, unknown> | undefined;
+
   /**
    * 构造 ValidationError
    * @param message - 错误描述，默认 "Validation Failed"
+   * @param details - 可选的校验详情，例如字段级错误信息
    */
-  constructor(message = "Validation Failed") {
+  constructor(message = "Validation Failed", details?: Record<string, unknown>) {
     super(message, 400, "VALIDATION_ERROR");
     this.name = "ValidationError";
+    if (details !== undefined) {
+      this.details = details;
+    }
   }
 }
 

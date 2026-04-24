@@ -26,7 +26,7 @@ export type { Context } from "./context";
 export type { Middleware, NextFunction } from "./middleware";
 
 // ========== 配置系统 ==========
-export { createConfig, loadConfig, parseArgs, securityPrecheck, sanitizeConfig } from "./config";
+export { createConfig, loadConfig, parseArgs, safeConfig, securityPrecheck, sanitizeConfig } from "./config";
 export type {
   ConfigSchema,
   ConfigFieldDef,

@@ -138,6 +138,25 @@ describe("createFileLogger", () => {
     logger.close();
   });
 
+  test("setLevel changes filtering at runtime", () => {
+    const filePath = join(tmpDir, "runtime-level.log");
+    const logger = createFileLogger({ filePath, level: "warn" });
+
+    logger.info("info-before");
+    logger.warn("warn-before");
+    logger.setLevel("debug");
+    logger.debug("debug-after");
+    logger.info("info-after");
+
+    const content = readFileSync(filePath, "utf-8").trim();
+    const lines = content.split("\n");
+    expect(lines).toHaveLength(3);
+    expect(JSON.parse(lines[0]!).message).toBe("warn-before");
+    expect(JSON.parse(lines[1]!).message).toBe("debug-after");
+    expect(JSON.parse(lines[2]!).message).toBe("info-after");
+    logger.close();
+  });
+
   test("child logger writes to same file", () => {
     const filePath = join(tmpDir, "child.log");
     const logger = createFileLogger({ filePath, level: "debug" });

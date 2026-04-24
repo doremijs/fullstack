@@ -13,7 +13,7 @@ import {
   ClientError,      // 4xx 错误基类
   ServerError,      // 5xx 错误基类
   NotFoundError,    // 404
-  ValidationError,  // 422（通常）
+  ValidationError,  // 400
   UnauthorizedError, // 401
   ForbiddenError,   // 403
 } from "@ventostack/core";
@@ -25,7 +25,7 @@ import {
 VentoStackError
 ├── ClientError (4xx)
 │   ├── NotFoundError (404)
-│   ├── ValidationError (422)
+│   ├── ValidationError (400)
 │   ├── UnauthorizedError (401)
 │   └── ForbiddenError (403)
 └── ServerError (5xx)
@@ -46,14 +46,16 @@ router.get("/users/:id<int>", async (ctx) => {
   return ctx.json(user);
 });
 
-router.post("/users", async (ctx) => {
-  const body = await ctx.body<{ email: string }>();
-
-  if (!body.email || !body.email.includes("@")) {
+router.post("/users", defineRouteConfig({
+  body: {
+    email: { type: "string", required: true },
+  },
+}), async (ctx) => {
+  if (!ctx.body.email.includes("@")) {
     throw new ValidationError("邮箱格式无效", { field: "email" });
   }
 
-  const user = await createUser(body);
+  const user = await createUser(ctx.body as { email: string });
   return ctx.json(user, 201);
 });
 ```
@@ -77,7 +79,7 @@ const errorHandler: Middleware = async (ctx, next) => {
           code: err.code,
           ...(err instanceof ValidationError ? { details: err.details } : {})
         },
-        err.statusCode
+        err.code
       );
     }
 
@@ -125,11 +127,11 @@ router.post("/checkout", async (ctx) => {
 
 ```typescript
 // VentoStackError 基类
-new VentoStackError(message: string, statusCode: number, code?: string)
+new VentoStackError(message: string, code: number, errorCode: string)
 
 // 预定义错误
 new NotFoundError(message?: string)        // 404, "NOT_FOUND"
 new UnauthorizedError(message?: string)    // 401, "UNAUTHORIZED"
 new ForbiddenError(message?: string)       // 403, "FORBIDDEN"
-new ValidationError(message: string, details?: unknown) // 422, "VALIDATION_ERROR"
+new ValidationError(message: string, details?: Record<string, unknown>) // 400, "VALIDATION_ERROR"
 ```

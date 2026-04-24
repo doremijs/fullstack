@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadConfig, parseArgs, sanitizeConfig, securityPrecheck } from "../config";
+import { inspect } from "node:util";
+import { loadConfig, parseArgs, safeConfig, sanitizeConfig, securityPrecheck } from "../config";
 import type { ConfigSchema } from "../config";
 
 describe("loadConfig", () => {
@@ -63,6 +64,54 @@ describe("loadConfig", () => {
 
     const config = await loadConfig(schema, { basePath: configDir }, { APP_PORT: "9999" });
     expect(config.port).toBe(9999);
+  });
+
+  test("sensitive fields are masked when loaded config is inspected", async () => {
+    const configDir = join(tmpDir, "test-sensitive-loadconfig");
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(
+      join(configDir, "base.json"),
+      JSON.stringify({ jwtSecret: "super-secret-value", appName: "ventostack" }),
+    );
+
+    const config = await loadConfig(
+      {
+        jwtSecret: { type: "string", required: true, sensitive: true },
+        appName: { type: "string", default: "ventostack" },
+      },
+      { basePath: configDir },
+      {},
+    );
+
+    expect(config.jwtSecret).toBe("super-secret-value");
+
+    const inspected = inspect(config, { depth: null });
+    expect(inspected).toContain("***");
+    expect(inspected).not.toContain("super-secret-value");
+  });
+
+  test("safeConfig returns a masked snapshot for loaded config", async () => {
+    const configDir = join(tmpDir, "test-safe-loadconfig");
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(
+      join(configDir, "base.json"),
+      JSON.stringify({ jwtSecret: "super-secret-value", appName: "ventostack" }),
+    );
+
+    const config = await loadConfig(
+      {
+        jwtSecret: { type: "string", required: true, sensitive: true },
+        appName: { type: "string", default: "ventostack" },
+      },
+      { basePath: configDir },
+      {},
+    );
+
+    const safe = safeConfig(config);
+
+    expect(safe.jwtSecret).toBe("***");
+    expect(safe.appName).toBe("ventostack");
+    expect(config.jwtSecret).toBe("super-secret-value");
   });
 
   test("defaults to development env", async () => {
@@ -274,5 +323,136 @@ describe("sanitizeConfig", () => {
     const config = { token: undefined };
     const sanitized = sanitizeConfig(schema, config as unknown as Record<string, unknown>);
     expect(sanitized.token).toBeUndefined();
+  });
+});
+
+// ---------- 编译期类型推导测试 ----------
+
+import { createConfig } from "../config";
+
+describe("createConfig type inference", () => {
+  test("default value makes type non-nullable", () => {
+    const config = createConfig({
+      port: { type: "number", default: 3000 },
+      host: { type: "string", default: "0.0.0.0" },
+      debug: { type: "boolean", default: false },
+    }, {});
+
+    // 有 default 的字段不应包含 undefined
+    const port: number = config.port;
+    const host: string = config.host;
+    const debug: boolean = config.debug;
+
+    expect(port).toBe(3000);
+    expect(host).toBe("0.0.0.0");
+    expect(debug).toBe(false);
+  });
+
+  test("required true makes type non-nullable", () => {
+    const config = createConfig({
+      databaseUrl: { type: "string", required: true, env: "DATABASE_URL" },
+    }, { DATABASE_URL: "postgres://localhost" });
+
+    const url: string = config.databaseUrl;
+    expect(url).toBe("postgres://localhost");
+  });
+
+  test("no default and no required gives undefined", () => {
+    const config = createConfig({
+      optionalPort: { type: "number" },
+    }, {});
+
+    // 无 default 且无 required 时应包含 undefined
+    const port: number | undefined = config.optionalPort;
+    expect(port).toBeUndefined();
+  });
+
+  test("default type must match field type", () => {
+    // @ts-expect-error default 必须是 number 而不是 string
+    createConfig({ port: { type: "number", default: "3000" } }, {});
+
+    // @ts-expect-error default 必须是 string 而不是 number
+    createConfig({ host: { type: "string", default: 0 } }, {});
+
+    // @ts-expect-error default 必须是 boolean 而不是 string
+    createConfig({ debug: { type: "boolean", default: "true" } }, {});
+
+    // 正确类型应通过
+    createConfig({
+      port: { type: "number", default: 3000 },
+      host: { type: "string", default: "localhost" },
+      debug: { type: "boolean", default: true },
+    }, {});
+  });
+
+  test("options infers union type", () => {
+    const config = createConfig({
+      logLevel: { type: "string", options: ["debug", "info", "error"] as const, default: "info" },
+      mode: { type: "number", options: [1, 2, 3] as const, default: 1 },
+      flag: { type: "boolean", options: [true, false] as const, default: false },
+    }, {});
+
+    // 类型应为字面量 union
+    const logLevel: "debug" | "info" | "error" = config.logLevel;
+    const mode: 1 | 2 | 3 = config.mode;
+    const flag: true | false = config.flag;
+
+    expect(logLevel).toBe("info");
+    expect(mode).toBe(1);
+    expect(flag).toBe(false);
+  });
+
+  test("options runtime validation rejects invalid value", () => {
+    expect(() =>
+      createConfig(
+        {
+          logLevel: { type: "string", options: ["debug", "info", "error"] as const, env: "LOG_LEVEL" },
+        },
+        { LOG_LEVEL: "warn" },
+      ),
+    ).toThrow('Config "logLevel": value "warn" is not in allowed options');
+  });
+
+  test("options runtime validation accepts valid value", () => {
+    const config = createConfig(
+      {
+        logLevel: { type: "string", options: ["debug", "info", "error"] as const, env: "LOG_LEVEL" },
+      },
+      { LOG_LEVEL: "debug" },
+    );
+
+    expect(config.logLevel).toBe("debug");
+  });
+
+  test("sensitive fields are masked when inspected", () => {
+    const config = createConfig(
+      {
+        jwtSecret: { type: "string", env: "JWT_SECRET", required: true, sensitive: true },
+        appName: { type: "string", default: "ventostack" },
+      },
+      { JWT_SECRET: "super-secret-value" },
+    );
+
+    expect(config.jwtSecret).toBe("super-secret-value");
+
+    const inspected = inspect(config, { depth: null });
+    expect(inspected).toContain("***");
+    expect(inspected).not.toContain("super-secret-value");
+  });
+
+  test("safeConfig returns a masked snapshot for createConfig", () => {
+    const config = createConfig(
+      {
+        jwtSecret: { type: "string", env: "JWT_SECRET", required: true, sensitive: true },
+        appName: { type: "string", default: "ventostack" },
+      },
+      { JWT_SECRET: "super-secret-value" },
+    );
+
+    const safe = safeConfig(config);
+
+    expect(safe.jwtSecret).toBe("***");
+    expect(safe.appName).toBe("ventostack");
+    expect(config.jwtSecret).toBe("super-secret-value");
   });
 });

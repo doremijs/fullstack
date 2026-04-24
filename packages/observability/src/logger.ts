@@ -45,6 +45,8 @@ export interface Logger {
    * @param defaultMeta 子记录器默认携带的元数据
    * @returns 新的 Logger 实例 */
   child(defaultMeta: Record<string, unknown>): Logger;
+  /** 动态调整最低输出级别 */
+  setLevel(level: LogLevel): void;
 }
 
 /** 日志记录器配置选项 */
@@ -115,6 +117,7 @@ const noopLogger: Logger = {
   child() {
     return noopLogger;
   },
+  setLevel() {},
 };
 
 /** 创建结构化日志记录器
@@ -124,7 +127,9 @@ export function createLogger(options?: LoggerOptions): Logger {
   const enabled = options?.enabled ?? true;
   if (!enabled) return noopLogger;
 
-  const minLevel = options?.level ?? "info";
+  const state: { level: LogLevel } = {
+    level: options?.level ?? "info",
+  };
   const output =
     options?.output ??
     ((entry: LogEntry) => {
@@ -134,7 +139,7 @@ export function createLogger(options?: LoggerOptions): Logger {
     f.toLowerCase(),
   );
 
-  return buildLogger(minLevel, output, sensitiveFields, {});
+  return buildLogger(state, output, sensitiveFields, {});
 }
 
 /** 构建具体日志记录器实现
@@ -144,13 +149,13 @@ export function createLogger(options?: LoggerOptions): Logger {
  * @param baseMeta 基础默认元数据
  * @returns Logger 实例 */
 function buildLogger(
-  minLevel: LogLevel,
+  state: { level: LogLevel },
   output: (entry: LogEntry) => void,
   sensitiveFields: string[],
   baseMeta: Record<string, unknown>,
 ): Logger {
   function log(level: LogLevel, message: string, meta?: Record<string, unknown>): void {
-    if (LOG_LEVEL_ORDER[level] < LOG_LEVEL_ORDER[minLevel]) return;
+    if (LOG_LEVEL_ORDER[level] < LOG_LEVEL_ORDER[state.level]) return;
 
     const merged = { ...baseMeta, ...meta };
     const redacted = redactMeta(merged, sensitiveFields);
@@ -182,10 +187,13 @@ function buildLogger(
       log("fatal", message, meta);
     },
     child(defaultMeta) {
-      return buildLogger(minLevel, output, sensitiveFields, {
+      return buildLogger(state, output, sensitiveFields, {
         ...baseMeta,
         ...defaultMeta,
       });
+    },
+    setLevel(level) {
+      state.level = level;
     },
   };
 }

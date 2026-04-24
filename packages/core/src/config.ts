@@ -1,13 +1,9 @@
 // @ventostack/core - 配置系统
 
-/** 配置字段定义 */
-export interface ConfigFieldDef {
-  /** 字段类型 */
-  type: "string" | "number" | "boolean";
-  /** 可选枚举值 */
-  options?: readonly unknown[];
-  /** 默认值 */
-  default?: unknown;
+import { inspect } from "node:util";
+
+/** 配置字段公共属性（与具体类型无关） */
+interface ConfigFieldDefBase {
   /** 对应环境变量名 */
   env?: string;
   /** 是否必填 */
@@ -17,6 +13,36 @@ export interface ConfigFieldDef {
   /** 是否为敏感信息（日志脱敏） */
   sensitive?: boolean;
 }
+
+/** 配置字段定义 —— string 变体（default/options 类型与 type 严格关联） */
+export interface StringConfigFieldDef extends ConfigFieldDefBase {
+  type: "string";
+  /** 默认值 */
+  default?: string;
+  /** 可选枚举值 */
+  options?: readonly string[];
+}
+
+/** 配置字段定义 —— number 变体（default/options 类型与 type 严格关联） */
+export interface NumberConfigFieldDef extends ConfigFieldDefBase {
+  type: "number";
+  /** 默认值 */
+  default?: number;
+  /** 可选枚举值 */
+  options?: readonly number[];
+}
+
+/** 配置字段定义 —— boolean 变体（default/options 类型与 type 严格关联） */
+export interface BooleanConfigFieldDef extends ConfigFieldDefBase {
+  type: "boolean";
+  /** 默认值 */
+  default?: boolean;
+  /** 可选枚举值 */
+  options?: readonly boolean[];
+}
+
+/** 配置字段定义（discriminated union，default/options 类型与 type 关联） */
+export type ConfigFieldDef = StringConfigFieldDef | NumberConfigFieldDef | BooleanConfigFieldDef;
 
 /** 配置结构定义（支持嵌套） */
 export interface ConfigSchema {
@@ -33,13 +59,13 @@ export interface ConfigLoaderOptions {
 
 /** 安全预检选项 */
 export interface SecurityCheckOptions {
-  /** 必需的密钥环境变量列表 */
+  /** 需要强制存在的密钥环境变量名列表，例如 JWT_SECRET、DB_PASSWORD */
   requiredSecrets?: string[];
-  /** 密钥最小长度 */
+  /** 密钥最小长度阈值，只在 requiredSecrets 命中时检查，默认 32 */
   minSecretLength?: number;
-  /** 生产环境是否要求 HTTPS */
+  /** 是否在生产环境要求协议必须是 https；读取 PROTOCOL 或 APP_PROTOCOL */
   requireHTTPS?: boolean;
-  /** 生产环境是否禁止 DEBUG */
+  /** 是否在生产环境禁止开启 DEBUG；DEBUG=1 或 DEBUG=true 都算开启 */
   disallowDebug?: boolean;
 }
 
@@ -51,6 +77,13 @@ export interface SecurityCheckResult {
   errors: string[];
 }
 
+const CONFIG_INSPECT = inspect.custom;
+const CONFIG_SCHEMA = Symbol("ventostack.config.schema");
+
+type ConfigWithSchema = {
+  [CONFIG_SCHEMA]?: ConfigSchema;
+};
+
 // 判断是否为字段定义（而非嵌套 schema）
 function isFieldDef(value: unknown): value is ConfigFieldDef {
   return (
@@ -60,6 +93,24 @@ function isFieldDef(value: unknown): value is ConfigFieldDef {
     typeof (value as ConfigFieldDef).type === "string" &&
     ["string", "number", "boolean"].includes((value as ConfigFieldDef).type)
   );
+}
+
+function attachConfigSchema<T extends ConfigSchema>(config: ConfigValue<T>, schema: T): ConfigValue<T> {
+  Object.defineProperty(config, CONFIG_SCHEMA, {
+    value: schema,
+    enumerable: false,
+    configurable: true,
+  });
+
+  return config;
+}
+
+function getConfigSchema(config: unknown): ConfigSchema | undefined {
+  if (typeof config !== "object" || config === null) {
+    return undefined;
+  }
+
+  return (config as ConfigWithSchema)[CONFIG_SCHEMA];
 }
 
 /**
@@ -148,7 +199,7 @@ function resolveField(
   }
 
   // 5. 校验 options
-  if (fieldDef.options && value !== undefined && !fieldDef.options.includes(value)) {
+  if (fieldDef.options && value !== undefined && !fieldDef.options.includes(value as never)) {
     throw new Error(
       `Config "${key}": value "${value}" is not in allowed options [${fieldDef.options.join(", ")}]`,
     );
@@ -165,7 +216,7 @@ function resolveField(
  * @param overrides - 覆盖值
  * @returns 解析后的配置对象
  */
-function resolveSchema(
+export function resolveConfigSchema(
   schema: ConfigSchema,
   env: Record<string, string | undefined>,
   prefix = "",
@@ -180,7 +231,7 @@ function resolveSchema(
       result[key] = resolveField(def, fullKey, env, overrides);
     } else {
       // 嵌套 schema
-      result[key] = resolveSchema(def as ConfigSchema, env, fullKey, overrides);
+      result[key] = resolveConfigSchema(def as ConfigSchema, env, fullKey, overrides);
     }
   }
 
@@ -189,18 +240,31 @@ function resolveSchema(
 
 type ExtractFieldType<T> = T extends { options: readonly (infer O)[] }
   ? O
-  : T extends { type: "string" }
+  : T extends StringConfigFieldDef
     ? string
-    : T extends { type: "number" }
+    : T extends NumberConfigFieldDef
       ? number
-      : T extends { type: "boolean" }
+      : T extends BooleanConfigFieldDef
         ? boolean
         : unknown;
 
-/** 从 ConfigSchema 推导出的配置值类型 */
+type IsNonNullableField<T> = T extends { required: true }
+  ? true
+  : T extends { default: infer D }
+    ? [D] extends [undefined]
+      ? false
+      : true
+    : false;
+
+/** 从 ConfigSchema 推导出的配置值类型
+ *  - 有 default 或 required: true 的字段不含 undefined
+ *  - 其余字段为 T | undefined
+ */
 export type ConfigValue<T extends ConfigSchema = ConfigSchema> = {
   [K in keyof T]: T[K] extends ConfigFieldDef
-    ? ExtractFieldType<T[K]> | undefined
+    ? IsNonNullableField<T[K]> extends true
+      ? ExtractFieldType<T[K]>
+      : ExtractFieldType<T[K]> | undefined
     : T[K] extends ConfigSchema
       ? ConfigValue<T[K]>
       : unknown;
@@ -212,11 +276,11 @@ export type ConfigValue<T extends ConfigSchema = ConfigSchema> = {
  * @param env - 环境变量，默认 process.env
  * @returns 类型安全的配置对象
  */
-export function createConfig<T extends ConfigSchema>(
+export function createConfig<const T extends ConfigSchema>(
   schema: T,
   env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
 ): ConfigValue<T> {
-  return resolveSchema(schema, env) as ConfigValue<T>;
+  return attachConfigInspection(schema, resolveConfigSchema(schema, env) as ConfigValue<T>);
 }
 
 // --- 深度合并 ---
@@ -324,7 +388,7 @@ export function parseArgs(args?: string[]): Record<string, unknown> {
  * @param env - 环境变量
  * @returns 类型安全的配置对象
  */
-export async function loadConfig<T extends ConfigSchema>(
+export async function loadConfig<const T extends ConfigSchema>(
   schema: T,
   options?: ConfigLoaderOptions,
   env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
@@ -342,13 +406,20 @@ export async function loadConfig<T extends ConfigSchema>(
   const merged = deepMerge(baseConfig, envConfig);
 
   // 4. 通过 schema 解析，环境变量覆盖文件配置
-  return resolveSchema(schema, env, "", merged) as ConfigValue<T>;
+  return attachConfigInspection(schema, resolveConfigSchema(schema, env, "", merged) as ConfigValue<T>);
 }
 
 // --- 安全预检 ---
 
 /**
- * 执行安全预检
+ * 执行安全预检。
+ *
+ * 检查规则：
+ * - `requiredSecrets`：逐个检查环境变量是否存在且非空
+ * - `minSecretLength`：仅对 `requiredSecrets` 中命中的值检查长度，默认 32
+ * - `requireHTTPS`：仅在 `NODE_ENV=production` 时检查 `PROTOCOL` / `APP_PROTOCOL` 是否为 `https`
+ * - `disallowDebug`：仅在 `NODE_ENV=production` 时检查 `DEBUG` 是否显式开启
+ *
  * @param options - 预检选项
  * @param env - 环境变量
  * @returns 预检结果
@@ -390,6 +461,49 @@ export function securityPrecheck(
   }
 
   return { passed: errors.length === 0, errors };
+}
+
+/**
+ * 给配置对象挂载安全的 inspect 行为。
+ *
+ * - `console.log(config)` / `util.inspect(config)` 会看到脱敏后的结果
+ * - 直接访问 `config.jwtSecret` 仍然返回真实值，供业务逻辑使用
+ * - 如果需要日志安全输出，优先打印整个配置对象，而不是单独拼接敏感字段
+ */
+export function attachConfigInspection<const T extends ConfigSchema>(
+  schema: T,
+  config: ConfigValue<T>,
+): ConfigValue<T> {
+  attachConfigSchema(config, schema);
+
+  const masked = () => sanitizeConfig(schema, config as Record<string, unknown>);
+
+  Object.defineProperty(config, CONFIG_INSPECT, {
+    value: masked,
+    enumerable: false,
+    configurable: true,
+  });
+
+  return config;
+}
+
+/**
+ * 生成配置对象的安全只读快照。
+ *
+ * - 敏感字段会变成 `***`
+ * - 非敏感字段保留原值
+ * - 返回的是新对象，不会影响原始配置
+ */
+export function safeConfig<const T extends ConfigSchema>(config: ConfigValue<T>): ConfigValue<T> {
+  const schema = getConfigSchema(config);
+
+  if (!schema) {
+    throw new Error(
+      "safeConfig() expects a Ventostack config object created by createConfig/loadConfig/loadYAMLConfig",
+    );
+  }
+
+  return sanitizeConfig(schema, config as Record<string, unknown>) as ConfigValue<T>;
 }
 
 // --- 敏感字段脱敏 ---
