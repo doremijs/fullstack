@@ -58,12 +58,15 @@ interface RateLimitOptions {
 
 ## 按路由配置不同限流规则
 
-不同路由可以注册不同的限流中间件：
+不同路由可以通过 `router.group` 或路由级中间件注册不同的限流规则：
 
 ```typescript
-// 登录接口严格限流
-app.use(
+// 登录接口严格限流（路由级中间件）
+router.post(
   "/auth/login",
+  async (ctx) => {
+    /* 登录逻辑 */
+  },
   rateLimit({
     windowMs: 15 * 60_000,
     max: 5,
@@ -72,12 +75,29 @@ app.use(
   }),
 );
 
-// 搜索接口单独限流
-app.use(
+// 搜索接口单独限流（路由级中间件）
+router.get(
   "/search",
+  async (ctx) => {
+    /* 搜索逻辑 */
+  },
   rateLimit({
     windowMs: 60_000,
     max: 30,
+    store: createMemoryRateLimitStore(),
+  }),
+);
+
+// 或者使用分组中间件
+router.group(
+  "/api",
+  (api) => {
+    api.post("/auth/login", loginHandler);
+    api.get("/search", searchHandler);
+  },
+  rateLimit({
+    windowMs: 60_000,
+    max: 100,
     store: createMemoryRateLimitStore(),
   }),
 );
@@ -119,15 +139,11 @@ app.use(
 );
 ```
 
-`createRedisRateLimitStore` 接受任何满足最小接口的 Redis 客户端（Bun Redis、ioredis、node-redis 等）：
+`createRedisRateLimitStore` 基于 Bun Redis 设计：
 
 ```typescript
-interface RedisClientLike {
-  incr(key: string): Promise<number>;
-  pexpire(key: string, milliseconds: number): Promise<void>;
-  pttl(key: string): Promise<number>;
-  del(key: string): Promise<void>;
-}
+const redis = new Bun.Redis("redis://localhost:6379");
+const store = createRedisRateLimitStore({ client: redis });
 ```
 
 如果客户端支持 `eval`，会自动使用原子 Lua 脚本执行 `INCR + PEXPIRE`，彻底避免 race condition。

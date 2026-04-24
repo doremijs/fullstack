@@ -33,10 +33,13 @@ const requestLatency = metrics.histogram(
 httpRequests.inc({ method: "GET", path: "/users", status: "200" });
 httpRequests.inc({ method: "GET", path: "/users", status: "200" }, 5); // 增加 5
 
-// 活跃连接
-activeConnections.set(42);
-activeConnections.inc();
-activeConnections.dec();
+// 活跃连接（支持标签维度）
+activeConnections.set(42, { region: "us-east" });
+activeConnections.inc({ region: "us-east" });
+activeConnections.dec({ region: "us-east" });
+
+// 获取指定标签的值
+const count = activeConnections.get({ region: "us-east" });
 
 // 延迟直方图
 const start = performance.now();
@@ -146,10 +149,10 @@ interface HistogramSnapshot {
 }
 
 interface Gauge {
-  set(value: number): void;
-  inc(value?: number): void;
-  dec(value?: number): void;
-  get(): number;
+  set(value: number, labels?: Record<string, string>): void;
+  inc(labels?: Record<string, string>): void;
+  dec(labels?: Record<string, string>): void;
+  get(labels?: Record<string, string>): number;
   reset(): void;
 }
 ```

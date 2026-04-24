@@ -122,8 +122,11 @@ const tokenRefresh = createTokenRefresh(jwt, {
   refreshTokenTTL: 604800,  // 7 天
 });
 
-// 生成 Token 对
-const pair = await tokenRefresh.generatePair({ sub: user.id, role: user.role }, process.env.JWT_SECRET!);
+// 生成 Token 对（必须显式传入 secret，不会使用 JWT 的默认密钥）
+const pair = await tokenRefresh.generatePair(
+  { sub: user.id, role: user.role },
+  process.env.JWT_SECRET!,
+);
 // pair: { accessToken, refreshToken, expiresIn, refreshExpiresIn }
 
 // 用 Refresh Token 换取新 Token 对（旧 Refresh Token 自动吊销）
@@ -237,9 +240,9 @@ interface TokenRefreshOptions {
 
 /** Token 刷新管理器接口 */
 interface TokenRefreshManager {
-  /** 生成新的 Access Token 与 Refresh Token 对 */
+  /** 生成新的 Access Token 与 Refresh Token 对（secret 为必填参数） */
   generatePair(payload: Record<string, unknown>, secret: string): Promise<TokenPair>;
-  /** 用 Refresh Token 换取新的 Token 对（旧的 Refresh Token 会被吊销） */
+  /** 用 Refresh Token 换取新的 Token 对（旧的 Refresh Token 会被吊销，secret 为必填参数） */
   refresh(refreshToken: string, secret: string): Promise<TokenPair>;
   /** 吊销指定 JTI 的 Token */
   revoke(jti: string): Promise<void>;

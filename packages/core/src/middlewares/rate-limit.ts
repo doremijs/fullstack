@@ -97,7 +97,7 @@ function defaultKeyFn(ctx: Context, trustProxyHeaders = false): string {
 }
 
 /**
- * 最小 Redis 客户端接口，兼容 Bun Redis、ioredis、node-redis 等
+ * 最小 Redis 客户端接口，基于 Bun Redis 设计
  */
 export interface RedisClientLike {
   /** 执行 INCR 命令 */
@@ -153,7 +153,7 @@ export function createRedisRateLimitStore(options: RedisRateLimitStoreOptions): 
   return {
     async increment(key: string, windowMs: number) {
       const fullKey = `${keyPrefix}${key}`;
-      // 如果客户端支持 eval（Bun Redis、ioredis），使用原子 Lua 脚本
+      // 如果客户端支持 eval（Bun Redis），使用原子 Lua 脚本
       if ("eval" in client && typeof (client as unknown as Record<string, unknown>).eval === "function") {
         const result = await (client as unknown as { eval(script: string, keys: number, ...args: string[]): Promise<[number, number]> }).eval(
           luaScript,

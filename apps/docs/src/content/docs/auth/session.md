@@ -10,7 +10,7 @@ description: 使用 createSessionManager 管理有状态的用户会话
 ```typescript
 import { createSessionManager, createMemorySessionStore } from "@ventostack/auth";
 
-// 创建内存存储（生产环境可替换为 Redis 等外部存储）
+// 内存存储（开发/单进程）
 const store = createMemorySessionStore();
 
 const session = createSessionManager(store, {
@@ -97,33 +97,45 @@ router.post("/auth/logout", async (ctx) => {
 });
 ```
 
+## Redis 存储
+
+多实例部署时，使用 `createRedisSessionStore` 接入 Redis 实现分布式 Session：
+
+```typescript
+import { createSessionManager, createRedisSessionStore } from "@ventostack/auth";
+
+const redis = new Bun.Redis("redis://localhost:6379");
+const store = createRedisSessionStore({ client: redis, keyPrefix: "app:session:" });
+const session = createSessionManager(store, { ttl: 86400 });
+```
+
 ## 自定义 SessionStore
 
-你可以实现 `SessionStore` 接口，接入 Redis、数据库等外部存储：
+你也可以完全自定义存储，只需实现 `SessionStore` 接口：
 
 ```typescript
 import type { SessionStore, Session } from "@ventostack/auth";
 
-const redisStore: SessionStore = {
+const customStore: SessionStore = {
   async get(id: string): Promise<Session | null> {
-    const data = await redis.get(id);
-    return data ? JSON.parse(data) : null;
+    // 从数据库/缓存加载
+    return null;
   },
 
   async set(session: Session): Promise<void> {
-    await redis.setex(session.id, Math.ceil((session.expiresAt - Date.now()) / 1000), JSON.stringify(session));
+    // 持久化到存储
   },
 
   async delete(id: string): Promise<void> {
-    await redis.del(id);
+    // 删除会话
   },
 
   async touch(id: string, ttl: number): Promise<void> {
-    await redis.expire(id, ttl);
+    // 延长过期时间
   },
 };
 
-const session = createSessionManager(redisStore, { ttl: 86400 });
+const session = createSessionManager(customStore, { ttl: 86400 });
 ```
 
 ## Session 接口
@@ -215,10 +227,32 @@ interface SessionManager {
 }
 ```
 
+## Redis SessionStore 接口
+
+```typescript
+/** Redis Session 存储客户端最小接口 */
+interface RedisSessionClientLike {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string): Promise<unknown>;
+  expire(key: string, seconds: number): Promise<number>;
+  del(key: string): Promise<number>;
+}
+
+/** Redis Session 存储选项 */
+interface RedisSessionStoreOptions {
+  client: RedisSessionClientLike;
+  keyPrefix?: string;
+}
+
+/** 创建 Redis Session 存储 */
+function createRedisSessionStore(options: RedisSessionStoreOptions): SessionStore;
+```
+
 ## 注意事项
 
 - `createSessionManager(store, options)` 的第一个参数是 `SessionStore` 实例，不是配置对象
 - `create()` 返回 `Promise<Session>` 对象，包含 `id`、`data`、`expiresAt`，不是字符串
 - `get()` 返回 `Promise<Session | null>`，不是 `Record | null`
 - 续期方法名为 `touch(id)`，不是 `refresh()`
+- `cookieName` 配置项当前仅在接口中保留，实际 Cookie 名称需要开发者在中间件中自行处理（如示例中的 `"sid"`）
 - 内置 `createMemorySessionStore()` 基于 Map 实现，仅适合开发或单进程场景

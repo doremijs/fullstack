@@ -141,7 +141,7 @@ interface Tracer {
 ## 注意事项
 
 - `createTracer` 是纯内存实现，Span 数据存储在内存数组中
-- 当前不提供 OpenTelemetry 导出器或 Jaeger/Zipkin 集成；如需 OTLP 导出，可使用 `createOTelTracer`（来自 `@ventostack/observability` 的 `otel` 模块）
+- 当前不提供 OpenTelemetry 导出器或 Jaeger/Zipkin 集成；如需 OTLP 导出，可使用 `createOTelTracer`（从 `@ventostack/observability` 主入口导出，是 `createTracer` 的别名）
 - `startSpan` 的第二个参数是父 `SpanContext`，不是 `SpanOptions` 对象
 - Span 不会自动结束，必须显式调用 `end()`
 - 已结束的 Span 可通过 `flush()` 获取并清空

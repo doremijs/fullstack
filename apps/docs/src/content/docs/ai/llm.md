@@ -113,14 +113,23 @@ const request = await approval.request(
 // 查询待审批列表
 const pending = approval.listPending();
 
-// 批准请求
+// 批准请求（如果请求不存在或已处理，返回 null）
 const approved = approval.approve(request.id, "admin", "确认执行删除操作");
+if (!approved) {
+  console.error("审批请求不存在或已过期");
+}
 
-// 拒绝请求
+// 拒绝请求（如果请求不存在或已处理，返回 null）
 const rejected = approval.reject(request.id, "admin", "风险过高，拒绝执行");
+if (!rejected) {
+  console.error("审批请求不存在或已过期");
+}
 
-// 获取状态
+// 获取状态（不存在返回 null）
 const status = approval.getStatus(request.id);
+if (!status) {
+  console.error("审批请求不存在");
+}
 
 // 清理过期请求
 const cleaned = approval.cleanup();

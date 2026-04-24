@@ -43,6 +43,10 @@ try {
 await txm.commit();
 ```
 
+`savepoint()`、`releaseSavepoint()` 和 `rollbackTo()` 都会改变事务深度（`depth()`）。`savepoint()` 增加深度，`releaseSavepoint()` 和 `rollbackTo()` 减少深度。
+
+`releaseSavepoint()` 只能释放最近创建的 savepoint（LIFO 顺序），尝试释放非最近的 savepoint 会抛出错误。
+
 ## 自动嵌套事务
 
 ```typescript

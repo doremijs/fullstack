@@ -3,14 +3,27 @@ title: 缓存层
 description: 使用 createCache 添加高性能缓存支持
 ---
 
-`@ventostack/cache` 提供了统一的缓存接口，底层可以切换内存缓存或 Redis，无需修改业务代码。
+`@ventostack/cache` 提供了统一的缓存接口，内置内存与 Redis 两种适配器。所有组件基于 `CacheAdapter` 接口构建，切换底层存储无需修改业务代码。
 
 ## 创建缓存
+
+### 内存缓存（开发/单进程）
 
 ```typescript
 import { createCache, createMemoryAdapter } from "@ventostack/cache";
 
 const cache = createCache(createMemoryAdapter());
+```
+
+### Redis 缓存（生产/分布式）
+
+```typescript
+import { createCache, createRedisAdapter } from "@ventostack/cache";
+
+const redis = new Bun.Redis("redis://localhost:6379");
+const cache = createCache(
+  createRedisAdapter({ client: redis, keyPrefix: "app:v1:" })
+);
 ```
 
 ## 基本操作
