@@ -96,6 +96,87 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 <script>
 	import { pagefindUserConfig } from 'virtual:starlight/pagefind-config';
 
+	interface HistoryMessage {
+		role: 'user' | 'assistant';
+		content: string;
+		reasoning?: string;
+		sources?: Array<{ title: string; url: string }>;
+		timestamp: number;
+	}
+
+	const STORAGE_KEY = 'vento-ai-history';
+	const PAGE_SIZE = 10;
+
+	function loadHistory(): HistoryMessage[] {
+		try {
+			const raw = sessionStorage.getItem(STORAGE_KEY);
+			return raw ? JSON.parse(raw) : [];
+		} catch {
+			return [];
+		}
+	}
+
+	function saveHistory(history: HistoryMessage[]) {
+		try {
+			sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-100)));
+		} catch {
+			// storage full or disabled
+		}
+	}
+
+	function appendHistory(msg: HistoryMessage) {
+		const history = loadHistory();
+		history.push(msg);
+		saveHistory(history);
+	}
+
+	/** 简单语法高亮（客户端） */
+	function highlightCode(code: string): string {
+		// 先做 HTML escape
+		let text = code
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;');
+
+		const rules: Array<{ regex: RegExp; className: string }> = [
+			{ regex: /(\/\/.*$|#.*$)/gm, className: 'token-comment' },
+			{ regex: /(["'`])(?:\\.|(?!\1)[^\\\r\n])*\1/g, className: 'token-string' },
+			{ regex: /\b(import|export|from|const|let|var|function|class|interface|type|return|async|await|if|else|for|while|switch|case|break|continue|new|this|true|false|null|undefined|try|catch|throw|typeof|instanceof|in|of|extends|implements|static|public|private|protected|readonly|declare|namespace|module|require|default|as|with|yield|debugger)\b/g, className: 'token-keyword' },
+			{ regex: /\b\d+(?:\.\d+)?\b/g, className: 'token-number' },
+		];
+
+		interface Match { start: number; end: number; className: string; text: string }
+		const matches: Match[] = [];
+
+		for (const { regex, className } of rules) {
+			let m: RegExpExecArray | null;
+			const localRegex = new RegExp(regex.source, regex.flags.includes('g') ? regex.flags : regex.flags + 'g');
+			while ((m = localRegex.exec(text)) !== null) {
+				matches.push({ start: m.index, end: m.index + m[0].length, className, text: m[0] });
+			}
+		}
+
+		matches.sort((a, b) => a.start - b.start);
+		const unique: Match[] = [];
+		let lastEnd = -1;
+		for (const m of matches) {
+			if (m.start >= lastEnd) {
+				unique.push(m);
+				lastEnd = m.end;
+			}
+		}
+
+		let result = '';
+		let pos = 0;
+		for (const m of unique) {
+			result += text.slice(pos, m.start);
+			result += `<span class="${m.className}">${m.text}</span>`;
+			pos = m.end;
+		}
+		result += text.slice(pos);
+		return result;
+	}
+
 	/** 轻量 Markdown 渲染（支持常见格式） */
 	function renderMarkdown(text: string): string {
 		let html = text
@@ -103,8 +184,11 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			.replace(/</g, '&lt;')
 			.replace(/>/g, '&gt;');
 
-		// 代码块
-		html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>');
+		// 代码块（带简单语法高亮）
+		html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang: string, code: string) => {
+			const highlighted = highlightCode(code.trimEnd());
+			return `<pre><code class="language-${lang}">${highlighted}</code></pre>`;
+		});
 		// 行内代码
 		html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 		// 加粗
@@ -122,41 +206,103 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 		html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 		// 链接
 		html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+		// 表格
+		html = html.replace(/(\|[^\n]+\|\n)(\|[-:\|\s]+\|\n)((?:\|[^\n]+\|\n?)+)/g, (match) => {
+			const rows = match.trim().split('\n').filter(r => r.trim());
+			if (rows.length < 2) return match;
+			let table = '<table><thead><tr>';
+			const headerCells = rows[0].split('|').map(c => c.trim()).filter(c => c !== '');
+			headerCells.forEach(c => { table += `<th>${c}</th>`; });
+			table += '</tr></thead><tbody>';
+			for (let i = 2; i < rows.length; i++) {
+				const cells = rows[i].split('|').map(c => c.trim()).filter(c => c !== '');
+				table += '<tr>';
+				cells.forEach(c => { table += `<td>${c}</td>`; });
+				table += '</tr>';
+			}
+			table += '</tbody></table>';
+			return table;
+		});
 		// 无序列表行
 		html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
 		// 有序列表行
 		html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
 
-		// 段落分割 + 列表包裹
-		const blocks = html.split(/\n\n+/);
-		const result: string[] = [];
-		let inList = false;
+		// 保护多行 <pre> 块，防止逐行扫描时拆散
+		const preBlocks: string[] = [];
+		html = html.replace(/<pre[\s\S]*?<\/pre>/g, (match) => {
+			const idx = preBlocks.length;
+			preBlocks.push(match);
+			return `<!--PRE_BLOCK_${idx}-->`;
+		});
 
-		for (const block of blocks) {
-			const trimmed = block.trim();
-			if (!trimmed) continue;
+		// 逐行扫描：空行分段，列表行自动包裹 <ul>，普通行累积为段落
+		const lines = html.split('\n');
+		const result: string[] = [];
+		let paraLines: string[] = [];
+		let listItems: string[] = [];
+
+		function flushPara() {
+			if (paraLines.length > 0) {
+				result.push(`<p>${paraLines.join('<br>')}</p>`);
+				paraLines = [];
+			}
+		}
+		function flushList() {
+			if (listItems.length > 0) {
+				result.push(`<ul>\n${listItems.join('\n')}\n</ul>`);
+				listItems = [];
+			}
+		}
+
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (!trimmed) {
+				flushPara();
+				flushList();
+				continue;
+			}
 
 			if (trimmed.startsWith('<h') || trimmed.startsWith('<pre')) {
-				if (inList) { result.push('</ul>'); inList = false; }
+				flushPara();
+				flushList();
 				result.push(trimmed);
+				continue;
+			}
+
+			// 还原被保护的 <pre> 块
+			const preMatch = trimmed.match(/^<!--PRE_BLOCK_(\d+)-->$/);
+			if (preMatch) {
+				flushPara();
+				flushList();
+				result.push(preBlocks[parseInt(preMatch[1], 10)]);
 				continue;
 			}
 
 			if (trimmed.startsWith('<li')) {
-				if (!inList) { result.push('<ul>'); inList = true; }
-				result.push(trimmed);
+				flushPara();
+				listItems.push(trimmed);
 				continue;
 			}
 
-			if (inList) { result.push('</ul>'); inList = false; }
-			result.push(`<p>${trimmed.replace(/\n/g, '<br>')}</p>`);
+			// 普通文本
+			flushList();
+			paraLines.push(trimmed);
 		}
-		if (inList) result.push('</ul>');
+
+		flushPara();
+		flushList();
 
 		return result.join('');
 	}
 
 	class SiteSearch extends HTMLElement {
+		private visibleCount = PAGE_SIZE;
+		private aiMessages: HTMLDivElement | null = null;
+		private aiInput: HTMLTextAreaElement | null = null;
+		private aiSend: HTMLButtonElement | null = null;
+		private aiStatus: HTMLDivElement | null = null;
+
 		constructor() {
 			super();
 			const openBtn = this.querySelector<HTMLButtonElement>('button[data-open-modal]')!;
@@ -212,6 +358,9 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 					const panelName = tab.getAttribute('data-tab');
 					const panel = this.querySelector(`[data-panel="${panelName}"]`);
 					panel?.classList.add('active');
+					if (panelName === 'ai') {
+						this.renderHistory();
+					}
 				});
 			});
 
@@ -222,7 +371,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			} catch {}
 
 			const shouldStrip = this.dataset.stripTrailingSlash !== undefined;
-			const stripTrailingSlash = (path: string) => path.replace(/(.)\/(#.*)?$/, '$1$2');
+			const stripTrailingSlash = (path: string) => path.replace(/(.)(\/#.*)?$/, '$1$2');
 			const formatURL = shouldStrip ? stripTrailingSlash : (path: string) => path;
 
 			window.addEventListener('DOMContentLoaded', () => {
@@ -251,225 +400,438 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			});
 
 			// Ask AI logic
-			const aiInput = this.querySelector<HTMLTextAreaElement>('.ai-input');
-			const aiSend = this.querySelector<HTMLButtonElement>('.ai-send');
-			const aiMessages = this.querySelector<HTMLDivElement>('.ai-messages');
-			const aiStatus = this.querySelector<HTMLDivElement>('.ai-status');
+			this.aiInput = this.querySelector<HTMLTextAreaElement>('.ai-input');
+			this.aiSend = this.querySelector<HTMLButtonElement>('.ai-send');
+			this.aiMessages = this.querySelector<HTMLDivElement>('.ai-messages');
+			this.aiStatus = this.querySelector<HTMLDivElement>('.ai-status');
 
-			if (aiInput && aiSend && aiMessages) {
+			if (this.aiInput && this.aiSend && this.aiMessages) {
 				// textarea 自动高度
 				const autoResize = () => {
-					aiInput.style.height = 'auto';
-					aiInput.style.height = Math.min(aiInput.scrollHeight, 120) + 'px';
+					this.aiInput!.style.height = 'auto';
+					this.aiInput!.style.height = Math.min(this.aiInput!.scrollHeight, 120) + 'px';
 				};
-				aiInput.addEventListener('input', autoResize);
+				this.aiInput.addEventListener('input', autoResize);
 
-				const addMessage = (role: 'user' | 'assistant', content: string) => {
-					const msg = document.createElement('div');
-					msg.className = `ai-message ai-message--${role}`;
-					msg.textContent = content;
-					aiMessages.appendChild(msg);
-
-					aiMessages.scrollTop = aiMessages.scrollHeight;
-					return msg;
-				};
-
-				const sendMessage = async () => {
-					const text = aiInput.value.trim();
-					if (!text) return;
-
-					addMessage('user', text);
-					aiInput.value = '';
-					aiInput.style.height = 'auto';
-					aiSend.disabled = true;
-					if (aiStatus) aiStatus.textContent = '';
-
-					let assistantMsg: HTMLDivElement | null = null;
-					let reasoningEl: HTMLDetailsElement | null = null;
-					let contentEl: HTMLDivElement | null = null;
-						let sourcesEl: HTMLDivElement | null = null;
-					let reasoningText = '';
-					let contentText = '';
-					const thinkingMsg = addMessage('assistant', '生成中...');
-					thinkingMsg.classList.add('ai-message--thinking');
-
-					try {
-						const response = await fetch('/api/chat', {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({ message: text }),
-						});
-
-						if (!response.ok) {
-							thinkingMsg.remove();
-							const err = await response.json().catch(() => ({ error: 'Request failed' }));
-							addMessage('assistant', `错误：${err.error ?? '未知错误'}`);
-							return;
-						}
-
-						if (!response.body) {
-							thinkingMsg.remove();
-							addMessage('assistant', '错误：响应流为空');
-							return;
-						}
-
-						// 收到流式响应，移除网络等待的 thinkingMsg
-						thinkingMsg.remove();
-						assistantMsg = addMessage('assistant', '');
-
-						const reader = response.body.getReader();
-						const decoder = new TextDecoder();
-						let buffer = '';
-
-						while (true) {
-							const { done, value } = await reader.read();
-							if (done) break;
-							buffer += decoder.decode(value, { stream: true });
-
-							const lines = buffer.split('\n');
-							buffer = lines.pop() || '';
-
-							for (const line of lines) {
-								const trimmed = line.trim();
-								if (!trimmed.startsWith('data: ')) continue;
-								const data = trimmed.slice(6);
-								if (data === '[DONE]') continue;
-								try {
-									const parsed = JSON.parse(data);
-									const delta = parsed.choices?.[0]?.delta;
-
-													// reasoning（思考过程）→ 可折叠面板
-													if (delta?.reasoning) {
-														reasoningText += delta.reasoning;
-														if (!reasoningEl && assistantMsg) {
-															reasoningEl = document.createElement('details');
-															reasoningEl.className = 'ai-reasoning';
-															const summary = document.createElement('summary');
-															summary.textContent = '思考过程';
-															reasoningEl.appendChild(summary);
-															const rc = document.createElement('div');
-															rc.className = 'ai-reasoning-text';
-															reasoningEl.appendChild(rc);
-															assistantMsg.appendChild(reasoningEl);
-														}
-														if (reasoningEl) {
-															const rc = reasoningEl.querySelector('.ai-reasoning-text') as HTMLDivElement;
-															if (rc) rc.textContent = reasoningText;
-														}
-													}
-
-									// content（正式回答）→ Markdown 渲染
-									if (delta?.content) {
-										contentText += delta.content;
-										if (!contentEl && assistantMsg) {
-											contentEl = document.createElement('div');
-											contentEl.className = 'ai-content';
-											assistantMsg.appendChild(contentEl);
-										}
-										if (contentEl) {
-											contentEl.innerHTML = renderMarkdown(contentText);
-										}
-									}
-
-
-												// sources（参考文档）→ 渲染链接面板
-												if (parsed.sources && Array.isArray(parsed.sources)) {
-													if (!sourcesEl && assistantMsg) {
-														sourcesEl = document.createElement('div');
-														sourcesEl.className = 'ai-sources';
-														assistantMsg.appendChild(sourcesEl);
-													}
-													if (sourcesEl) {
-														sourcesEl.innerHTML = '<div class="ai-sources-title">参考文档</div>' +
-															parsed.sources.map((s: { title: string; url: string }) =>
-																`<a href="${s.url}" class="ai-source-link">${s.title}</a>`
-															).join('');
-													}
-												}
-									aiMessages.scrollTop = aiMessages.scrollHeight;
-								} catch {
-									// ignore malformed SSE lines
-								}
-							}
-						}
-
-						// flush remaining buffer
-						if (buffer.trim().startsWith('data: ')) {
-							const data = buffer.trim().slice(6);
-							if (data !== '[DONE]') {
-								try {
-									const parsed = JSON.parse(data);
-									const delta = parsed.choices?.[0]?.delta;
-															if (delta?.reasoning) {
-																reasoningText += delta.reasoning;
-																if (!reasoningEl && assistantMsg) {
-																	reasoningEl = document.createElement('details');
-																	reasoningEl.className = 'ai-reasoning';
-																	const summary = document.createElement('summary');
-																	summary.textContent = '思考过程';
-																	reasoningEl.appendChild(summary);
-																	const rc = document.createElement('div');
-																	rc.className = 'ai-reasoning-text';
-																	reasoningEl.appendChild(rc);
-																	assistantMsg.appendChild(reasoningEl);
-																}
-																if (reasoningEl) {
-																	const rc = reasoningEl.querySelector('.ai-reasoning-text') as HTMLDivElement;
-																	if (rc) rc.textContent = reasoningText;
-																}
-															}
-									if (delta?.content) {
-										contentText += delta.content;
-										if (!contentEl && assistantMsg) {
-											contentEl = document.createElement('div');
-											contentEl.className = 'ai-content';
-											assistantMsg.appendChild(contentEl);
-										}
-										if (contentEl) {
-											contentEl.innerHTML = renderMarkdown(contentText);
-										}
-									}
-
-													// sources（参考文档）→ 渲染链接面板
-													if (parsed.sources && Array.isArray(parsed.sources)) {
-														if (!sourcesEl && assistantMsg) {
-															sourcesEl = document.createElement('div');
-															sourcesEl.className = 'ai-sources';
-															assistantMsg.appendChild(sourcesEl);
-														}
-														if (sourcesEl) {
-															sourcesEl.innerHTML = '<div class="ai-sources-title">参考文档</div>' +
-																parsed.sources.map((s: { title: string; url: string }) =>
-																	`<a href="${s.url}" class="ai-source-link">${s.title}</a>`
-																).join('');
-															}
-													}
-								} catch {
-									// ignore
-								}
-							}
-						}
-					} catch (err) {
-						thinkingMsg.remove();
-						const errorText = `错误：${err instanceof Error ? err.message : String(err)}`;
-						if (assistantMsg) {
-							assistantMsg.textContent += '\n' + errorText;
-						} else {
-							addMessage('assistant', errorText);
-						}
-					} finally {
-						aiSend.disabled = false;
-						aiInput.focus();
-					}
-				};
-
-				aiSend.addEventListener('click', sendMessage);
-				aiInput.addEventListener('keydown', (e) => {
+				this.aiSend.addEventListener('click', () => this.sendMessage());
+				this.aiInput.addEventListener('keydown', (e) => {
 					if (e.key === 'Enter' && !e.shiftKey) {
 						e.preventDefault();
-						sendMessage();
+						this.sendMessage();
 					}
 				});
+			}
+		}
+
+		/** 渲染历史消息（带分页） */
+		renderHistory() {
+			if (!this.aiMessages) return;
+			const history = loadHistory();
+			this.aiMessages.innerHTML = '';
+
+			const startIdx = Math.max(0, history.length - this.visibleCount);
+			const toShow = history.slice(startIdx);
+
+			// 加载更多按钮
+			if (startIdx > 0) {
+				const loadMoreBtn = document.createElement('button');
+				loadMoreBtn.className = 'ai-load-more';
+				loadMoreBtn.textContent = `加载更多历史消息 (${startIdx} 条)`;
+				loadMoreBtn.addEventListener('click', () => {
+					this.visibleCount += PAGE_SIZE;
+					this.renderHistory();
+				});
+				this.aiMessages.appendChild(loadMoreBtn);
+			}
+
+			for (const msg of toShow) {
+				this.renderMessage(msg.role, msg.content, msg.reasoning, msg.sources, false);
+			}
+
+			this.aiMessages.scrollTop = this.aiMessages.scrollHeight;
+		}
+
+		/** 添加单条消息到 UI */
+		renderMessage(
+			role: 'user' | 'assistant',
+			content: string,
+			reasoning?: string,
+			sources?: Array<{ title: string; url: string }>,
+			save = true,
+		) {
+			if (!this.aiMessages) return null;
+
+			const msg = document.createElement('div');
+			msg.className = `ai-message ai-message--${role}`;
+
+			if (role === 'user') {
+				msg.textContent = content;
+			} else {
+				// assistant: reasoning + markdown content + sources
+				if (reasoning) {
+					const details = document.createElement('details');
+					details.className = 'ai-reasoning';
+					details.open = true;
+					const summary = document.createElement('summary');
+					summary.className = 'ai-reasoning-header';
+					summary.innerHTML = '思考过程';
+					details.appendChild(summary);
+					const rc = document.createElement('div');
+					rc.className = 'ai-reasoning-text';
+					rc.textContent = reasoning;
+					details.appendChild(rc);
+					msg.appendChild(details);
+				}
+
+				const contentEl = document.createElement('div');
+				contentEl.className = 'ai-content sl-markdown-content';
+				contentEl.innerHTML = renderMarkdown(content);
+				msg.appendChild(contentEl);
+
+				if (sources && sources.length > 0) {
+					const sourcesEl = document.createElement('div');
+					sourcesEl.className = 'ai-sources';
+					sourcesEl.innerHTML =
+						'<div class="ai-sources-title">参考文档</div>' +
+						sources
+							.map(
+								(s) =>
+									`<a href="${s.url}" class="ai-source-link">${s.title}</a>`,
+							)
+							.join('');
+					msg.appendChild(sourcesEl);
+				}
+			}
+
+			this.aiMessages.appendChild(msg);
+			this.aiMessages.scrollTop = this.aiMessages.scrollHeight;
+
+			if (save) {
+				appendHistory({ role, content, reasoning, sources, timestamp: Date.now() });
+			}
+
+			return msg;
+		}
+
+		async sendMessage() {
+			if (!this.aiInput || !this.aiSend || !this.aiMessages) return;
+
+			const text = this.aiInput.value.trim();
+			if (!text) return;
+
+			// 保存用户消息
+			this.renderMessage('user', text, undefined, undefined, true);
+			this.aiInput.value = '';
+			this.aiInput.style.height = 'auto';
+			this.aiSend.disabled = true;
+			if (this.aiStatus) this.aiStatus.textContent = '';
+
+			let assistantMsg: HTMLDivElement | null = null;
+			let reasoningEl: HTMLDivElement | null = null;
+			let contentEl: HTMLDivElement | null = null;
+			let sourcesEl: HTMLDivElement | null = null;
+			let toolsEl: HTMLDivElement | null = null;
+			const toolElements = new Map<string, HTMLDivElement>();
+				let toolCallCount = 0;
+			let reasoningText = '';
+			let contentText = '';
+			let sourcesList: Array<{ title: string; url: string }> = [];
+
+			const thinkingMsg = document.createElement('div');
+			thinkingMsg.className = 'ai-message ai-message--thinking';
+			thinkingMsg.textContent = '思考中...';
+			this.aiMessages.appendChild(thinkingMsg);
+
+			// 智能滚动：用户手动上滚后暂停，回到底部时恢复
+			let shouldAutoScroll = true;
+			const scrollThreshold = 50;
+			const onScroll = () => {
+				if (!this.aiMessages) return;
+				const distance = this.aiMessages.scrollHeight - this.aiMessages.scrollTop - this.aiMessages.clientHeight;
+				shouldAutoScroll = distance <= scrollThreshold;
+			};
+			this.aiMessages.addEventListener('scroll', onScroll);
+			const scrollToBottom = () => {
+				if (shouldAutoScroll && this.aiMessages) {
+					this.aiMessages.scrollTop = this.aiMessages.scrollHeight;
+				}
+			};
+
+			try {
+				const history = loadHistory().slice(-20).map((h) => ({
+					role: h.role,
+					content: h.content,
+				}));
+
+				const response = await fetch('/api/chat', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ message: text, history }),
+				});
+
+				if (!response.ok) {
+					thinkingMsg.remove();
+					const err = await response.json().catch(() => ({ error: 'Request failed' }));
+					this.renderMessage('assistant', `错误：${err.error ?? '未知错误'}`);
+					return;
+				}
+
+				if (!response.body) {
+					thinkingMsg.remove();
+					this.renderMessage('assistant', '错误：响应流为空');
+					return;
+				}
+
+				// 收到流式响应，移除网络等待的 thinkingMsg
+				thinkingMsg.remove();
+				assistantMsg = document.createElement('div');
+				assistantMsg.className = 'ai-message ai-message--assistant';
+				this.aiMessages.appendChild(assistantMsg);
+
+				const reader = response.body.getReader();
+				const decoder = new TextDecoder();
+				let buffer = '';
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					buffer += decoder.decode(value, { stream: true });
+
+					const lines = buffer.split('\n');
+					buffer = lines.pop() || '';
+
+					for (const line of lines) {
+						const trimmed = line.trim();
+						if (!trimmed.startsWith('data: ')) continue;
+						const data = trimmed.slice(6);
+						if (data === '[DONE]') continue;
+						try {
+							const parsed = JSON.parse(data);
+
+							// tool_call
+							if (parsed.tool_call && assistantMsg && ++toolCallCount <= 3) {
+								if (!toolsEl) {
+									toolsEl = document.createElement('div');
+									toolsEl.className = 'ai-tools';
+									assistantMsg.appendChild(toolsEl);
+								}
+								const toolEl = document.createElement('div');
+								toolEl.className = 'ai-tool ai-tool--running';
+								const query = parsed.tool_call.arguments?.query || '';
+								const shortQ = query.length > 40 ? query.slice(0, 40) + '...' : query;
+								toolEl.innerHTML = `<span class="ai-tool-spinner"></span><span class="ai-tool-name">${parsed.tool_call.name}</span>${shortQ ? `<span class="ai-tool-args">${shortQ}</span>` : ''}`;
+								toolsEl.appendChild(toolEl);
+								toolElements.set(parsed.tool_call.name + '_' + toolCallCount, toolEl);
+							}
+
+							// tool_result
+							if (parsed.tool_result && assistantMsg) {
+								let el: HTMLDivElement | null = null;
+								for (const [key, val] of toolElements) {
+									if (key.startsWith(parsed.tool_result.name + '_')) el = val;
+								}
+								if (el) {
+									el.className = 'ai-tool ai-tool--done';
+									const result = parsed.tool_result.result as { found?: number; count?: number };
+									const count = result?.found ?? result?.count ?? 0;
+									el.innerHTML = `<span class="ai-tool-icon">&#10003;</span><span class="ai-tool-name">${parsed.tool_result.name}</span><span class="ai-tool-status">${count} 条结果</span>`;
+								}
+							}
+
+							// reasoning（思考过程）→ 可展开/收起的面板，带 loading spinner
+							const delta = parsed.choices?.[0]?.delta;
+							if (delta?.reasoning) {
+								reasoningText += delta.reasoning;
+								if (!reasoningEl && assistantMsg) {
+									reasoningEl = document.createElement('details');
+									reasoningEl.className = 'ai-reasoning';
+									(reasoningEl as HTMLDetailsElement).open = true;
+									const summary = document.createElement('summary');
+									summary.className = 'ai-reasoning-header';
+									summary.innerHTML = '<span class="ai-reasoning-spinner"></span>思考过程';
+									reasoningEl.appendChild(summary);
+									const rc = document.createElement('div');
+									rc.className = 'ai-reasoning-text';
+									reasoningEl.appendChild(rc);
+									assistantMsg.appendChild(reasoningEl);
+								}
+								if (reasoningEl) {
+									const rc = reasoningEl.querySelector('.u0061u0069u002du0072u0065u0061u0073u006fu006eu0069u006eu0067u002du0074u0065u0078u0074') as HTMLDivElement;
+									if (rc) {
+										rc.textContent = reasoningText;
+										if ((reasoningEl as HTMLDetailsElement).open) {
+											rc.scrollTop = rc.scrollHeight;
+										}
+									}
+								}
+							}
+
+							// content（正式回答）→ Markdown 渲染
+							if (delta?.content) {
+								contentText += delta.content;
+								if (!contentEl && assistantMsg) {
+									contentEl = document.createElement('div');
+									contentEl.className = 'ai-content sl-markdown-content';
+									assistantMsg.appendChild(contentEl);
+								}
+								if (contentEl) {
+									contentEl.innerHTML = renderMarkdown(contentText);
+									scrollToBottom();
+									}
+							}
+
+							// sources（参考文档）→ 渲染链接面板
+							if (parsed.sources && Array.isArray(parsed.sources)) {
+								sourcesList = parsed.sources;
+								if (!sourcesEl && assistantMsg) {
+									sourcesEl = document.createElement('div');
+									sourcesEl.className = 'ai-sources';
+									assistantMsg.appendChild(sourcesEl);
+								}
+								if (sourcesEl) {
+									sourcesEl.innerHTML =
+										'<div class="ai-sources-title">参考文档</div>' +
+										parsed.sources
+											.map(
+												(s: { title: string; url: string }) =>
+													`<a href="${s.url}" class="ai-source-link">${s.title}</a>`,
+											)
+											.join('');
+								}
+							}
+
+							this.aiMessages!.scrollTop = this.aiMessages!.scrollHeight;
+						} catch {
+							// ignore malformed SSE lines
+						}
+					}
+				}
+
+				// flush remaining buffer
+				if (buffer.trim().startsWith('data: ')) {
+					const data = buffer.trim().slice(6);
+					if (data !== '[DONE]') {
+						try {
+							const parsed = JSON.parse(data);
+
+							if (parsed.tool_call && assistantMsg && ++toolCallCount <= 3) {
+								if (!toolsEl) {
+									toolsEl = document.createElement('div');
+									toolsEl.className = 'ai-tools';
+									assistantMsg.appendChild(toolsEl);
+								}
+								const toolEl = document.createElement('div');
+								toolEl.className = 'ai-tool ai-tool--running';
+								const query = parsed.tool_call.arguments?.query || '';
+								const shortQ = query.length > 40 ? query.slice(0, 40) + '...' : query;
+								toolEl.innerHTML = `<span class="ai-tool-spinner"></span><span class="ai-tool-name">${parsed.tool_call.name}</span>${shortQ ? `<span class="ai-tool-args">${shortQ}</span>` : ''}`;
+								toolsEl.appendChild(toolEl);
+								toolElements.set(parsed.tool_call.name + '_' + toolCallCount, toolEl);
+							}
+
+							if (parsed.tool_result && assistantMsg) {
+								let el: HTMLDivElement | null = null;
+								for (const [key, val] of toolElements) {
+									if (key.startsWith(parsed.tool_result.name + '_')) el = val;
+								}
+								if (el) {
+									el.className = 'ai-tool ai-tool--done';
+									const result = parsed.tool_result.result as { found?: number; count?: number };
+									const count = result?.found ?? result?.count ?? 0;
+									el.innerHTML = `<span class="ai-tool-icon">&#10003;</span><span class="ai-tool-name">${parsed.tool_result.name}</span><span class="ai-tool-status">${count} 条结果</span>`;
+								}
+							}
+
+							const delta = parsed.choices?.[0]?.delta;
+							if (delta?.reasoning) {
+								reasoningText += delta.reasoning;
+								if (!reasoningEl && assistantMsg) {
+									reasoningEl = document.createElement('details');
+									reasoningEl.className = 'ai-reasoning';
+									(reasoningEl as HTMLDetailsElement).open = true;
+									const summary = document.createElement('summary');
+									summary.className = 'ai-reasoning-header';
+									summary.innerHTML = '<span class="ai-reasoning-spinner"></span>思考过程';
+									reasoningEl.appendChild(summary);
+									const rc = document.createElement('div');
+									rc.className = 'ai-reasoning-text';
+									reasoningEl.appendChild(rc);
+									assistantMsg.appendChild(reasoningEl);
+								}
+								if (reasoningEl) {
+									const rc = reasoningEl.querySelector('.u0061u0069u002du0072u0065u0061u0073u006fu006eu0069u006eu0067u002du0074u0065u0078u0074') as HTMLDivElement;
+									if (rc) {
+										rc.textContent = reasoningText;
+										if ((reasoningEl as HTMLDetailsElement).open) {
+											rc.scrollTop = rc.scrollHeight;
+										}
+									}
+								}
+							}
+
+							if (delta?.content) {
+								contentText += delta.content;
+								if (!contentEl && assistantMsg) {
+									contentEl = document.createElement('div');
+									contentEl.className = 'ai-content sl-markdown-content';
+									assistantMsg.appendChild(contentEl);
+								}
+								if (contentEl) {
+									contentEl.innerHTML = renderMarkdown(contentText);
+									scrollToBottom();
+									}
+							}
+
+							if (parsed.sources && Array.isArray(parsed.sources)) {
+								sourcesList = parsed.sources;
+								if (!sourcesEl && assistantMsg) {
+									sourcesEl = document.createElement('div');
+									sourcesEl.className = 'ai-sources';
+									assistantMsg.appendChild(sourcesEl);
+								}
+								if (sourcesEl) {
+									sourcesEl.innerHTML =
+										'<div class="ai-sources-title">参考文档</div>' +
+										parsed.sources
+											.map(
+												(s: { title: string; url: string }) =>
+													`<a href="${s.url}" class="ai-source-link">${s.title}</a>`,
+											)
+											.join('');
+								}
+							}
+						} catch {
+							// ignore
+						}
+					}
+				}
+
+				// stream 结束后移除所有 reasoning spinner
+				for (const spinner of this.aiMessages!.querySelectorAll('.ai-reasoning-spinner')) {
+					spinner.remove();
+				}
+
+				// 保存 assistant 完整回复到 history
+				if (contentText.trim()) {
+					appendHistory({
+						role: 'assistant',
+						content: contentText,
+						reasoning: reasoningText || undefined,
+						sources: sourcesList.length > 0 ? sourcesList : undefined,
+						timestamp: Date.now(),
+					});
+				}
+			} catch (err) {
+				thinkingMsg.remove();
+				const errorText = `错误：${err instanceof Error ? err.message : String(err)}`;
+				if (assistantMsg) {
+					assistantMsg.textContent += '\n' + errorText;
+				} else {
+					this.renderMessage('assistant', errorText);
+				}
+			} finally {
+				this.aiSend!.disabled = false;
+				this.aiInput!.focus();
 			}
 		}
 	}
@@ -638,7 +1000,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 				margin: 4rem auto auto;
 				border-radius: 0.5rem;
 				width: 90%;
-				max-width: 40rem;
+				max-width: 52rem;
 				height: max-content;
 				min-height: 15rem;
 				max-height: calc(100% - 8rem);
@@ -698,6 +1060,23 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			font-style: italic;
 		}
 
+		/* Load more button */
+		.ai-load-more {
+			align-self: center;
+			padding: 0.375rem 1rem;
+			border: 1px solid var(--sl-color-gray-5);
+			border-radius: 0.375rem;
+			background: transparent;
+			color: var(--sl-color-gray-2);
+			font-size: var(--sl-text-xs);
+			cursor: pointer;
+			transition: all 0.15s;
+		}
+		.ai-load-more:hover {
+			color: var(--sl-color-white);
+			border-color: var(--sl-color-gray-3);
+		}
+
 		/* Markdown content */
 		.ai-content {
 			line-height: 1.6;
@@ -709,6 +1088,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			margin: 0.75rem 0 0.5rem;
 			font-size: var(--sl-text-base);
 			font-weight: 600;
+			color: var(--sl-color-white);
 		}
 		.ai-content code {
 			background-color: var(--sl-color-gray-6);
@@ -742,7 +1122,7 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 		.ai-content del { text-decoration: line-through; opacity: 0.7; }
 		.ai-content br { display: block; content: ''; margin: 0.25rem 0; }
 
-		/* Reasoning panel */
+		/* Reasoning panel (可展开/收起，默认展开) */
 		.ai-reasoning {
 			margin-bottom: 0.75rem;
 			font-size: var(--sl-text-xs);
@@ -751,16 +1131,29 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			border-radius: 0.375rem;
 			overflow: hidden;
 		}
-		.ai-reasoning summary {
-			cursor: pointer;
-			user-select: none;
+		.ai-reasoning-header {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
 			padding: 0.375rem 0.75rem;
 			background-color: var(--sl-color-gray-6);
 			color: var(--sl-color-gray-2);
 			font-weight: 500;
+			font-size: var(--sl-text-xs);
+			cursor: pointer;
+			user-select: none;
+			list-style: none;
 		}
-		.ai-reasoning summary:hover {
-			color: var(--sl-color-white);
+		.ai-reasoning-header::-webkit-details-marker {
+			display: none;
+		}
+		.ai-reasoning-header::before {
+			content: '▼';
+			font-size: 0.625rem;
+			transition: transform 0.2s;
+		}
+		.ai-reasoning:not([open]) .ai-reasoning-header::before {
+			transform: rotate(-90deg);
 		}
 		.ai-reasoning-text {
 			padding: 0.5rem 0.75rem;
@@ -771,9 +1164,72 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			max-height: 12rem;
 			overflow-y: auto;
 		}
+		/* Reasoning spinner */
+		.ai-reasoning-spinner {
+			display: inline-block;
+			width: 0.75rem;
+			height: 0.75rem;
+			border: 2px solid var(--sl-color-gray-4);
+			border-top-color: var(--sl-color-accent);
+			border-radius: 50%;
+			animation: ai-spin 0.6s linear infinite;
+			flex-shrink: 0;
+		}
+		@keyframes ai-spin {
+			to { transform: rotate(360deg); }
+		}
+
+		/* Syntax highlight tokens */
+		.token-comment { color: #6a9955; }
+		.token-string { color: #ce9178; }
+		.token-keyword { color: #569cd6; }
+		.token-number { color: #b5cea8; }
+		.token-class { color: #4ec9b0; }
+		.token-function { color: #dcdcaa; }
+		.token-operator { color: #d4d4d4; }
+		.token-punctuation { color: #d4d4d4; }
+
+		/* Tools log */
+		.ai-tools {
+			display: flex;
+			flex-direction: column;
+			gap: 0.375rem;
+			margin-bottom: 0.75rem;
+		}
+		.ai-tool {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			padding: 0.375rem 0.75rem;
+			border-radius: 0.375rem;
+			font-size: var(--sl-text-xs);
+			border: 1px solid var(--sl-color-gray-5);
+		}
+		.ai-tool--running {
+			background-color: var(--sl-color-gray-6);
+			color: var(--sl-color-gray-2);
+		}
+		.ai-tool--done {
+			background-color: var(--sl-color-accent-low);
+			color: var(--sl-color-accent);
+			border-color: var(--sl-color-accent);
+		}
+		.ai-tool-icon {
+			font-size: 0.875rem;
+			line-height: 1;
+		}
+		.ai-tool-name {
+			font-weight: 500;
+			font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+		}
+		.ai-tool-status {
+			margin-left: auto;
+			opacity: 0.8;
+		}
 
 		/* Input area */
 		.ai-input-area {
+			display: flex;
 			position: relative;
 			border-top: 1px solid var(--sl-color-gray-5);
 		}
@@ -825,30 +1281,30 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 			text-align: center;
 		}
 
-			.ai-sources {
-				margin-top: 0.75rem;
-				padding-top: 0.5rem;
-				border-top: 1px solid var(--sl-color-gray-5);
-			}
-			.ai-sources-title {
-				font-size: var(--sl-text-xs);
-				color: var(--sl-color-gray-2);
-				margin-bottom: 0.375rem;
-			}
-			.ai-source-link {
-				display: inline-block;
-				margin-right: 0.5rem;
-				margin-bottom: 0.25rem;
-				padding: 0.25rem 0.5rem;
-				border-radius: 0.25rem;
-				background-color: var(--sl-color-gray-6);
-				color: var(--sl-color-accent);
-				font-size: var(--sl-text-xs);
-				text-decoration: none;
-			}
-			.ai-source-link:hover {
-				background-color: var(--sl-color-accent-low);
-			}
+		.ai-sources {
+			margin-top: 0.75rem;
+			padding-top: 0.5rem;
+			border-top: 1px solid var(--sl-color-gray-5);
+		}
+		.ai-sources-title {
+			font-size: var(--sl-text-xs);
+			color: var(--sl-color-gray-2);
+			margin-bottom: 0.375rem;
+		}
+		.ai-source-link {
+			display: inline-block;
+			margin-right: 0.5rem;
+			margin-bottom: 0.25rem;
+			padding: 0.25rem 0.5rem;
+			border-radius: 0.25rem;
+			background-color: var(--sl-color-gray-6);
+			color: var(--sl-color-accent);
+			font-size: var(--sl-text-xs);
+			text-decoration: none;
+		}
+		.ai-source-link:hover {
+			background-color: var(--sl-color-accent-low);
+		}
 	}
 </style>
 
@@ -1046,5 +1502,3 @@ const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagef
 		}
 	}
 </style>
-
-
