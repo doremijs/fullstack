@@ -1,6 +1,6 @@
 {
 	"name": "vento-stack-docs",
-	"compatibility_date": "2026-04-23",
+	"compatibility_date": "2026-04-21",
 	"compatibility_flags": [
 		"nodejs_compat",
 		"global_fetch_strictly_public"
