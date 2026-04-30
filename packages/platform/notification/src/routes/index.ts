@@ -1,0 +1,1 @@
+export { createNotificationRoutes } from "./notification";

@@ -1,0 +1,24 @@
+/**
+ * @ventostack/monitor — 系统监控
+ *
+ * 运行时状态聚合：服务器状态、缓存统计、数据源状态、健康检查。
+ */
+
+// Services
+export { createMonitorService } from "./services/monitor";
+export type {
+  OnlineUser,
+  ServerStatus,
+  CacheStats,
+  DataSourceStatus,
+  PaginatedResult,
+  MonitorService,
+  MonitorServiceDeps,
+} from "./services/monitor";
+
+// Routes
+export { createMonitorRoutes } from "./routes/monitor";
+
+// Module
+export { createMonitorModule } from "./module";
+export type { MonitorModule, MonitorModuleDeps } from "./module";

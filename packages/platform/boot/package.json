@@ -1,0 +1,26 @@
+{
+  "name": "@ventostack/boot",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ventostack/core": "workspace:*",
+    "@ventostack/database": "workspace:*",
+    "@ventostack/cache": "workspace:*",
+    "@ventostack/auth": "workspace:*",
+    "@ventostack/events": "workspace:*",
+    "@ventostack/observability": "workspace:*",
+    "@ventostack/system": "workspace:*",
+    "@ventostack/gen": "workspace:*",
+    "@ventostack/monitor": "workspace:*",
+    "@ventostack/notification": "workspace:*",
+    "@ventostack/i18n": "workspace:*",
+    "@ventostack/workflow": "workspace:*",
+    "@ventostack/oss": "workspace:*",
+    "@ventostack/scheduler": "workspace:*"
+  }
+}
