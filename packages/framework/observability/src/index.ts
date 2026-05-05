@@ -21,7 +21,7 @@
  */
 
 /** 创建结构化日志记录器 */
-export { createLogger } from "./logger";
+export { createLogger, getDefaultLogger } from "./logger";
 export type { Logger, LogLevel, LogEntry, LoggerOptions } from "./logger";
 
 /** 创建指标收集器（计数器、直方图、仪表盘） */
@@ -36,8 +36,16 @@ export type {
 } from "./metrics";
 
 /** 创建健康检查服务 */
-export { createHealthCheck } from "./health";
-export type { HealthCheck, HealthStatus, HealthCheckOptions, CheckResult } from "./health";
+export { createHealthCheck, createDefaultHealthCheck, sqlCheck, redisCheck } from "./health";
+export type {
+  HealthCheck,
+  HealthStatus,
+  HealthCheckOptions,
+  CheckResult,
+  SqlCheckable,
+  RedisCheckable,
+  DefaultHealthCheckOptions,
+} from "./health";
 
 /** 创建分布式追踪器 */
 export { createTracer } from "./tracing";

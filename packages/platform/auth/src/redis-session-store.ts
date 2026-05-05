@@ -8,14 +8,14 @@ import type { Session, SessionStore } from "./session";
 
 /**
  * Redis Session 存储客户端最小接口
- * 基于 Bun Redis 设计
+ * 基于 Bun.RedisClient 设计
  */
 export interface RedisSessionClientLike {
   /** 获取键值 */
   get(key: string): Promise<string | null>;
   /** 设置键值 */
   set(key: string, value: string): Promise<unknown>;
-  /** 设置键的过期时间（秒） */
+  /** 设置键的过期时间（秒），返回是否设置成功 */
   expire(key: string, seconds: number): Promise<number>;
   /** 删除键 */
   del(key: string): Promise<number>;
@@ -43,8 +43,9 @@ export interface RedisSessionStoreOptions {
  * @example
  * ```typescript
  * import { createSessionManager, createRedisSessionStore } from "@ventostack/auth";
+ * import { RedisClient } from "bun";
  *
- * const redis = new Bun.Redis("redis://localhost:6379");
+ * const redis = new RedisClient("redis://localhost:6379");
  * const store = createRedisSessionStore({ client: redis, keyPrefix: "app:session:" });
  * const session = createSessionManager(store, { ttl: 3600 });
  * ```

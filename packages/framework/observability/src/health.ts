@@ -2,6 +2,8 @@
  * @ventostack/observability — Health Check
  * 提供存活探针（live）与就绪探针（ready），支持并行执行多项自定义检查
  * 自动聚合检查结果为 ok / degraded / error 三种整体状态，并计算服务运行时长
+ *
+ * 内置常见基础设施检查（SQL、Redis），通过鸭子类型接口避免包间耦合。
  */
 
 /** 单项健康检查结果 */
@@ -108,4 +110,75 @@ export function createHealthCheck(options?: HealthCheckOptions): HealthCheck {
   }
 
   return { addCheck, live, ready };
+}
+
+// ========== 内置基础设施检查 ==========
+
+/** SQL 执行器最小接口（鸭子类型，不依赖具体包） */
+export interface SqlCheckable {
+  (sql: string, params?: unknown[]): Promise<unknown>;
+}
+
+/** Redis 客户端最小接口（鸭子类型，不依赖具体包） */
+export interface RedisCheckable {
+  get(key: string): Promise<unknown>;
+}
+
+/** 创建 SQL 数据库检查（执行 SELECT 1）
+ * @param executor SQL 执行器
+ * @returns [name, checker] 元组，可直接传给 health.addCheck(...sqlCheck(executor)) */
+export function sqlCheck(executor: SqlCheckable): [string, () => Promise<boolean | string>] {
+  return [
+    "database",
+    async () => {
+      try {
+        await executor("SELECT 1");
+        return true;
+      } catch (err) {
+        return err instanceof Error ? err.message : "unknown";
+      }
+    },
+  ];
+}
+
+/** 创建 Redis 连通性检查（执行 GET 健康检查键）
+ * @param client Redis 客户端
+ * @returns [name, checker] 元组，可直接传给 health.addCheck(...redisCheck(client)) */
+export function redisCheck(client: RedisCheckable): [string, () => Promise<boolean | string>] {
+  return [
+    "redis",
+    async () => {
+      try {
+        await client.get("__health__");
+        return true;
+      } catch (err) {
+        return err instanceof Error ? err.message : "unknown";
+      }
+    },
+  ];
+}
+
+/** 默认健康检查配置 */
+export interface DefaultHealthCheckOptions extends HealthCheckOptions {
+  /** SQL 执行器，提供时自动注册 database 检查 */
+  sql?: SqlCheckable;
+  /** Redis 客户端，提供时自动注册 redis 检查 */
+  redis?: RedisCheckable;
+}
+
+/** 创建带内置检查的健康检查器
+ * @param options 配置选项，传入 sql/redis 自动注册对应检查
+ * @returns HealthCheck 实例 */
+export function createDefaultHealthCheck(options?: DefaultHealthCheckOptions): HealthCheck {
+  const health = createHealthCheck(options);
+
+  if (options?.sql) {
+    health.addCheck(...sqlCheck(options.sql));
+  }
+
+  if (options?.redis) {
+    health.addCheck(...redisCheck(options.redis));
+  }
+
+  return health;
 }

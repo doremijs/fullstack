@@ -28,6 +28,19 @@ export const client = createFetchClient<OpenAPIs>({
         headers: { 'Content-Type': 'application/json' },
       })
     }
+    // 403 — 密码过期特殊处理，透传 data 给前端
+    if (response.status === 403) {
+      const contentType = response.headers.get('content-type')
+      if (contentType?.includes('application/json')) {
+        const json = await response.json()
+        if (json?.data?.code === 'password_expired') {
+          return new Response(JSON.stringify({ error: { code: 'password_expired', tempToken: json.data.tempToken }, data: null }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+      }
+    }
     // 解包后端 { code, message, data } 信封
     const contentType = response.headers.get('content-type')
     if (contentType?.includes('application/json') && response.ok) {

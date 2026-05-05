@@ -31,9 +31,3 @@ export { createCrudRoutes } from './routes/crud';
 // Module
 export { createSystemModule } from './module';
 export type { SystemModule, SystemModuleDeps } from './module';
-
-// Migrations
-export { createSysTables } from './migrations/001_create_sys_tables';
-
-// Seeds
-export { initAdminSeed } from './seeds/001_init_admin';

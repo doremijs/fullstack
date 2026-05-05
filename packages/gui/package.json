@@ -16,10 +16,23 @@
     "tailwind-merge": ">=2"
   },
   "peerDependenciesMeta": {
-    "react": { "optional": false },
-    "react-router-dom": { "optional": false },
-    "antd": { "optional": true },
-    "clsx": { "optional": true },
-    "tailwind-merge": { "optional": true }
+    "react": {
+      "optional": false
+    },
+    "react-router-dom": {
+      "optional": false
+    },
+    "antd": {
+      "optional": true
+    },
+    "clsx": {
+      "optional": true
+    },
+    "tailwind-merge": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "dayjs": "^1.11.20"
   }
 }

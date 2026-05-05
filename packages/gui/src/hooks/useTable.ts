@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import type { TableRowSelection } from 'antd/es/table'
 
 export interface PaginatedData<T> {
   list: T[]
@@ -31,6 +32,11 @@ export interface UseTableReturn<T, P extends PaginatedParams> {
   onSearch: (p: Partial<P>) => void
   onReset: () => void
   onPageChange: (page: number, pageSize: number) => void
+  selectedRowKeys: React.Key[]
+  selectedRows: T[]
+  rowSelection: TableRowSelection<T>
+  clearSelection: () => void
+  hasSelected: boolean
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,6 +55,8 @@ export function useTable<T, P extends PaginatedParams = PaginatedParams>(
     pageSize: defaultPageSize,
     ...options?.defaultParams,
   } as P)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [selectedRows, setSelectedRows] = useState<T[]>([])
 
   const fetchData = useCallback(async (p: P) => {
     setLoading(true)
@@ -92,6 +100,21 @@ export function useTable<T, P extends PaginatedParams = PaginatedParams>(
     setParamsState(newParams)
   }, [params])
 
+  const onSelectChange = useCallback((keys: React.Key[], rows: T[]) => {
+    setSelectedRowKeys(keys)
+    setSelectedRows(rows)
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedRowKeys([])
+    setSelectedRows([])
+  }, [])
+
+  const rowSelection: TableRowSelection<T> = {
+    selectedRowKeys,
+    onChange: onSelectChange as any,
+  }
+
   // 初始加载
   useEffect(() => {
     fetchData(params)
@@ -100,5 +123,6 @@ export function useTable<T, P extends PaginatedParams = PaginatedParams>(
   return {
     loading, data, total, page, pageSize, params,
     setParams, refresh, onSearch, onReset, onPageChange,
+    selectedRowKeys, selectedRows, rowSelection, clearSelection, hasSelected: selectedRowKeys.length > 0,
   }
 }

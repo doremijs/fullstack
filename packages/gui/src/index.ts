@@ -7,6 +7,8 @@
 
 // Utils
 export { cn } from './utils/cn'
+export { cleanParams } from './utils/cleanParams'
+export { fmtDate } from './utils/fmtDate'
 export { getAccessToken, setAccessToken, clearToken } from './utils/token'
 export { fetchConfig, getConfig } from './utils/fetchConfig'
 // createApiClient — depends on @doremijs/o2t, exported from sub-path if needed

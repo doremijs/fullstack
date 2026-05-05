@@ -26,12 +26,15 @@ export interface TokenRevocationStore {
 
 /**
  * Redis Token 吊销存储客户端最小接口
+ * 基于 Bun.RedisClient 设计
  */
 export interface RedisRevocationClientLike {
-  /** 设置键值（带毫秒级 TTL） */
-  set(key: string, value: string, px: number): Promise<unknown>;
+  /** 设置键值 */
+  set(key: string, value: string): Promise<unknown>;
+  /** 设置键的过期时间（毫秒），返回是否设置成功 */
+  pexpire(key: string, milliseconds: number): Promise<number>;
   /** 判断键是否存在 */
-  exists(key: string): Promise<number>;
+  exists(key: string): Promise<boolean>;
 }
 
 /**
@@ -65,8 +68,18 @@ export function createMemoryRevocationStore(): TokenRevocationStore {
 
 /**
  * 创建 Redis Token 吊销存储实例
- * 基于 Redis SET with PX 实现 TTL 自动过期
+ * 基于 Redis SET + PEXPIRE 实现 TTL 自动过期
  * 适用于生产环境与分布式部署
+ *
+ * @example
+ * ```typescript
+ * import { createRedisRevocationStore } from "@ventostack/auth";
+ * import { RedisClient } from "bun";
+ *
+ * const redis = new RedisClient("redis://localhost:6379");
+ * const store = createRedisRevocationStore(redis, "token_revocation:");
+ * ```
+ *
  * @param client Redis 客户端实例
  * @param prefix 键前缀，默认 "token_revocation:"
  * @returns Redis Token 吊销存储实例
@@ -77,12 +90,13 @@ export function createRedisRevocationStore(
 ): TokenRevocationStore {
   return {
     async add(jti: string, ttl: number): Promise<void> {
-      await client.set(`${prefix}${jti}`, "1", ttl);
+      const key = `${prefix}${jti}`;
+      await client.set(key, "1");
+      await client.pexpire(key, ttl);
     },
 
     async has(jti: string): Promise<boolean> {
-      const result = await client.exists(`${prefix}${jti}`);
-      return result === 1;
+      return client.exists(`${prefix}${jti}`);
     },
   };
 }

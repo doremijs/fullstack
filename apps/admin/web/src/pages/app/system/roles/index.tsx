@@ -1,20 +1,15 @@
 import { useState } from 'react'
-import { Card, Table, Button, Input, Select, Form, Modal, Space, Tag, message, Row, Col, Tree } from 'antd'
+import { Card, Table, Button, Input, Form, Modal, Space, Tag, message, Row, Col, Tree } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import { client } from '@/api'
 import type { PaginatedData, RoleItem, MenuItem } from '@/api/types'
-import { useTable } from '@/hooks/useTable'
+import { useTable, cleanParams, fmtDate } from '@ventostack/gui'
 import ActionColumn from '@/components/ActionColumn'
-
-const cleanParams = (params: Record<string, unknown>) =>
-  Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null))
+import DictSelect from '@/components/DictSelect'
 
 const fetcher = (params: Record<string, unknown>) =>
   client.get('/api/system/roles', { query: cleanParams(params) }) as Promise<{ error?: unknown; data?: PaginatedData<RoleItem> }>
-
-const fmtDate = (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-'
 
 /** 将 MenuItem[] 转为 Ant Design TreeData */
 function toTreeData(items: MenuItem[]): any[] {
@@ -50,7 +45,7 @@ function getDescendantKeys(items: MenuItem[], targetKey: string): string[] {
 }
 
 const RolePage = () => {
-  const { loading, data, total, page, pageSize, refresh, onSearch, onReset, onPageChange } =
+  const { loading, data, total, page, pageSize, refresh, onSearch, onReset, onPageChange, selectedRowKeys, rowSelection, clearSelection, hasSelected } =
     useTable<RoleItem>(fetcher)
   const [searchForm] = Form.useForm()
   const [modalOpen, setModalOpen] = useState(false)
@@ -80,23 +75,23 @@ const RolePage = () => {
     setModalLoading(true)
     try {
       if (editingRole) {
-        await client.put(`/api/system/roles/${editingRole.id}` as '/api/system/roles/:id', { body: { name: values.name, sort: values.sort, remark: values.remark, status: values.status } })
-        message.success('更新成功'); setModalOpen(false); refresh()
+        const { error } = await client.put('/api/system/roles/:id', { params: { id: editingRole.id }, body: { name: values.name, sort: values.sort, remark: values.remark, status: values.status } })
+        if (!error) { message.success('更新成功'); setModalOpen(false); refresh() }
       } else {
-        await client.post('/api/system/roles', { body: { name: values.name, code: values.code, sort: values.sort, remark: values.remark } })
-        message.success('创建成功'); setModalOpen(false); refresh()
+        const { error } = await client.post('/api/system/roles', { body: { name: values.name, code: values.code, sort: values.sort, remark: values.remark } })
+        if (!error) { message.success('创建成功'); setModalOpen(false); refresh() }
       }
     } finally { setModalLoading(false) }
   }
 
   const handleDelete = async (id: string) => {
-    await client.delete(`/api/system/roles/${id}` as '/api/system/roles/:id')
-    message.success('删除成功'); refresh()
+    const { error } = await client.delete('/api/system/roles/:id', { params: { id } })
+    if (!error) { message.success('删除成功'); refresh() }
   }
 
   const openAssignMenus = async (r: RoleItem) => {
     setAssignRoleId(r.id)
-    const res = await client.get('/api/system/menus/tree' as '/api/system/menus/tree') as { error?: unknown; data?: MenuItem[] }
+    const res = await client.get('/api/system/menus/tree') as { error?: unknown; data?: MenuItem[] }
     setMenuTree(res.data ?? [])
     setCheckedKeys([])
     setMenuModalOpen(true)
@@ -118,8 +113,8 @@ const RolePage = () => {
   }
 
   const handleAssignMenus = async () => {
-    await client.put(`/api/system/roles/${assignRoleId}/menus` as '/api/system/roles/:id/menus', { body: { menuIds: checkedKeys } })
-    message.success('菜单权限分配成功'); setMenuModalOpen(false)
+    const { error } = await client.put('/api/system/roles/:id/menus', { params: { id: assignRoleId }, body: { menuIds: checkedKeys } })
+    if (!error) { message.success('菜单权限分配成功'); setMenuModalOpen(false) }
   }
 
   const columns: ColumnsType<RoleItem> = [
@@ -147,18 +142,16 @@ const RolePage = () => {
         <Form form={searchForm} layout="inline">
           <Form.Item name="name"><Input placeholder="角色名称" prefix={<SearchOutlined />} /></Form.Item>
           <Form.Item name="status">
-            <Select placeholder="状态" allowClear style={{ width: 100 }}>
-              <Select.Option value={1}>正常</Select.Option>
-              <Select.Option value={0}>禁用</Select.Option>
-            </Select>
+            <DictSelect typeCode="sys_status" placeholder="状态" allowClear style={{ width: 100 }} />
           </Form.Item>
           <Space><Button type="primary" onClick={handleSearch}>搜索</Button><Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button></Space>
         </Form>
       </Card>
       <Card title={`角色列表（${total}）`} extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增角色</Button>}>
-        <Table rowKey="id" columns={columns} dataSource={data} loading={loading}
+        {hasSelected && <div className="mb-2 text-sm text-gray-500">已选 {selectedRowKeys.length} 项 <Button type="link" size="small" onClick={clearSelection}>取消选择</Button></div>}
+        <Table rowKey="id" columns={columns} dataSource={data} loading={loading} size="small"
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: t => `共 ${t} 条`, onChange: onPageChange }}
-          scroll={{ x: 1000 }} />
+          scroll={{ x: 1000 }} rowSelection={rowSelection} />
       </Card>
       <Modal title={editingRole ? '编辑角色' : '新增角色'} open={modalOpen} onOk={handleOk} onCancel={() => setModalOpen(false)} confirmLoading={modalLoading} destroyOnHidden width={640}>
         <Form form={form} layout="vertical" preserve={false}>
@@ -171,7 +164,7 @@ const RolePage = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="status" label="状态" initialValue={1}>
-                <Select><Select.Option value={1}>正常</Select.Option><Select.Option value={0}>禁用</Select.Option></Select>
+                <DictSelect typeCode="sys_status" />
               </Form.Item>
             </Col>
             <Col span={12}>

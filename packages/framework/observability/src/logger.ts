@@ -142,6 +142,19 @@ export function createLogger(options?: LoggerOptions): Logger {
   return buildLogger(state, output, sensitiveFields, {});
 }
 
+/** 全局默认日志单例 */
+let _defaultLogger: Logger | null = null;
+
+/** 获取全局默认日志记录器（懒初始化，首次调用时创建）
+ * @param options 首次初始化时的配置（后续调用忽略）
+ * @returns Logger 单例 */
+export function getDefaultLogger(options?: LoggerOptions): Logger {
+  if (!_defaultLogger) {
+    _defaultLogger = createLogger(options);
+  }
+  return _defaultLogger;
+}
+
 /** 构建具体日志记录器实现
  * @param minLevel 最低输出级别
  * @param output 日志输出函数

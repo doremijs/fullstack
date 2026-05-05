@@ -8,6 +8,7 @@
 
 import { createDatabase, type Database, type SqlExecutor } from "@ventostack/database";
 import { env } from "../config";
+import { SQL } from "bun";
 
 export interface DatabaseContext {
   db: Database;
@@ -18,17 +19,17 @@ export interface DatabaseContext {
 
 function createBunExecutor(): { executor: SqlExecutor; close: () => Promise<void> } {
   // Bun 1.2+ 将 SQL 暴露为 globalThis.SQL
-  const SQLClass =
-    (globalThis as any).SQL ?? (globalThis as any).Bun?.SQL;
+  // const SQLClass =
+  //   (globalThis as any).SQL ?? (globalThis as any).Bun?.SQL;
 
-  if (typeof SQLClass !== "function") {
-    throw new Error(
-      "Bun.SQL is not available in this runtime. Please upgrade to Bun 1.2+.",
-    );
-  }
+  // if (typeof SQLClass !== "function") {
+  //   throw new Error(
+  //     "Bun.SQL is not available in this runtime. Please upgrade to Bun 1.2+.",
+  //   );
+  // }
 
   // max: 1 — 允许 executor 发送 raw BEGIN/COMMIT（迁移系统依赖此模式）
-  const sql = new SQLClass({ url: env.DATABASE_URL, max: 1 });
+  const sql = new SQL({ url: env.DATABASE_URL, max: 1 });
 
   const executor: SqlExecutor = async (text, params) => {
     const result = params && params.length > 0

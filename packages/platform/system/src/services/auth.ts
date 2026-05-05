@@ -12,6 +12,8 @@ import type { AuthSessionManager } from "@ventostack/auth";
 import type { AuditStore } from "@ventostack/observability";
 import type { SqlExecutor } from "@ventostack/database";
 import type { EventBus } from "@ventostack/events";
+import type { ConfigService } from "./config";
+import { validatePassword } from "./password-policy";
 
 /** 登录结果 */
 export interface LoginResult {
@@ -21,6 +23,8 @@ export interface LoginResult {
   refreshExpiresIn: number;
   sessionId: string;
   mfaRequired: boolean;
+  mfaToken?: string;
+  mfaSetupRequired?: boolean;
 }
 
 /** MFA 设置结果 */
@@ -64,10 +68,13 @@ export interface AuthService {
   verifyMFA(userId: string, code: string): Promise<boolean>;
   disableMFA(userId: string, code: string): Promise<void>;
   recoverMFA(userId: string, recoveryCode: string): Promise<{ tempToken: string }>;
+  completeMFALogin(mfaToken: string, code: string, ip: string, userAgent: string, deviceType?: string): Promise<LoginResult>;
 }
 
-/** 登录失败最大次数 */
-const MAX_LOGIN_FAILURES = 5;
+/** 登录失败最大次数（默认值，实际从 sys_config 读取） */
+const DEFAULT_MAX_LOGIN_FAILURES = 5;
+/** 账户锁定时长分钟数（默认值，实际从 sys_config 读取） */
+const DEFAULT_LOCK_MINUTES = 15;
 /** IP 每分钟最大请求次数 */
 const MAX_IP_REQUESTS_PER_MINUTE = 20;
 /** IP 限流窗口（秒） */
@@ -92,6 +99,7 @@ export function createAuthService(deps: {
   auditStore: AuditStore;
   jwtSecret: string;
   eventBus: EventBus;
+  configService: ConfigService;
 }): AuthService {
   const {
     executor,
@@ -103,6 +111,7 @@ export function createAuthService(deps: {
     auditStore,
     jwtSecret,
     eventBus,
+    configService,
   } = deps;
 
   /** 解析 User-Agent 中的浏览器和 OS */
@@ -138,10 +147,14 @@ export function createAuthService(deps: {
     async login(params) {
       const { username, password, ip, userAgent, deviceType } = params;
 
-      // 1. 检查账号锁定（按 IP + 用户名组合）
+      // 1. 读取配置
+      const maxAttempts = Number(await configService.getValue('sys_login_max_attempts')) || DEFAULT_MAX_LOGIN_FAILURES;
+      const lockMinutes = Number(await configService.getValue('sys_login_lock_minutes')) || DEFAULT_LOCK_MINUTES;
+
+      // 2. 检查账号锁定（按 IP + 用户名组合）
       const failKey = `login_fail:${ip}:${username}`;
       const failCount = await cache.get<number>(failKey);
-      if (failCount !== null && failCount >= MAX_LOGIN_FAILURES) {
+      if (failCount !== null && failCount >= maxAttempts) {
         await auditStore.append({
           actor: username,
           action: "login.locked",
@@ -153,7 +166,7 @@ export function createAuthService(deps: {
         throw new Error("Account locked due to too many failed attempts");
       }
 
-      // 2. 检查 IP 速率限制
+      // 3. 检查 IP 速率限制
       const ipKey = `login_ip:${ip}`;
       const ipCount = await cache.get<number>(ipKey);
       if (ipCount !== null && ipCount >= MAX_IP_REQUESTS_PER_MINUTE) {
@@ -174,7 +187,7 @@ export function createAuthService(deps: {
 
       // 3. 查询用户
       const rows = await executor(
-        "SELECT id, username, password_hash, status, mfa_enabled, mfa_secret FROM sys_user WHERE username = $1 AND deleted_at IS NULL",
+        "SELECT id, username, password_hash, status, mfa_enabled, mfa_secret, blacklisted, locked_until, login_attempts, password_changed_at FROM sys_user WHERE username = $1 AND deleted_at IS NULL",
         [username],
       );
       const users = rows as Array<{
@@ -184,6 +197,10 @@ export function createAuthService(deps: {
         status: number;
         mfa_enabled: boolean;
         mfa_secret: string | null;
+        blacklisted: boolean;
+        locked_until: string | null;
+        login_attempts: number | null;
+        password_changed_at: string | null;
       }>;
 
       if (users.length === 0) {
@@ -215,12 +232,44 @@ export function createAuthService(deps: {
         throw new Error("Account is disabled");
       }
 
-      // 5. 校验密码
+      // 5. 检查黑名单
+      if (user.blacklisted) {
+        await auditStore.append({
+          actor: username,
+          action: "login.blacklisted",
+          resource: "auth",
+          result: "denied",
+          metadata: { ip, userId: user.id, reason: "account_blacklisted" },
+        });
+        await recordLoginLog({ userId: user.id, username, ip, userAgent, status: 0, message: "账号已被拉黑" });
+        throw new Error("Account is blacklisted");
+      }
+
+      // 6. 检查 DB-based 锁定
+      if (user.locked_until && new Date(user.locked_until as string) > new Date()) {
+        await auditStore.append({
+          actor: username,
+          action: "login.locked_db",
+          resource: "auth",
+          result: "denied",
+          metadata: { ip, userId: user.id, reason: "account_locked_db", lockedUntil: user.locked_until },
+        });
+        await recordLoginLog({ userId: user.id, username, ip, userAgent, status: 0, message: "账号已被锁定" });
+        throw new Error("Account is locked");
+      }
+
+      // 7. 清除过期锁定
+      if (user.locked_until && new Date(user.locked_until as string) <= new Date()) {
+        await executor(`UPDATE sys_user SET locked_until = NULL, login_attempts = 0 WHERE id = $1`, [user.id]);
+      }
+
+      // 8. 校验密码
       const valid = await passwordHasher.verify(password, user.password_hash);
       if (!valid) {
-        // 6. 密码错误：递增失败计数
+        // 9. 密码错误：递增失败计数（缓存 + DB）
         const newFailCount = (failCount ?? 0) + 1;
-        await cache.set(failKey, newFailCount, { ttl: 900 });
+        await cache.set(failKey, newFailCount, { ttl: lockMinutes * 60 });
+        await executor(`UPDATE sys_user SET login_attempts = COALESCE(login_attempts, 0) + 1 WHERE id = $1`, [user.id]);
 
         await auditStore.append({
           actor: username,
@@ -234,11 +283,32 @@ export function createAuthService(deps: {
         throw new Error("Invalid credentials");
       }
 
-      // 7. 登录成功：清除失败计数
+      // 10. 登录成功：清除失败计数（缓存 + DB）
       await cache.del(failKey);
+      await executor(`UPDATE sys_user SET login_attempts = 0 WHERE id = $1`, [user.id]);
 
-      // 8. 检查是否需要 MFA
-      if (user.mfa_enabled) {
+      // 11. 检查密码是否过期
+      const expireDays = Number(await configService.getValue('sys_password_expire_days')) ?? 30;
+      if (expireDays !== -1 && user.password_changed_at) {
+        const expiredAt = new Date(user.password_changed_at as string);
+        expiredAt.setDate(expiredAt.getDate() + expireDays);
+        if (expiredAt < new Date()) {
+          const tempToken = await jwt.sign(
+            { sub: user.id, iss: "password-expired", username: user.username },
+            jwtSecret,
+            { expiresIn: 600 },
+          );
+          await recordLoginLog({ userId: user.id, username, ip, userAgent, status: 0, message: "密码已过期" });
+          const err = new Error("Password expired") as Error & { code: string; data: { tempToken: string } };
+          err.code = "password_expired";
+          err.data = { tempToken };
+          throw err;
+        }
+      }
+
+      // 12. 检查是否需要 MFA（受全局配置控制）
+      const mfaGloballyEnabled = (await configService.getValue('sys_mfa_enabled')) !== 'false';
+      if (mfaGloballyEnabled && user.mfa_enabled) {
         const mfaToken = await jwt.sign(
           { sub: user.id, iss: "mfa-pending", username: user.username },
           jwtSecret,
@@ -261,12 +331,11 @@ export function createAuthService(deps: {
           refreshExpiresIn: 0,
           sessionId: "",
           mfaRequired: true,
-          // mfaToken 通过 accessToken 字段临时传递，调用方需识别 mfaRequired
-          // 也可以改为扩展 LoginResult，此处放在 accessToken 保持接口简洁
-        } as LoginResult & { mfaToken?: string };
+          mfaToken,
+        };
       }
 
-      // 9. 调用统一会话管理器完成登录
+      // 13. 调用统一会话管理器完成登录
       const sessionResult = await authSessionManager.login({
         userId: user.id,
         device: {
@@ -289,6 +358,10 @@ export function createAuthService(deps: {
       });
       await recordLoginLog({ userId: user.id, username, ip, userAgent, status: 1, message: "登录成功" });
 
+      // 检查是否需要提示用户设置 MFA（全局启用 + 强制 + 用户未配置）
+      const mfaForce = (await configService.getValue('sys_mfa_force')) === 'true';
+      const mfaSetupRequired = mfaGloballyEnabled && mfaForce && !user.mfa_enabled;
+
       return {
         accessToken: sessionResult.accessToken,
         refreshToken: sessionResult.refreshToken,
@@ -296,6 +369,7 @@ export function createAuthService(deps: {
         refreshExpiresIn: sessionResult.refreshExpiresIn,
         sessionId: sessionResult.sessionId,
         mfaRequired: false,
+        mfaSetupRequired,
       };
     },
 
@@ -406,10 +480,18 @@ export function createAuthService(deps: {
         throw new Error("Invalid or expired reset token");
       }
 
+      // 密码策略校验
+      const minLength = Number(await configService.getValue('sys_password_min_length')) || 6;
+      const complexity = (await configService.getValue('sys_password_complexity')) as 'low' | 'medium' | 'high' || 'low';
+      const validation = validatePassword(newPassword, { minLength, complexity });
+      if (!validation.valid) {
+        throw new Error(validation.message);
+      }
+
       const passwordHash = await passwordHasher.hash(newPassword);
 
       await executor(
-        "UPDATE sys_user SET password_hash = $1, updated_at = NOW() WHERE id = $2",
+        "UPDATE sys_user SET password_hash = $1, password_changed_at = NOW(), updated_at = NOW() WHERE id = $2",
         [passwordHash, userId],
       );
 
@@ -426,10 +508,18 @@ export function createAuthService(deps: {
     },
 
     async resetPassword(userId, newPassword) {
+      // 密码策略校验
+      const minLength = Number(await configService.getValue('sys_password_min_length')) || 6;
+      const complexity = (await configService.getValue('sys_password_complexity')) as 'low' | 'medium' | 'high' || 'low';
+      const validation = validatePassword(newPassword, { minLength, complexity });
+      if (!validation.valid) {
+        throw new Error(validation.message);
+      }
+
       const passwordHash = await passwordHasher.hash(newPassword);
 
       await executor(
-        "UPDATE sys_user SET password_hash = $1, updated_at = NOW() WHERE id = $2",
+        "UPDATE sys_user SET password_hash = $1, password_changed_at = NOW(), updated_at = NOW() WHERE id = $2",
         [passwordHash, userId],
       );
 
@@ -605,6 +695,69 @@ export function createAuthService(deps: {
       });
 
       return { tempToken };
+    },
+
+    async completeMFALogin(mfaToken, code, ip, userAgent, deviceType) {
+      // 1. 验证 MFA 临时 token
+      const payload = await jwt.verify(mfaToken, jwtSecret) as { sub?: string; iss?: string; username?: string };
+      if (!payload.sub || payload.iss !== "mfa-pending") {
+        throw new Error("Invalid MFA token");
+      }
+
+      const userId = payload.sub;
+      const username = payload.username ?? "";
+
+      // 2. 查询用户的 MFA 密钥
+      const rows = await executor(
+        "SELECT mfa_secret, mfa_enabled FROM sys_user WHERE id = $1 AND deleted_at IS NULL",
+        [userId],
+      );
+      const users = rows as Array<{ mfa_secret: string | null; mfa_enabled: boolean }>;
+      if (users.length === 0 || !users[0]!.mfa_secret) {
+        throw new Error("MFA not configured");
+      }
+
+      // 3. 验证 TOTP 码
+      const valid = await totp.verifyAndConsume(users[0]!.mfa_secret, code);
+      if (!valid) {
+        await auditStore.append({
+          actor: userId,
+          action: "login.mfa_failed",
+          resource: "auth",
+          result: "failure",
+          metadata: { ip },
+        });
+        throw new Error("Invalid MFA code");
+      }
+
+      // 4. 创建会话，颁发真实 token
+      const sessionResult = await authSessionManager.login({
+        userId,
+        device: {
+          sessionId: "",
+          userId,
+          deviceType: deviceType ?? "web",
+          deviceName: userAgent,
+        },
+        tokenPayload: { username },
+      });
+
+      await auditStore.append({
+        actor: username,
+        action: "login.mfa_success",
+        resource: "auth",
+        result: "success",
+        metadata: { ip, userId, sessionId: sessionResult.sessionId },
+      });
+
+      return {
+        accessToken: sessionResult.accessToken,
+        refreshToken: sessionResult.refreshToken,
+        expiresIn: sessionResult.expiresIn,
+        refreshExpiresIn: sessionResult.refreshExpiresIn,
+        sessionId: sessionResult.sessionId,
+        mfaRequired: false,
+      };
     },
   };
 }

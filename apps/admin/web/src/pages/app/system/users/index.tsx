@@ -1,23 +1,30 @@
-import { useState } from 'react'
-import { Card, Table, Button, Input, Select, Form, Modal, Space, Tag, message, Row, Col } from 'antd'
+import { useState, useEffect, useCallback } from 'react'
+import { Card, Table, Button, Input, Form, Modal, Space, Tag, message, Row, Col, Tree, Spin } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { PlusOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons'
-import dayjs from 'dayjs'
+import { PlusOutlined, SearchOutlined, ReloadOutlined, ApartmentOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import { client } from '@/api'
-import type { PaginatedData, UserItem } from '@/api/types'
-import { useTable } from '@/hooks/useTable'
+import type { PaginatedData, UserItem, DeptItem } from '@/api/types'
+import { useTable, cleanParams, fmtDate } from '@ventostack/gui'
 import ActionColumn from '@/components/ActionColumn'
-
-const cleanParams = (params: Record<string, unknown>) =>
-  Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null))
+import DictSelect from '@/components/DictSelect'
+import { usePublicConfig } from '@/hooks/usePublicConfig'
 
 const fetcher = (params: Record<string, unknown>) =>
   client.get('/api/system/users', { query: cleanParams(params) }) as Promise<{ error?: unknown; data?: PaginatedData<UserItem> }>
 
-const fmtDate = (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-'
+/** Flatten dept tree into antd TreeDataNode format */
+const buildTreeData = (items: DeptItem[]): Array<{ key: string; title: string; children?: any[] }> =>
+  items.map(item => ({
+    key: item.id,
+    title: item.name,
+    children: item.children?.length ? buildTreeData(item.children) : undefined,
+  }))
 
 const UserPage = () => {
-  const { loading, data, total, page, pageSize, refresh, onSearch, onReset, onPageChange } =
+  const navigate = useNavigate()
+  const deptEnabled = usePublicConfig(s => s.config.deptEnabled)
+  const { loading, data, total, page, pageSize, refresh, onSearch, onReset, onPageChange, selectedRowKeys, rowSelection, clearSelection, hasSelected } =
     useTable<UserItem>(fetcher)
   const [searchForm] = Form.useForm()
   const [modalOpen, setModalOpen] = useState(false)
@@ -30,11 +37,46 @@ const UserPage = () => {
   const [resetPwdUserId, setResetPwdUserId] = useState('')
   const [resetPwdForm] = Form.useForm()
 
+  // Dept tree state
+  const [deptTreeData, setDeptTreeData] = useState<Array<{ key: string; title: string; children?: any[] }>>([])
+  const [deptLoading, setDeptLoading] = useState(false)
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null)
+  const [deptPanelVisible, setDeptPanelVisible] = useState(true)
+
+  // Fetch dept tree
+  const fetchDeptTree = useCallback(async () => {
+    setDeptLoading(true)
+    try {
+      const { data: result } = await client.get('/api/system/depts/tree') as { error?: unknown; data?: DeptItem[] }
+      if (result) {
+        setDeptTreeData(buildTreeData(result))
+      }
+    } finally {
+      setDeptLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { if (deptEnabled) fetchDeptTree() }, [fetchDeptTree, deptEnabled])
+
+  const handleDeptSelect = (selectedKeys: React.Key[]) => {
+    const deptId = selectedKeys[0] as string | undefined
+    setSelectedDeptId(deptId ?? null)
+    if (deptId) {
+      onSearch({ ...searchForm.getFieldsValue(), deptId })
+    } else {
+      onSearch({ ...searchForm.getFieldsValue(), deptId: undefined })
+    }
+  }
+
   const handleSearch = () => {
     const values = searchForm.getFieldsValue()
-    onSearch(cleanParams(values))
+    onSearch(cleanParams({ ...values, deptId: selectedDeptId ?? undefined }))
   }
-  const handleReset = () => { searchForm.resetFields(); onReset() }
+  const handleReset = () => {
+    searchForm.resetFields()
+    setSelectedDeptId(null)
+    onReset()
+  }
 
   const openCreate = () => { setEditingUser(null); form.resetFields(); setModalOpen(true) }
   const openEdit = (r: UserItem) => {
@@ -48,24 +90,24 @@ const UserPage = () => {
     setModalLoading(true)
     try {
       if (editingUser) {
-        await client.put(`/api/system/users/${editingUser.id}` as '/api/system/users/:id', { body: { nickname: values.nickname, email: values.email, phone: values.phone, status: values.status, deptId: values.deptId } })
-        message.success('更新成功'); setModalOpen(false); refresh()
+        const { error } = await client.put('/api/system/users/:id', { params: { id: editingUser.id }, body: { nickname: values.nickname, email: values.email, phone: values.phone, status: values.status, deptId: values.deptId } })
+        if (!error) { message.success('更新成功'); setModalOpen(false); refresh() }
       } else {
-        await client.post('/api/system/users', { body: { username: values.username, password: values.password, nickname: values.nickname, email: values.email, phone: values.phone, status: values.status } })
-        message.success('创建成功'); setModalOpen(false); refresh()
+        const { error } = await client.post('/api/system/users', { body: { username: values.username, password: values.password, nickname: values.nickname, email: values.email, phone: values.phone, status: values.status } })
+        if (!error) { message.success('创建成功'); setModalOpen(false); refresh() }
       }
     } finally { setModalLoading(false) }
   }
 
   const handleDelete = async (id: string) => {
-    await client.delete(`/api/system/users/${id}` as '/api/system/users/:id')
-    message.success('删除成功'); refresh()
+    const { error } = await client.delete('/api/system/users/:id', { params: { id } })
+    if (!error) { message.success('删除成功'); refresh() }
   }
 
   const handleStatus = async (id: string, status: number) => {
     const newStatus = status === 1 ? 0 : 1
-    await client.put(`/api/system/users/${id}/status` as '/api/system/users/:id/status', { body: { status: newStatus } })
-    message.success(newStatus === 1 ? '已启用' : '已禁用'); refresh()
+    const { error } = await client.put('/api/system/users/:id/status', { params: { id }, body: { status: newStatus } })
+    if (!error) { message.success(newStatus === 1 ? '已启用' : '已禁用'); refresh() }
   }
 
   const openResetPwd = (id: string) => {
@@ -78,9 +120,8 @@ const UserPage = () => {
     const values = await resetPwdForm.validateFields()
     setResetPwdLoading(true)
     try {
-      await client.put(`/api/system/users/${resetPwdUserId}/reset-pwd` as '/api/system/users/:id/reset-pwd', { body: { newPassword: values.newPassword } })
-      message.success('密码重置成功')
-      setResetPwdOpen(false)
+      const { error } = await client.put('/api/system/users/:id/reset-pwd', { params: { id: resetPwdUserId }, body: { newPassword: values.newPassword } })
+      if (!error) { message.success('密码重置成功'); setResetPwdOpen(false) }
     } finally { setResetPwdLoading(false) }
   }
 
@@ -106,27 +147,65 @@ const UserPage = () => {
   return (
     <div>
       <h3 className="text-lg font-semibold mb-4">用户管理</h3>
-      <Card className="mb-4">
-        <Form form={searchForm} layout="inline">
-          <Form.Item name="username"><Input placeholder="用户名" prefix={<SearchOutlined />} /></Form.Item>
-          <Form.Item name="status">
-            <Select placeholder="状态" allowClear style={{ width: 100 }}>
-              <Select.Option value={1}>正常</Select.Option>
-              <Select.Option value={0}>禁用</Select.Option>
-            </Select>
-          </Form.Item>
-          <Space>
-            <Button type="primary" onClick={handleSearch}>搜索</Button>
-            <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
-          </Space>
-        </Form>
-      </Card>
-      <Card title={`用户列表（${total}）`}
-        extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增用户</Button>}>
-        <Table rowKey="id" columns={columns} dataSource={data} loading={loading}
-          pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: t => `共 ${t} 条`, onChange: onPageChange }}
-          scroll={{ x: 1200 }} />
-      </Card>
+      <div className="flex gap-4">
+        {/* Dept tree sidebar */}
+        {deptEnabled && deptPanelVisible && (
+          <Card className="shrink-0" style={{ width: 240 }} styles={{ body: { padding: '12px 16px' } }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">部门筛选</span>
+              <Button type="text" size="small" icon={<MenuFoldOutlined />} onClick={() => setDeptPanelVisible(false)} />
+            </div>
+            <Spin spinning={deptLoading}>
+              {deptTreeData.length > 0 ? (
+                <Tree
+                  treeData={deptTreeData}
+                  selectedKeys={selectedDeptId ? [selectedDeptId] : []}
+                  onSelect={handleDeptSelect}
+                  defaultExpandAll
+                  showLine={{ showLeafIcon: false }}
+                  className="text-sm"
+                  style={{ fontSize: 13 }}
+                />
+              ) : (
+                <div className="text-xs text-gray-400 py-4 text-center">暂无部门数据</div>
+              )}
+            </Spin>
+            <div className="mt-2 pt-2 border-t border-gray-100">
+              <Button type="link" size="small" icon={<ApartmentOutlined />} onClick={() => navigate('/app/system/depts')} className="text-xs p-0">
+                管理部门
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
+          <Card className="mb-4">
+            <Form form={searchForm} layout="inline">
+              {deptEnabled && !deptPanelVisible && (
+                <Form.Item>
+                  <Button icon={<MenuUnfoldOutlined />} onClick={() => setDeptPanelVisible(true)} />
+                </Form.Item>
+              )}
+              <Form.Item name="username"><Input placeholder="用户名" prefix={<SearchOutlined />} /></Form.Item>
+              <Form.Item name="status">
+                <DictSelect typeCode="sys_status" placeholder="状态" allowClear style={{ width: 100 }} />
+              </Form.Item>
+              <Space>
+                <Button type="primary" onClick={handleSearch}>搜索</Button>
+                <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
+              </Space>
+            </Form>
+          </Card>
+          <Card title={`用户列表（${total}）`}
+            extra={<Space><Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增用户</Button></Space>}>
+            {hasSelected && <div className="mb-2 text-sm text-gray-500">已选 {selectedRowKeys.length} 项 <Button type="link" size="small" onClick={clearSelection}>取消选择</Button></div>}
+            <Table rowKey="id" columns={columns} dataSource={data} loading={loading} size="small"
+              pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: t => `共 ${t} 条`, onChange: onPageChange }}
+              scroll={{ x: 1200 }} rowSelection={rowSelection} />
+          </Card>
+        </div>
+      </div>
       <Modal title={editingUser ? '编辑用户' : '新增用户'} open={modalOpen} onOk={handleOk} onCancel={() => setModalOpen(false)} confirmLoading={modalLoading} destroyOnHidden width={640}>
         <Form form={form} layout="vertical" preserve={false}>
           <Row gutter={16}>
@@ -141,7 +220,7 @@ const UserPage = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="status" label="状态" initialValue={1}>
-                <Select><Select.Option value={1}>正常</Select.Option><Select.Option value={0}>禁用</Select.Option></Select>
+                <DictSelect typeCode="sys_status" />
               </Form.Item>
             </Col>
             <Col span={12}>

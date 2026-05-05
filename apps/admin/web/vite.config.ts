@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
       svgr(),
       pages({
         extensions: ['tsx'],
-        exclude: ['**/{components,assets,blocks,hooks,store}/**/*.*', '**/_*.*'],
+        exclude: ['**/{components,assets,blocks,hooks,store,__tests__}/**/*.*', '**/_*.*'],
         routeStyle: 'next',
         importMode: 'async',
         dirs: 'src/pages',

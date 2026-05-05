@@ -345,6 +345,25 @@ console.log("当前配置:", sanitized); // 安全输出
 - 如果你要写日志，优先打印整个配置对象，或者先用 `safeConfig(config)`
 - `safeConfig(config)` 更适合配置对象，`sanitizeConfig` 更适合你自己额外组装的普通对象
 
+## 标签日志
+
+在启动阶段、CLI 脚本、种子数据等场景中，常常需要轻量的 `[tag] message` 格式日志。`createTagLogger` 提供统一的标签日志，无需初始化 `Logger` 实例：
+
+```typescript
+import { createTagLogger } from "@ventostack/core";
+
+const log = createTagLogger("cache");
+
+log.info("Using Redis adapter");   // → [cache] Using Redis adapter
+log.warn("Connection slow");       // → [cache] Connection slow
+log.error("Connection lost");      // → [cache] Connection lost
+```
+
+说明：
+- 用于应用启动阶段（`Logger` 尚未初始化时）、CLI 命令、迁移/种子脚本等场景
+- 业务运行时日志请使用 `createLogger`（见 [可观测性 — 日志](/docs/observability/logger)）
+- 同一个 tag 可在多个文件中复用，保持日志前缀一致
+
 ## 相关模块
 
 以下配置相关模块也存在于 `@ventostack/core` 中，但由独立文档页面覆盖：

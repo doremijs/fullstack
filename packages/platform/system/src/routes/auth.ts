@@ -28,7 +28,11 @@ export function createAuthRoutes(
         deviceType: body.deviceType as string | undefined,
       });
       return ok(result);
-    } catch (e) {
+    } catch (e: unknown) {
+      const err = e as Error & { code?: string; data?: { tempToken?: string } };
+      if (err.code === "password_expired" && err.data?.tempToken) {
+        return fail("Password expired", 403, 403, { code: "password_expired", tempToken: err.data.tempToken });
+      }
       const msg = e instanceof Error ? e.message : "Login failed";
       return fail(msg, 401, 401);
     }
@@ -92,6 +96,23 @@ export function createAuthRoutes(
       return ok(result);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Refresh failed";
+      return fail(msg, 401, 401);
+    }
+  });
+
+  router.post("/api/auth/mfa/login", async (ctx) => {
+    try {
+      const body = await parseBody(ctx.request);
+      const result = await authService.completeMFALogin(
+        body.mfaToken as string,
+        body.code as string,
+        ctx.request.headers.get("x-forwarded-for") ?? "unknown",
+        ctx.request.headers.get("user-agent") ?? "unknown",
+        body.deviceType as string | undefined,
+      );
+      return ok(result);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "MFA verification failed";
       return fail(msg, 401, 401);
     }
   });

@@ -13,13 +13,16 @@
  * 环境变量参考 .env.example
  */
 
+import { createTagLogger } from "@ventostack/core";
 import { env } from "./config";
 import { buildApp, type AppContext } from "./app";
+
+const log = createTagLogger("server");
+const genLog = createTagLogger("gen:sdk");
 
 let appCtx: AppContext | null = null;
 
 async function main(): Promise<void> {
-  console.log("");
 
   appCtx = await buildApp();
 
@@ -31,12 +34,29 @@ async function main(): Promise<void> {
   // 5. process.exit(0)
   await appCtx.app.listen();
 
-  console.log(`[server] Listening on http://${env.HOST}:${env.PORT}`);
-  console.log(`[server] Environment: ${env.NODE_ENV}`);
-  console.log(`[server] API:       http://${env.HOST}:${env.PORT}/api`);
-  console.log(`[server] OpenAPI:   http://${env.HOST}:${env.PORT}/openapi.json`);
-  console.log(`[server] Docs:      http://${env.HOST}:${env.PORT}/docs`);
-  console.log("");
+  log.info(`Listening on http://${env.HOST}:${env.PORT}`);
+  log.info(`Environment: ${env.NODE_ENV}`);
+  log.info(`API:       http://${env.HOST}:${env.PORT}/api`);
+  log.info(`OpenAPI:   http://${env.HOST}:${env.PORT}/openapi.json`);
+  log.info(`Docs:      http://${env.HOST}:${env.PORT}/docs\n`);
+
+  // 后端启动后自动生成前端 SDK 类型（仅开发模式）
+  if (env.NODE_ENV !== "production") {
+    const webDir = import.meta.dir.replace("/apps/admin/api/src", "/apps/admin/web");
+    Bun.spawn({
+      cmd: ["bun", "run", "gen:sdk"],
+      cwd: webDir,
+      stdout: "inherit",
+      stderr: "inherit",
+      onExit(subprocess, exitCode) {
+        if (exitCode === 0) {
+          genLog.info("前端 SDK 类型已更新");
+        } else {
+          genLog.warn(`生成失败 (exit code ${exitCode})`);
+        }
+      },
+    });
+  }
 }
 
 // ===============================================

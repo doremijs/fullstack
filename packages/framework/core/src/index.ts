@@ -259,3 +259,10 @@ export type { ABTestManager, ABTest, ABTestVariant, ABTestResult } from "./ab-te
 // ========== 12-Factor 配置 ==========
 export { loadTwelveFactorConfig, validateEnvVars } from "./twelve-factor";
 export type { TwelveFactorConfig, TwelveFactorResult } from "./twelve-factor";
+
+// ========== 标签日志 ==========
+export { createTagLogger } from "./tag-log";
+export type { TagLogger } from "./tag-log";
+
+// ========== 工具函数 ==========
+export { generateUUID } from "./utils/generate-id";

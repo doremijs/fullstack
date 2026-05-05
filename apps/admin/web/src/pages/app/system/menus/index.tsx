@@ -2,13 +2,12 @@ import { useEffect, useState, useCallback } from 'react'
 import { Card, Table, Button, Form, Input, InputNumber, Select, Modal, Tag, message, Row, Col } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import { client } from '@/api'
 import type { MenuItem } from '@/api/types'
 import ActionColumn from '@/components/ActionColumn'
 import { resolveIcon } from '@/utils/icon'
-
-const fmtDate = (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-'
+import DictSelect from '@/components/DictSelect'
+import { fmtDate } from '@ventostack/gui'
 
 /** 常用图标列表（使用 @ant-design/icons 完整名称） */
 const iconOptions = [
@@ -39,8 +38,8 @@ const MenuPage = () => {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await client.get('/api/system/menus/tree' as '/api/system/menus/tree') as { data?: MenuItem[] }
-      setData(res.data ?? [])
+      const { error, data } = await client.get('/api/system/menus/tree') as { error?: unknown; data?: MenuItem[] }
+      if (!error) { setData(data ?? []) }
     } finally { setLoading(false) }
   }, [])
 
@@ -63,18 +62,18 @@ const MenuPage = () => {
     setModalLoading(true)
     try {
       if (editingMenu) {
-        await client.put(`/api/system/menus/${editingMenu.id}` as '/api/system/menus/:id', { body: values })
-        message.success('更新成功'); setModalOpen(false); fetchData()
+        const { error } = await client.put('/api/system/menus/:id', { params: { id: editingMenu.id }, body: values })
+        if (!error) { message.success('更新成功'); setModalOpen(false); fetchData() }
       } else {
-        await client.post('/api/system/menus', { body: values })
-        message.success('创建成功'); setModalOpen(false); fetchData()
+        const { error } = await client.post('/api/system/menus', { body: values })
+        if (!error) { message.success('创建成功'); setModalOpen(false); fetchData() }
       }
     } finally { setModalLoading(false) }
   }
 
   const handleDelete = async (id: string) => {
-    await client.delete(`/api/system/menus/${id}` as '/api/system/menus/:id')
-    message.success('删除成功'); fetchData()
+    const { error } = await client.delete('/api/system/menus/:id', { params: { id } })
+    if (!error) { message.success('删除成功'); fetchData() }
   }
 
   const typeMap: Record<number, string> = { 1: '目录', 2: '菜单', 3: '按钮' }
@@ -108,7 +107,7 @@ const MenuPage = () => {
     <div>
       <h3 className="text-lg font-semibold mb-4">菜单管理</h3>
       <Card title="菜单列表" extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => openCreate()}>新增菜单</Button>}>
-        <Table rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={false} scroll={{ x: 1200 }} defaultExpandAllRows expandable={{ rowExpandable: (r) => r.type !== 3 }} />
+        <Table rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={false} scroll={{ x: 1200 }} defaultExpandAllRows expandable={{ rowExpandable: (r) => r.type !== 3 }} size="small" />
       </Card>
       <Modal title={editingMenu ? '编辑菜单' : '新增菜单'} open={modalOpen} onOk={handleOk} onCancel={() => setModalOpen(false)} confirmLoading={modalLoading} destroyOnHidden width={640}>
         <Form form={form} layout="vertical" preserve={false}>
@@ -121,7 +120,7 @@ const MenuPage = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="type" label="菜单类型" rules={[{ required: true }]}>
-                <Select><Select.Option value={1}>目录</Select.Option><Select.Option value={2}>菜单</Select.Option><Select.Option value={3}>按钮</Select.Option></Select>
+                <DictSelect typeCode="sys_menu_type" />
               </Form.Item>
             </Col>
           </Row>
@@ -155,7 +154,7 @@ const MenuPage = () => {
               <Form.Item name="visible" label="是否显示" initialValue={true}><Select><Select.Option value={true}>显示</Select.Option><Select.Option value={false}>隐藏</Select.Option></Select></Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="status" label="状态" initialValue={1}><Select><Select.Option value={1}>正常</Select.Option><Select.Option value={0}>禁用</Select.Option></Select></Form.Item>
+              <Form.Item name="status" label="状态" initialValue={1}><DictSelect typeCode="sys_status" /></Form.Item>
             </Col>
           </Row>
         </Form>

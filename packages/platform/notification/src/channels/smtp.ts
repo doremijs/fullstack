@@ -2,7 +2,10 @@
  * SMTP 通知通道
  */
 
+import { getDefaultLogger } from "@ventostack/observability";
 import type { NotifyChannel } from "../services/notification";
+
+const log = getDefaultLogger().child({ module: "SMTP" });
 
 export interface SMTPChannelOptions {
   host: string;
@@ -20,7 +23,7 @@ export function createSMTPChannel(options: SMTPChannelOptions): NotifyChannel {
     async send(params) {
       // In production, this would use nodemailer or Bun's built-in SMTP support
       // For now, log the intent and return success
-      console.log(`[SMTP] Sending email to ${params.to}: ${params.title}`);
+      log.info(`Sending email to ${params.to}: ${params.title}`);
       return { success: true };
     },
   };

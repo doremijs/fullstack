@@ -1,10 +1,11 @@
-import { Card, Table, Input, Select, Form, Button, Tag, Space } from 'antd'
+import { Card, Table, Input, Select, Form, Button, Tag, Space, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { client } from '@/api'
 import type { PaginatedData, LoginLogItem } from '@/api/types'
-import { useTable } from '@/hooks/useTable'
+import { useTable } from '@ventostack/gui'
+import ActionColumn from '@/components/ActionColumn'
 
 const cleanParams = (params: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null))
@@ -33,8 +34,21 @@ const LoginLogPage = () => {
     { title: '操作系统', dataIndex: 'os', key: 'os', width: 120, ellipsis: true },
     { title: '状态', dataIndex: 'status', key: 'status', width: 80,
       render: (_: unknown, r: LoginLogItem) => <Tag color={r.status === 1 ? 'green' : 'red'}>{r.status === 1 ? '成功' : '失败'}</Tag> },
-    { title: '信息', dataIndex: 'message', key: 'message', ellipsis: true },
+    { title: '信息', dataIndex: 'message', key: 'message', ellipsis: true, render: (v: string) => <>
+      {v}
+      {(v?.includes('锁定') || v?.includes('拉黑')) && <Tag color="orange" className="ml-2">账户异常</Tag>}
+    </> },
     { title: '登录时间', dataIndex: 'loginAt', key: 'loginAt', width: 180, render: (_: unknown, r: LoginLogItem) => fmtDate(r.loginAt) },
+    { title: '操作', key: 'action', width: 130, fixed: 'right' as const,
+      render: (_: unknown, r: LoginLogItem) => (
+        <ActionColumn items={[
+          ...(r.status === 0 && r.userId ? [{ label: '解锁用户', onClick: async () => {
+            const { error } = await client.put('/api/system/users/:id/unlock', { params: { id: r.userId } })
+            if (!error) { message.success('已解锁') }
+          } }] : []),
+        ]} maxInline={1} />
+      )
+    },
   ]
 
   return (
@@ -52,6 +66,7 @@ const LoginLogPage = () => {
           <Space>
             <Button type="primary" onClick={handleSearch}>搜索</Button>
             <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
+            <Button danger onClick={async () => { const { error } = await client.delete('/api/system/login-logs'); if (!error) { message.success('日志已清空'); handleReset() } }}>清空日志</Button>
           </Space>
         </Form>
       </Card>

@@ -32,10 +32,10 @@ function createMockRedisClient(): RedisCacheClientLike {
       store.delete(key);
       return 1;
     },
-    async exists(key: string): Promise<number> {
-      return store.has(key) ? 1 : 0;
+    async exists(key: string): Promise<boolean> {
+      return store.has(key);
     },
-    async flushdb(): Promise<"OK"> {
+    async send(_command: string, _args: string[]): Promise<unknown> {
       for (const entry of store.values()) {
         if (entry.timer) clearTimeout(entry.timer);
       }

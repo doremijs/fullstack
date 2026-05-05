@@ -1,23 +1,18 @@
 import { useState } from 'react'
-import { Card, Table, Button, Input, InputNumber, Form, Modal, Drawer, Space, Tag, message, Select, Row, Col } from 'antd'
+import { Card, Table, Button, Input, InputNumber, Form, Modal, Drawer, Space, Tag, message, Row, Col } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import { client } from '@/api'
 import type { PaginatedData, DictTypeItem, DictDataItem } from '@/api/types'
-import { useTable } from '@/hooks/useTable'
+import { useTable, cleanParams, fmtDate } from '@ventostack/gui'
 import ActionColumn from '@/components/ActionColumn'
-
-const cleanParams = (params: Record<string, unknown>) =>
-  Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null))
+import DictSelect from '@/components/DictSelect'
 
 const typeFetcher = (params: Record<string, unknown>) =>
   client.get('/api/system/dict/types', { query: cleanParams(params) }) as Promise<{ error?: unknown; data?: PaginatedData<DictTypeItem> }>
 
-const fmtDate = (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-'
-
 const DictPage = () => {
-  const { loading: typeLoading, data: typeData, total, page, pageSize, refresh, onSearch, onReset, onPageChange } =
+  const { loading: typeLoading, data: typeData, total, page, pageSize, refresh, onSearch, onReset, onPageChange, selectedRowKeys, rowSelection, clearSelection, hasSelected } =
     useTable<DictTypeItem>(typeFetcher)
   const [searchForm] = Form.useForm()
   const [typeModalOpen, setTypeModalOpen] = useState(false)
@@ -48,23 +43,24 @@ const DictPage = () => {
     setTypeModalLoading(true)
     try {
       if (editingType) {
-        await client.put(`/api/system/dict/types/${editingType.code}` as '/api/system/dict/types/:id', { body: values })
-        message.success('更新成功'); setTypeModalOpen(false); refresh()
+        const { error } = await client.put('/api/system/dict/types/:id', { params: { id: editingType.code }, body: values })
+        if (!error) { message.success('更新成功'); setTypeModalOpen(false); refresh() }
       } else {
-        await client.post('/api/system/dict/types', { body: values })
-        message.success('创建成功'); setTypeModalOpen(false); refresh()
+        const { error } = await client.post('/api/system/dict/types', { body: values })
+        if (!error) { message.success('创建成功'); setTypeModalOpen(false); refresh() }
       }
     } finally { setTypeModalLoading(false) }
   }
   const handleDeleteType = async (code: string) => {
-    await client.delete(`/api/system/dict/types/${code}` as '/api/system/dict/types/:id')
-    message.success('删除成功'); refresh()
+    const { error } = await client.delete('/api/system/dict/types/:id', { params: { id: code } })
+    if (!error) { message.success('删除成功'); refresh() }
   }
 
   const openDictData = async (typeCode: string, typeName: string) => {
     setCurrentTypeCode(typeCode); setCurrentTypeName(typeName); setDataLoading(true); setDrawerOpen(true)
-    const res = await client.get(`/api/system/dict/types/${typeCode}/data` as '/api/system/dict/types/:code/data') as { data?: DictDataItem[] }
-    setDictData(res.data ?? []); setDataLoading(false)
+    const { error, data } = await client.get('/api/system/dict/types/:code/data', { params: { code: typeCode } }) as { error?: unknown; data?: DictDataItem[] }
+    if (!error) { setDictData(data ?? []) }
+    setDataLoading(false)
   }
 
   const openCreateData = () => { setEditingData(null); dataForm.resetFields(); dataForm.setFieldsValue({ sort: 0, status: 1 }); setDataEditOpen(true) }
@@ -75,18 +71,18 @@ const DictPage = () => {
     setDataModalLoading(true)
     try {
       if (editingData) {
-        await client.put(`/api/system/dict/data/${editingData.id}` as '/api/system/dict/data/:id', { body: values })
-        message.success('更新成功'); setDataEditOpen(false); openDictData(currentTypeCode, currentTypeName)
+        const { error } = await client.put('/api/system/dict/data/:id', { params: { id: editingData.id }, body: values })
+        if (!error) { message.success('更新成功'); setDataEditOpen(false); openDictData(currentTypeCode, currentTypeName) }
       } else {
-        await client.post('/api/system/dict/data', { body: { ...values, typeCode: currentTypeCode } })
-        message.success('创建成功'); setDataEditOpen(false); openDictData(currentTypeCode, currentTypeName)
+        const { error } = await client.post('/api/system/dict/data', { body: { ...values, typeCode: currentTypeCode } })
+        if (!error) { message.success('创建成功'); setDataEditOpen(false); openDictData(currentTypeCode, currentTypeName) }
       }
     } finally { setDataModalLoading(false) }
   }
 
   const handleDeleteData = async (id: string) => {
-    await client.delete(`/api/system/dict/data/${id}` as '/api/system/dict/data/:id')
-    message.success('删除成功'); openDictData(currentTypeCode, currentTypeName)
+    const { error } = await client.delete('/api/system/dict/data/:id', { params: { id } })
+    if (!error) { message.success('删除成功'); openDictData(currentTypeCode, currentTypeName) }
   }
 
   const typeColumns: ColumnsType<DictTypeItem> = [
@@ -129,9 +125,10 @@ const DictPage = () => {
         </Form>
       </Card>
       <Card title={`字典类型（${total}）`} extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreateType}>新增字典</Button>}>
-        <Table rowKey="id" columns={typeColumns} dataSource={typeData} loading={typeLoading}
+        {hasSelected && <div className="mb-2 text-sm text-gray-500">已选 {selectedRowKeys.length} 项 <Button type="link" size="small" onClick={clearSelection}>取消选择</Button></div>}
+        <Table rowKey="id" columns={typeColumns} dataSource={typeData} loading={typeLoading} size="small"
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: t => `共 ${t} 条`, onChange: onPageChange }}
-          scroll={{ x: 1000 }} />
+          scroll={{ x: 1000 }} rowSelection={rowSelection} />
       </Card>
       <Modal title={editingType ? '编辑字典类型' : '新增字典类型'} open={typeModalOpen} onOk={handleTypeOk} onCancel={() => setTypeModalOpen(false)} confirmLoading={typeModalLoading} destroyOnHidden width={640}>
         <Form form={typeForm} layout="vertical" preserve={false}>
@@ -146,7 +143,7 @@ const DictPage = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="status" label="状态" initialValue={1}>
-                <Select><Select.Option value={1}>正常</Select.Option><Select.Option value={0}>禁用</Select.Option></Select>
+                <DictSelect typeCode="sys_status" />
               </Form.Item>
             </Col>
           </Row>
@@ -156,7 +153,7 @@ const DictPage = () => {
 
       <Drawer title={`字典数据 - ${currentTypeName || currentTypeCode}`} open={drawerOpen} onClose={() => setDrawerOpen(false)} size="large" destroyOnHidden>
         <div className="mb-4"><Button type="primary" icon={<PlusOutlined />} onClick={openCreateData}>新增字典项</Button></div>
-        <Table rowKey="id" columns={dataColumns} dataSource={dictData} loading={dataLoading} pagination={false} scroll={{ x: 600 }} />
+        <Table rowKey="id" columns={dataColumns} dataSource={dictData} loading={dataLoading} pagination={false} scroll={{ x: 600 }} size="small" />
       </Drawer>
 
       <Modal title={editingData ? '编辑字典项' : '新增字典项'} open={dataEditOpen} onOk={handleDataOk} onCancel={() => setDataEditOpen(false)} confirmLoading={dataModalLoading} destroyOnHidden width={640}>
@@ -178,7 +175,7 @@ const DictPage = () => {
             </Col>
             <Col span={8}>
               <Form.Item name="status" label="状态" initialValue={1}>
-                <Select><Select.Option value={1}>正常</Select.Option><Select.Option value={0}>禁用</Select.Option></Select>
+                <DictSelect typeCode="sys_status" />
               </Form.Item>
             </Col>
           </Row>

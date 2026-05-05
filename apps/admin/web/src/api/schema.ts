@@ -11,35 +11,42 @@ export type OpenAPIs = {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/auth/register': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/auth/forgot-password': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/auth/reset-password': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
+      response: any
+    },
+    '/api/auth/reset-password-by-token': {
+      query: never,
+      params: never,
+      headers: never,
+      body: never,
       response: any
     },
     '/api/auth/refresh': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/auth/logout': {
@@ -53,90 +60,97 @@ export type OpenAPIs = {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/auth/mfa/verify': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/auth/mfa/disable': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/users': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
+      response: any
+    },
+    '/api/system/users/export': {
+      query: never,
+      params: never,
+      headers: never,
+      body: never,
       response: any
     },
     '/api/system/roles': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/menus': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/depts': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/posts': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/dict/types': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/configs': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/notices': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/dict/data': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     }
   },
   get: {
     '/api/system/users': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
@@ -150,7 +164,7 @@ export type OpenAPIs = {
       response: any
     },
     '/api/system/roles': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
@@ -164,7 +178,7 @@ export type OpenAPIs = {
       response: any
     },
     '/api/system/menus': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
@@ -185,7 +199,7 @@ export type OpenAPIs = {
       response: any
     },
     '/api/system/depts': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
@@ -206,7 +220,7 @@ export type OpenAPIs = {
       response: any
     },
     '/api/system/posts': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
@@ -220,7 +234,7 @@ export type OpenAPIs = {
       response: any
     },
     '/api/system/dict/types': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
@@ -241,7 +255,7 @@ export type OpenAPIs = {
       response: any
     },
     '/api/system/configs': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
@@ -254,8 +268,15 @@ export type OpenAPIs = {
       body: never,
       response: any
     },
+    '/api/system/configs/by-key/:key': {
+      query: never,
+      params: never,
+      headers: never,
+      body: never,
+      response: any
+    },
     '/api/system/notices': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
@@ -290,14 +311,14 @@ export type OpenAPIs = {
       response: any
     },
     '/api/system/operation-logs': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
       response: any
     },
     '/api/system/login-logs': {
-      query: any,
+      query: never,
       params: never,
       headers: never,
       body: never,
@@ -316,70 +337,84 @@ export type OpenAPIs = {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/users/:id/reset-pwd': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/users/:id/status': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/roles/:id': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
+      response: any
+    },
+    '/api/system/roles/:id/menus': {
+      query: never,
+      params: never,
+      headers: never,
+      body: never,
+      response: any
+    },
+    '/api/system/roles/:id/data-scope': {
+      query: never,
+      params: never,
+      headers: never,
+      body: never,
       response: any
     },
     '/api/system/menus/:id': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/depts/:id': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/posts/:id': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/dict/types/:id': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/configs/:id': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/notices/:id': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/notices/:id/publish': {
@@ -393,14 +428,14 @@ export type OpenAPIs = {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/dict/data/:id': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
       response: any
     },
     '/api/system/notices/:id/revoke': {
@@ -410,11 +445,18 @@ export type OpenAPIs = {
       body: never,
       response: any
     },
-    '/api/system/roles/:id/menus': {
+    '/api/system/users/:id/unlock': {
       query: never,
       params: never,
       headers: never,
-      body: any,
+      body: never,
+      response: any
+    },
+    '/api/system/users/:id/blacklist': {
+      query: never,
+      params: never,
+      headers: never,
+      body: never,
       response: any
     }
   },
@@ -476,6 +518,13 @@ export type OpenAPIs = {
       response: any
     },
     '/api/system/dict/data/:id': {
+      query: never,
+      params: never,
+      headers: never,
+      body: never,
+      response: any
+    },
+    '/api/system/login-logs': {
       query: never,
       params: never,
       headers: never,

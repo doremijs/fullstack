@@ -68,7 +68,7 @@ export function assembleAuthEngines(): AuthEngines {
   // ---- 多设备管理 ----
   const deviceManager = createMultiDeviceManager({
     maxDevices: env.MAX_DEVICES_PER_USER,
-    overflowStrategy: "kickOldest",
+    overflowStrategy: "kick-oldest",
   });
 
   // ---- Token 刷新与吊销 ----
@@ -81,6 +81,7 @@ export function assembleAuthEngines(): AuthEngines {
     deviceManager,
     tokenRefresh,
     jwt,
+    jwtSecret,
   });
 
   return {

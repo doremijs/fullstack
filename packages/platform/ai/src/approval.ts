@@ -4,6 +4,8 @@
  * 提供敏感工具调用的人工审批机制，支持提交、批准、拒绝、过期清理等生命周期管理。
  */
 
+import { generateId } from "@ventostack/core";
+
 /** 审批状态 */
 export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired";
 
@@ -96,14 +98,6 @@ export interface ApprovalManager {
 
 /** 默认审批有效期：1 小时（毫秒） */
 const DEFAULT_TTL = 3_600_000;
-
-/**
- * 生成唯一 ID
- * @returns UUID 字符串
- */
-function generateId(): string {
-  return crypto.randomUUID();
-}
 
 /**
  * 创建审批管理器实例

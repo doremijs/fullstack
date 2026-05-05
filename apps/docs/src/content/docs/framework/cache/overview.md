@@ -19,8 +19,9 @@ const cache = createCache(createMemoryAdapter());
 
 ```typescript
 import { createCache, createRedisAdapter } from "@ventostack/cache";
+import { RedisClient } from "bun";
 
-const redis = new Bun.Redis("redis://localhost:6379");
+const redis = new RedisClient("redis://localhost:6379");
 const cache = createCache(
   createRedisAdapter({ client: redis, keyPrefix: "app:v1:" })
 );

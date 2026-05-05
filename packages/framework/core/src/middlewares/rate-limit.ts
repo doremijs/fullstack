@@ -97,17 +97,17 @@ function defaultKeyFn(ctx: Context, trustProxyHeaders = false): string {
 }
 
 /**
- * 最小 Redis 客户端接口，基于 Bun Redis 设计
+ * 最小 Redis 客户端接口，基于 Bun.RedisClient 设计
  */
 export interface RedisClientLike {
   /** 执行 INCR 命令 */
   incr(key: string): Promise<number>;
-  /** 执行 PEXPIRE 命令（毫秒） */
-  pexpire(key: string, milliseconds: number): Promise<void>;
+  /** 执行 PEXPIRE 命令（毫秒），返回是否设置成功 */
+  pexpire(key: string, milliseconds: number): Promise<number>;
   /** 执行 PTTL 命令（毫秒），-1 表示无过期，-2 表示键不存在 */
   pttl(key: string): Promise<number>;
   /** 执行 DEL 命令 */
-  del(key: string): Promise<void>;
+  del(key: string): Promise<number>;
 }
 
 /** Redis 限流存储选项 */
@@ -126,8 +126,9 @@ export interface RedisRateLimitStoreOptions {
  * @example
  * ```typescript
  * import { createRedisRateLimitStore, rateLimit } from "@ventostack/core";
+ * import { RedisClient } from "bun";
  *
- * const redis = new Bun.Redis("redis://localhost:6379");
+ * const redis = new RedisClient("redis://localhost:6379");
  * const store = createRedisRateLimitStore({ client: redis });
  *
  * app.use(rateLimit({

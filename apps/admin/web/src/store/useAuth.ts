@@ -11,13 +11,20 @@ interface UserProfile {
 
 export type LoginForm = { username: string; password: string }
 
+export type PasswordExpiredInfo = { code: 'password_expired'; tempToken: string }
+
+export type MfaRequiredInfo = { code: 'mfa_required'; mfaToken: string }
+
+export type LoginResult = UserProfile | PasswordExpiredInfo | MfaRequiredInfo | null
+
 export type AuthState = {
   user: UserProfile | null
   ready: boolean
   loading: boolean
   computed: { logged: boolean }
   init: () => Promise<void>
-  login: (args: LoginForm) => Promise<UserProfile | null>
+  login: (args: LoginForm) => Promise<LoginResult>
+  completeMFALogin: (mfaToken: string, code: string) => Promise<LoginResult>
   logout: () => void
 }
 
@@ -48,7 +55,32 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ loading: false, ready: true })
   },
   async login(args) {
-    const { error, data } = await client.post('/api/auth/login', { body: args }) as { data?: { accessToken: string; refreshToken: string; expiresIn: number; sessionId: string; mfaRequired: boolean }; error?: unknown }
+    const { error, data } = await client.post('/api/auth/login', { body: args }) as { data?: { accessToken: string; refreshToken: string; expiresIn: number; sessionId: string; mfaRequired: boolean; mfaToken?: string; mfaSetupRequired?: boolean }; error?: { code?: string; tempToken?: string } }
+    if (!error && data) {
+      // MFA required — return mfaToken for second step
+      if (data.mfaRequired && data.mfaToken) {
+        return { code: 'mfa_required' as const, mfaToken: data.mfaToken }
+      }
+      // Normal login success
+      setAccessToken(data.accessToken)
+      const { data: user } = await client.get('/api/system/user/profile') as { data?: UserProfile; error?: unknown }
+      if (user) {
+        const result: UserProfile & { mfaSetupRequired?: boolean } = { ...user }
+        if (data.mfaSetupRequired) {
+          result.mfaSetupRequired = true
+        }
+        set({ user })
+        return result
+      }
+    }
+    // 密码过期：返回临时 token 信息
+    if (error?.code === 'password_expired' && error.tempToken) {
+      return { code: 'password_expired' as const, tempToken: error.tempToken }
+    }
+    return null
+  },
+  async completeMFALogin(mfaToken, code) {
+    const { error, data } = await client.post('/api/auth/mfa/login', { body: { mfaToken, code } }) as { data?: { accessToken: string; refreshToken: string; expiresIn: number; sessionId: string }; error?: unknown }
     if (!error && data) {
       setAccessToken(data.accessToken)
       const { data: user } = await client.get('/api/system/user/profile') as { data?: UserProfile; error?: unknown }

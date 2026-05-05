@@ -1,23 +1,86 @@
-import { Button, Form, Input, message } from 'antd'
-import { useState } from 'react'
+import { Button, Form, Input, Modal, message } from 'antd'
+import type { OTPRef } from 'antd/es/input/Otp'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth, type LoginForm } from '@/store/useAuth'
+import { useAuth, type LoginForm, type PasswordExpiredInfo, type MfaRequiredInfo } from '@/store/useAuth'
+import { usePublicConfig } from '@/hooks/usePublicConfig'
+import { client } from '@/api'
 
 const LoginPage = () => {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, completeMFALogin } = useAuth()
+  const siteName = usePublicConfig(s => s.config.siteName)
   const [form] = Form.useForm<LoginForm>()
   const [loading, setLoading] = useState(false)
+  const [expiredInfo, setExpiredInfo] = useState<PasswordExpiredInfo | null>(null)
+  const [pwdForm] = Form.useForm()
+  const [pwdLoading, setPwdLoading] = useState(false)
+
+  // MFA state
+  const [mfaInfo, setMfaInfo] = useState<MfaRequiredInfo | null>(null)
+  const [mfaLoading, setMfaLoading] = useState(false)
+  const [mfaCode, setMfaCode] = useState('')
+  const inputRef = useRef<OTPRef>(null)
+
+  useEffect(() => {
+    if (mfaInfo) {
+      inputRef.current?.focus()
+    }
+  }, [mfaInfo])
 
   const onFinish = async (values: LoginForm) => {
     setLoading(true)
-    const user = await login(values)
+    const result = await login(values)
     setLoading(false)
-    if (user) {
+    if (result && 'id' in result) {
       message.success('登录成功')
+      const user = result as { id: string; mfaSetupRequired?: boolean }
+      if (user.mfaSetupRequired) {
+        message.warning('请尽快在个人中心设置多因素认证')
+      }
       navigate('/app', { replace: true })
+    } else if (result && 'code' in result && result.code === 'mfa_required') {
+      setMfaInfo(result as MfaRequiredInfo)
+    } else if (result && 'code' in result && result.code === 'password_expired') {
+      setExpiredInfo(result as PasswordExpiredInfo)
     } else {
       message.error('用户名或密码错误')
+    }
+  }
+
+  const handleMfaSubmit = async () => {
+    if (!mfaInfo || !mfaCode) return
+    setMfaLoading(true)
+    const result = await completeMFALogin(mfaInfo.mfaToken, mfaCode)
+    setMfaLoading(false)
+    if (result && 'id' in result) {
+      message.success('登录成功')
+      setMfaInfo(null)
+      setMfaCode('')
+      navigate('/app', { replace: true })
+    } else {
+      message.error('验证码错误，请重试')
+      setMfaCode('')
+      inputRef.current?.focus()
+    }
+  }
+
+  const handlePasswordChange = async () => {
+    const values = await pwdForm.validateFields()
+    if (values.newPassword !== values.confirmPassword) {
+      message.error('两次密码不一致')
+      return
+    }
+    setPwdLoading(true)
+    const { error } = await client.post('/api/auth/reset-password-by-token', {
+      body: { token: expiredInfo?.tempToken, newPassword: values.newPassword },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any) as { error?: unknown }
+    setPwdLoading(false)
+    if (!error) {
+      message.success('密码修改成功，请重新登录')
+      setExpiredInfo(null)
+      pwdForm.resetFields()
     }
   }
 
@@ -25,7 +88,7 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-120 bg-white/90 backdrop-blur-sm rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-dark">VentoStack 管理后台</h1>
+          <h1 className="text-2xl font-bold text-dark">{siteName} 管理后台</h1>
           <p className="text-gray-500 mt-2">请输入账号和密码登录</p>
         </div>
 
@@ -52,6 +115,56 @@ const LoginPage = () => {
           </Form.Item>
         </Form>
       </div>
+
+      {/* MFA 验证弹窗 */}
+      <Modal
+        title="多因素认证验证"
+        open={!!mfaInfo}
+        closable={false}
+        footer={null}
+        destroyOnHidden
+      >
+        <p className="text-gray-500 mb-4">请输入您的认证器应用中显示的6位验证码</p>
+        <div className="flex flex-col items-center gap-4">
+          <Input.OTP
+            ref={inputRef}
+            length={6}
+            size="large"
+            value={mfaCode}
+            onChange={setMfaCode}
+          />
+          <Button
+            type="primary"
+            size="large"
+            className="w-full"
+            loading={mfaLoading}
+            disabled={mfaCode.length !== 6}
+            onClick={handleMfaSubmit}
+          >
+            验 证
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="密码已过期"
+        open={!!expiredInfo}
+        onCancel={() => setExpiredInfo(null)}
+        onOk={handlePasswordChange}
+        confirmLoading={pwdLoading}
+        okText="修改密码"
+        destroyOnHidden
+      >
+        <p className="text-gray-500 mb-4">您的密码已过期，请修改密码后重新登录。</p>
+        <Form form={pwdForm} layout="vertical">
+          <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }, { min: 6, message: '密码不能少于6位' }]}>
+            <Input.Password placeholder="请输入新密码" />
+          </Form.Item>
+          <Form.Item name="confirmPassword" label="确认密码" rules={[{ required: true, message: '请确认密码' }]}>
+            <Input.Password placeholder="请再次输入新密码" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Card, Table, Button, Form, Input, InputNumber, Select, Modal, Tag, message, Row, Col, TreeSelect } from 'antd'
+import { Card, Table, Button, Form, Input, InputNumber, Modal, Tag, message, Row, Col, TreeSelect } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import { client } from '@/api'
 import type { DeptItem } from '@/api/types'
 import ActionColumn from '@/components/ActionColumn'
-
-const fmtDate = (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-'
+import DictSelect from '@/components/DictSelect'
+import { fmtDate } from '@ventostack/gui'
 
 function toTreeSelectData(items: DeptItem[]): any[] {
   return items.map(item => ({
@@ -28,8 +27,8 @@ const DeptPage = () => {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await client.get('/api/system/depts/tree' as '/api/system/depts/tree') as { data?: DeptItem[] }
-      setData(res.data ?? [])
+      const { error, data } = await client.get('/api/system/depts/tree') as { error?: unknown; data?: DeptItem[] }
+      if (!error) { setData(data ?? []) }
     } finally { setLoading(false) }
   }, [])
 
@@ -51,18 +50,18 @@ const DeptPage = () => {
     setModalLoading(true)
     try {
       if (editingDept) {
-        await client.put(`/api/system/depts/${editingDept.id}` as '/api/system/depts/:id', { body: values })
-        message.success('更新成功'); setModalOpen(false); fetchData()
+        const { error } = await client.put('/api/system/depts/:id', { params: { id: editingDept.id }, body: values })
+        if (!error) { message.success('更新成功'); setModalOpen(false); fetchData() }
       } else {
-        await client.post('/api/system/depts', { body: values })
-        message.success('创建成功'); setModalOpen(false); fetchData()
+        const { error } = await client.post('/api/system/depts', { body: values })
+        if (!error) { message.success('创建成功'); setModalOpen(false); fetchData() }
       }
     } finally { setModalLoading(false) }
   }
 
   const handleDelete = async (id: string) => {
-    await client.delete(`/api/system/depts/${id}` as '/api/system/depts/:id')
-    message.success('删除成功'); fetchData()
+    const { error } = await client.delete('/api/system/depts/:id', { params: { id } })
+    if (!error) { message.success('删除成功'); fetchData() }
   }
 
   const columns: ColumnsType<DeptItem> = [
@@ -87,7 +86,7 @@ const DeptPage = () => {
     <div>
       <h3 className="text-lg font-semibold mb-4">部门管理</h3>
       <Card title="部门列表" extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => openCreate()}>新增部门</Button>}>
-        <Table rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={false} scroll={{ x: 1100 }} defaultExpandAllRows />
+        <Table rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={false} scroll={{ x: 1100 }} defaultExpandAllRows size="small" />
       </Card>
       <Modal title={editingDept ? '编辑部门' : '新增部门'} open={modalOpen} onOk={handleOk} onCancel={() => setModalOpen(false)} confirmLoading={modalLoading} destroyOnHidden width={640}>
         <Form form={form} layout="vertical" preserve={false}>
@@ -113,7 +112,7 @@ const DeptPage = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="status" label="状态" initialValue={1}>
-                <Select><Select.Option value={1}>正常</Select.Option><Select.Option value={0}>禁用</Select.Option></Select>
+                <DictSelect typeCode="sys_status" />
               </Form.Item>
             </Col>
             <Col span={12}>

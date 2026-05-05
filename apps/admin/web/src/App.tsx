@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom'
-import { Spin, ConfigProvider, App as AntApp } from 'antd'
+import { Spin, ConfigProvider, App as AntApp, theme as antdTheme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { Suspense } from 'react'
 import { useRoutes } from 'react-router'
 import { useAuth } from '@/store/useAuth'
 import { useMenu } from '@/store/useMenu'
+import { usePublicConfig } from '@/hooks/usePublicConfig'
 import GlobalHistory from '@/components/GlobalHistory'
 import GlobalMessage from '@/components/GlobalMessage'
 import { AppTheme } from '@/theme'
@@ -52,15 +53,18 @@ const _App = () => {
 
 function App() {
   const { init: initAuth } = useAuth()
+  const { config: publicConfig, fetch: fetchPublicConfig } = usePublicConfig()
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    Promise.all([initAuth()])
+    Promise.all([initAuth(), fetchPublicConfig()])
       .catch(() => {})
       .then(() => {
         setReady(true)
       })
   }, [])
+
+  const algorithm = publicConfig.theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm
 
   return (
     <BrowserRouter>
@@ -69,6 +73,7 @@ function App() {
       <ConfigProvider
         locale={zhCN}
         theme={{
+          algorithm,
           token: {
             colorPrimary: AppTheme.primaryColor,
           },

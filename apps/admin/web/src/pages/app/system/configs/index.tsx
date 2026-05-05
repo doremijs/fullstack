@@ -1,23 +1,18 @@
 import { useState } from 'react'
-import { Card, Table, Button, Input, Select, Form, Modal, Space, message, Row, Col } from 'antd'
+import { Card, Table, Button, Input, Form, Modal, Space, message, Row, Col } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import { client } from '@/api'
 import type { PaginatedData, ConfigItem } from '@/api/types'
-import { useTable } from '@/hooks/useTable'
+import { useTable, cleanParams, fmtDate } from '@ventostack/gui'
 import ActionColumn from '@/components/ActionColumn'
-
-const cleanParams = (params: Record<string, unknown>) =>
-  Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null))
+import DictSelect from '@/components/DictSelect'
 
 const fetcher = (params: Record<string, unknown>) =>
   client.get('/api/system/configs', { query: cleanParams(params) }) as Promise<{ error?: unknown; data?: PaginatedData<ConfigItem> }>
 
-const fmtDate = (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-'
-
 const ConfigPage = () => {
-  const { loading, data, total, page, pageSize, refresh, onSearch, onReset, onPageChange } =
+  const { loading, data, total, page, pageSize, refresh, onSearch, onReset, onPageChange, selectedRowKeys, rowSelection, clearSelection, hasSelected } =
     useTable<ConfigItem>(fetcher)
   const [searchForm] = Form.useForm()
   const [modalOpen, setModalOpen] = useState(false)
@@ -38,17 +33,17 @@ const ConfigPage = () => {
     setModalLoading(true)
     try {
       if (editingConfig) {
-        await client.put(`/api/system/configs/${editingConfig.key}` as '/api/system/configs/:id', { body: values })
-        message.success('更新成功'); setModalOpen(false); refresh()
+        const { error } = await client.put('/api/system/configs/:id', { params: { id: editingConfig.key }, body: values })
+        if (!error) { message.success('更新成功'); setModalOpen(false); refresh() }
       } else {
-        await client.post('/api/system/configs', { body: values })
-        message.success('创建成功'); setModalOpen(false); refresh()
+        const { error } = await client.post('/api/system/configs', { body: values })
+        if (!error) { message.success('创建成功'); setModalOpen(false); refresh() }
       }
     } finally { setModalLoading(false) }
   }
   const handleDelete = async (key: string) => {
-    await client.delete(`/api/system/configs/${key}` as '/api/system/configs/:id')
-    message.success('删除成功'); refresh()
+    const { error } = await client.delete('/api/system/configs/:id', { params: { id: key } })
+    if (!error) { message.success('删除成功'); refresh() }
   }
 
   const typeMap: Record<number, string> = { 0: '字符串', 1: '数字', 2: '布尔', 3: 'JSON' }
@@ -80,9 +75,10 @@ const ConfigPage = () => {
         </Form>
       </Card>
       <Card title={`参数列表（${total}）`} extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增参数</Button>}>
-        <Table rowKey="id" columns={columns} dataSource={data} loading={loading}
+        {hasSelected && <div className="mb-2 text-sm text-gray-500">已选 {selectedRowKeys.length} 项 <Button type="link" size="small" onClick={clearSelection}>取消选择</Button></div>}
+        <Table rowKey="id" columns={columns} dataSource={data} loading={loading} size="small"
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: t => `共 ${t} 条`, onChange: onPageChange }}
-          scroll={{ x: 1000 }} />
+          scroll={{ x: 1000 }} rowSelection={rowSelection} />
       </Card>
       <Modal title={editingConfig ? '编辑参数' : '新增参数'} open={modalOpen} onOk={handleOk} onCancel={() => setModalOpen(false)} confirmLoading={modalLoading} destroyOnHidden width={640}>
         <Form form={form} layout="vertical" preserve={false}>
@@ -98,7 +94,7 @@ const ConfigPage = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="type" label="类型" initialValue={0}>
-                <Select><Select.Option value={0}>字符串</Select.Option><Select.Option value={1}>数字</Select.Option><Select.Option value={2}>布尔</Select.Option><Select.Option value={3}>JSON</Select.Option></Select>
+                <DictSelect typeCode="sys_config_type" />
               </Form.Item>
             </Col>
             <Col span={12}>

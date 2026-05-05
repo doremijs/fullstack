@@ -8,10 +8,11 @@ description: 基于 Redis 的持久化缓存适配器
 ## 基本用法
 
 ```typescript
+import { RedisClient } from "bun";
 import { createCache, createRedisAdapter } from "@ventostack/cache";
 
 // 使用 Bun 原生 Redis
-const redis = new Bun.Redis("redis://localhost:6379");
+const redis = new RedisClient("redis://localhost:6379");
 const cache = createCache(createRedisAdapter({ client: redis }));
 ```
 
@@ -37,9 +38,9 @@ interface RedisCacheClientLike {
   set(key: string, value: string): Promise<unknown>;
   expire(key: string, seconds: number): Promise<number>;
   del(key: string): Promise<number>;
-  exists(key: string): Promise<number>;
-  flushdb(): Promise<unknown>;
+  exists(key: string): Promise<boolean>;
   keys(pattern: string): Promise<string[]>;
+  send(command: string, args: string[]): Promise<unknown>;
 }
 
 /** Redis 适配器选项 */
@@ -57,6 +58,6 @@ function createRedisAdapter(options: RedisAdapterOptions): CacheAdapter;
 ## 注意事项
 
 - `createRedisAdapter` 使用 `set` + `expire` 两步设置 TTL，最大化兼容不同客户端。
-- `flush()` 调用 `flushdb()`，会清空当前 Redis 数据库，生产环境请谨慎使用。
+- `flush()` 通过 `send("FLUSHDB", [])` 清空当前 Redis 数据库，生产环境请谨慎使用。
 - `keys()` 依赖 Redis 的 `KEYS` 命令，在大量键场景下建议使用 `SCAN` 替代（可通过自定义适配器实现）。
 - 键前缀在 `keys()` 返回结果中会被自动去除，保持与无前缀模式一致的开发体验。

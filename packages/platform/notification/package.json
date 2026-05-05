@@ -10,7 +10,8 @@
   "dependencies": {
     "@ventostack/core": "workspace:*",
     "@ventostack/database": "workspace:*",
-    "@ventostack/auth": "workspace:*"
+    "@ventostack/auth": "workspace:*",
+    "@ventostack/observability": "workspace:*"
   },
   "devDependencies": {
     "@ventostack/testing": "workspace:*"

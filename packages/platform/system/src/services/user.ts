@@ -6,6 +6,8 @@
 import type { Cache } from "@ventostack/cache";
 import type { PasswordHasher } from "@ventostack/auth";
 import type { SqlExecutor } from "@ventostack/database";
+import type { ConfigService } from "./config";
+import { validatePassword } from "./password-policy";
 
 /** 创建用户参数 */
 export interface CreateUserParams {
@@ -91,6 +93,36 @@ export interface UserService {
 }
 
 /**
+ * 递归收集指定部门及其所有子部门 ID
+ */
+async function collectDescendantDeptIds(executor: SqlExecutor, parentId: string): Promise<string[]> {
+  const rows = await executor(
+    `SELECT id, parent_id FROM sys_dept WHERE deleted_at IS NULL`
+  ) as Array<{ id: string; parent_id: string | null }>;
+
+  const childrenMap = new Map<string, string[]>();
+  for (const row of rows) {
+    const pid = row.parent_id;
+    if (pid) {
+      const children = childrenMap.get(pid) ?? [];
+      children.push(row.id);
+      childrenMap.set(pid, children);
+    }
+  }
+
+  const result: string[] = [parentId];
+  const queue = [parentId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    for (const child of childrenMap.get(current) ?? []) {
+      result.push(child);
+      queue.push(child);
+    }
+  }
+  return result;
+}
+
+/**
  * 创建用户服务实例
  * @param deps 依赖项
  * @returns 用户服务实例
@@ -99,8 +131,9 @@ export function createUserService(deps: {
   executor: SqlExecutor;
   passwordHasher: PasswordHasher;
   cache: Cache;
+  configService: ConfigService;
 }): UserService {
-  const { executor, passwordHasher, cache } = deps;
+  const { executor, passwordHasher, cache, configService } = deps;
 
   return {
     async create(params) {
@@ -115,11 +148,26 @@ export function createUserService(deps: {
         remark,
       } = params;
       const id = crypto.randomUUID();
-      const passwordHash = await passwordHasher.hash(password);
+
+      // 密码：若未提供则使用系统默认初始密码
+      let actualPassword = password;
+      if (!actualPassword) {
+        actualPassword = (await configService.getValue('sys_user_init_password')) || '123456';
+      }
+
+      // 密码策略校验
+      const minLength = Number(await configService.getValue('sys_password_min_length')) || 6;
+      const complexity = (await configService.getValue('sys_password_complexity')) as 'low' | 'medium' | 'high' || 'low';
+      const validation = validatePassword(actualPassword, { minLength, complexity });
+      if (!validation.valid) {
+        throw new Error(validation.message);
+      }
+
+      const passwordHash = await passwordHasher.hash(actualPassword);
 
       await executor(
-        `INSERT INTO sys_user (id, username, password_hash, email, phone, nickname, dept_id, status, remark, mfa_enabled, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, NOW(), NOW())`,
+        `INSERT INTO sys_user (id, username, password_hash, email, phone, nickname, dept_id, status, remark, mfa_enabled, password_changed_at, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, NOW(), NOW(), NOW())`,
         [
           id,
           username,
@@ -246,9 +294,11 @@ export function createUserService(deps: {
         paramIndex++;
       }
       if (deptId) {
-        conditions.push(`dept_id = $${paramIndex}`);
-        values.push(deptId);
-        paramIndex++;
+        const deptIds = await collectDescendantDeptIds(executor, deptId);
+        const placeholders = deptIds.map((_, i) => `$${paramIndex + i}`).join(', ');
+        conditions.push(`dept_id IN (${placeholders})`);
+        values.push(...deptIds);
+        paramIndex += deptIds.length;
       }
 
       const whereClause = conditions.join(" AND ");
@@ -285,10 +335,18 @@ export function createUserService(deps: {
     },
 
     async resetPassword(id, newPassword) {
+      // 密码策略校验
+      const minLength = Number(await configService.getValue('sys_password_min_length')) || 6;
+      const complexity = (await configService.getValue('sys_password_complexity')) as 'low' | 'medium' | 'high' || 'low';
+      const validation = validatePassword(newPassword, { minLength, complexity });
+      if (!validation.valid) {
+        throw new Error(validation.message);
+      }
+
       const passwordHash = await passwordHasher.hash(newPassword);
 
       await executor(
-        "UPDATE sys_user SET password_hash = $1, updated_at = NOW() WHERE id = $2",
+        "UPDATE sys_user SET password_hash = $1, password_changed_at = NOW(), updated_at = NOW() WHERE id = $2",
         [passwordHash, id],
       );
 

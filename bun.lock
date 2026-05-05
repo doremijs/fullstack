@@ -36,6 +36,7 @@
         "@ant-design/x": "^2.5.0",
         "@ant-design/x-markdown": "^2.5.0",
         "@doremijs/o2t": "^0.1.11",
+        "@ventostack/gui": "workspace:*",
         "ahooks": "^3.9.7",
         "antd": "^6.3.6",
         "clsx": "^2.1.1",
@@ -189,6 +190,25 @@
         "bun-types": "latest",
       },
     },
+    "packages/gui": {
+      "name": "@ventostack/gui",
+      "version": "0.1.0",
+      "dependencies": {
+        "dayjs": "^1.11.20",
+      },
+      "peerDependencies": {
+        "antd": ">=5",
+        "clsx": ">=2",
+        "react": ">=18",
+        "react-router-dom": ">=6",
+        "tailwind-merge": ">=2",
+      },
+      "optionalPeers": [
+        "antd",
+        "clsx",
+        "tailwind-merge",
+      ],
+    },
     "packages/platform/ai": {
       "name": "@ventostack/ai",
       "version": "0.1.0",
@@ -286,6 +306,7 @@
         "@ventostack/auth": "workspace:*",
         "@ventostack/core": "workspace:*",
         "@ventostack/database": "workspace:*",
+        "@ventostack/observability": "workspace:*",
       },
       "devDependencies": {
         "@ventostack/testing": "workspace:*",
@@ -1129,6 +1150,8 @@
     "@ventostack/events": ["@ventostack/events@workspace:packages/framework/events"],
 
     "@ventostack/gen": ["@ventostack/gen@workspace:packages/platform/gen"],
+
+    "@ventostack/gui": ["@ventostack/gui@workspace:packages/gui"],
 
     "@ventostack/i18n": ["@ventostack/i18n@workspace:packages/platform/i18n"],
 

@@ -1,20 +1,5 @@
 import type { Seed } from '@ventostack/database';
-
-/**
- * Generate a pseudo-UUID v4 for seed data.
- * Uses crypto.randomUUID() when available (Bun runtime).
- */
-function generateId(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Fallback: simple hex UUID for non-Bun environments
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import { generateUUID } from '@ventostack/core';
 
 /**
  * Initial admin seed: creates the admin user, admin role,
@@ -24,8 +9,8 @@ export const initAdminSeed: Seed = {
   name: '001_init_admin',
 
   async run(executor) {
-    const adminUserId = generateId();
-    const adminRoleId = generateId();
+    const adminUserId = generateUUID();
+    const adminRoleId = generateUUID();
 
     // Hash the admin password using Bun.password at seed time
     const passwordHash = await Bun.password.hash('admin123', {
@@ -56,12 +41,19 @@ export const initAdminSeed: Seed = {
     // --- Menu tree for system management ---
 
     // Level 1: Directories
-    const systemDirId = generateId();
+    const systemDirId = generateUUID();
+    const monitorDirId = generateUUID();
 
     await executor(
       `INSERT INTO sys_menu (id, parent_id, name, path, component, redirect, type, permission, icon, sort, visible, status, created_at, updated_at)
        VALUES ($1, NULL, $2, $3, $4, $5, $6, NULL, $7, $8, TRUE, 1, NOW(), NOW())`,
       [systemDirId, '系统管理', '/system', 'LAYOUT', '/system/users', 1, 'SettingOutlined', 1],
+    );
+
+    await executor(
+      `INSERT INTO sys_menu (id, parent_id, name, path, component, redirect, type, permission, icon, sort, visible, status, created_at, updated_at)
+       VALUES ($1, NULL, $2, $3, $4, $5, $6, NULL, $7, $8, TRUE, 1, NOW(), NOW())`,
+      [monitorDirId, '系统监控', '/monitor', 'LAYOUT', '/system/online', 2, 'DashboardOutlined', 2],
     );
 
     // Level 2: Menus
@@ -73,15 +65,32 @@ export const initAdminSeed: Seed = {
       icon: string;
       sort: number;
     }> = [
-      { id: generateId(), name: '用户管理', path: '/system/users', component: 'system/users/index', icon: 'UserOutlined', sort: 1 },
-      { id: generateId(), name: '角色管理', path: '/system/roles', component: 'system/roles/index', icon: 'TeamOutlined', sort: 2 },
-      { id: generateId(), name: '菜单管理', path: '/system/menus', component: 'system/menus/index', icon: 'MenuOutlined', sort: 3 },
-      { id: generateId(), name: '部门管理', path: '/system/depts', component: 'system/depts/index', icon: 'ApartmentOutlined', sort: 4 },
-      { id: generateId(), name: '岗位管理', path: '/system/posts', component: 'system/posts/index', icon: 'SolutionOutlined', sort: 5 },
-      { id: generateId(), name: '字典管理', path: '/system/dict', component: 'system/dict/index', icon: 'BookOutlined', sort: 6 },
-      { id: generateId(), name: '参数设置', path: '/system/configs', component: 'system/configs/index', icon: 'ToolOutlined', sort: 7 },
-      { id: generateId(), name: '通知公告', path: '/system/notices', component: 'system/notices/index', icon: 'BellOutlined', sort: 8 },
-      { id: generateId(), name: '日志管理', path: '/system/logs', component: 'LAYOUT', icon: 'FileTextOutlined', sort: 9 },
+      { id: generateUUID(), name: '用户管理', path: '/system/users', component: 'system/users/index', icon: 'UserOutlined', sort: 1 },
+      { id: generateUUID(), name: '角色管理', path: '/system/roles', component: 'system/roles/index', icon: 'TeamOutlined', sort: 2 },
+      { id: generateUUID(), name: '菜单管理', path: '/system/menus', component: 'system/menus/index', icon: 'MenuOutlined', sort: 3 },
+      { id: generateUUID(), name: '部门管理', path: '/system/depts', component: 'system/depts/index', icon: 'ApartmentOutlined', sort: 4 },
+      { id: generateUUID(), name: '岗位管理', path: '/system/posts', component: 'system/posts/index', icon: 'SolutionOutlined', sort: 5 },
+      { id: generateUUID(), name: '字典管理', path: '/system/dict', component: 'system/dict/index', icon: 'BookOutlined', sort: 6 },
+      { id: generateUUID(), name: '参数设置', path: '/system/configs', component: 'system/configs/index', icon: 'ToolOutlined', sort: 7 },
+      { id: generateUUID(), name: '通知公告', path: '/system/notices', component: 'system/notices/index', icon: 'BellOutlined', sort: 8 },
+      { id: generateUUID(), name: '日志管理', path: '/system/logs', component: 'LAYOUT', icon: 'FileTextOutlined', sort: 9 },
+    ];
+
+    // Level 2: Monitor menus (under monitorDirId)
+    const monitorMenuEntries: Array<{
+      id: string;
+      name: string;
+      path: string;
+      component: string;
+      icon: string;
+      sort: number;
+    }> = [
+      { id: generateUUID(), name: '在线用户', path: '/system/online', component: 'system/online/index', icon: 'TeamOutlined', sort: 1 },
+      { id: generateUUID(), name: '定时任务', path: '/system/scheduler', component: 'system/scheduler/index', icon: 'ClockCircleOutlined', sort: 2 },
+      { id: generateUUID(), name: '文件管理', path: '/system/oss', component: 'system/oss/index', icon: 'FolderOutlined', sort: 3 },
+      { id: generateUUID(), name: '系统监控', path: '/system/monitor', component: 'system/monitor/index', icon: 'DashboardOutlined', sort: 4 },
+      { id: generateUUID(), name: '代码生成', path: '/system/gen', component: 'system/gen/index', icon: 'CodeOutlined', sort: 5 },
+      { id: generateUUID(), name: '消息中心', path: '/system/notification', component: 'system/notification/index', icon: 'BellOutlined', sort: 6 },
     ];
 
     // Level 3: Buttons (permissions) per menu
@@ -141,10 +150,40 @@ export const initAdminSeed: Seed = {
         { name: '公告删除', permission: 'system:notice:remove', sort: 4 },
       ],
       '日志管理': [],
+      '在线用户': [
+        { name: '在线查询', permission: 'system:online:list', sort: 1 },
+        { name: '强退用户', permission: 'system:online:forceLogout', sort: 2 },
+      ],
+      '定时任务': [
+        { name: '任务查询', permission: 'system:scheduler:list', sort: 1 },
+        { name: '任务新增', permission: 'system:scheduler:add', sort: 2 },
+        { name: '任务修改', permission: 'system:scheduler:edit', sort: 3 },
+        { name: '任务删除', permission: 'system:scheduler:remove', sort: 4 },
+        { name: '启停任务', permission: 'system:scheduler:toggle', sort: 5 },
+        { name: '立即执行', permission: 'system:scheduler:execute', sort: 6 },
+      ],
+      '文件管理': [
+        { name: '文件查询', permission: 'system:oss:list', sort: 1 },
+        { name: '文件上传', permission: 'system:oss:upload', sort: 2 },
+        { name: '文件删除', permission: 'system:oss:remove', sort: 3 },
+      ],
+      '系统监控': [
+        { name: '监控查询', permission: 'system:monitor:list', sort: 1 },
+      ],
+      '代码生成': [
+        { name: '生成查询', permission: 'system:gen:list', sort: 1 },
+        { name: '生成代码', permission: 'system:gen:generate', sort: 2 },
+        { name: '生成删除', permission: 'system:gen:remove', sort: 3 },
+      ],
+      '消息中心': [
+        { name: '消息查询', permission: 'system:notification:list', sort: 1 },
+        { name: '消息发送', permission: 'system:notification:send', sort: 2 },
+        { name: '消息删除', permission: 'system:notification:remove', sort: 3 },
+      ],
     };
 
     // Insert Level 2 menus and collect their IDs for role binding
-    const allMenuIds: string[] = [systemDirId];
+    const allMenuIds: string[] = [systemDirId, monitorDirId];
 
     for (const menu of menuEntries) {
       await executor(
@@ -158,7 +197,30 @@ export const initAdminSeed: Seed = {
       const buttons = buttonPermissions[menu.name];
       if (buttons) {
         for (const btn of buttons) {
-          const btnId = generateId();
+          const btnId = generateUUID();
+          await executor(
+            `INSERT INTO sys_menu (id, parent_id, name, path, component, redirect, type, permission, icon, sort, visible, status, created_at, updated_at)
+             VALUES ($1, $2, $3, NULL, NULL, NULL, 3, $4, NULL, $5, TRUE, 1, NOW(), NOW())`,
+            [btnId, menu.id, btn.name, btn.permission, btn.sort],
+          );
+          allMenuIds.push(btnId);
+        }
+      }
+    }
+
+    // Insert Level 2 monitor menus and their button permissions
+    for (const menu of monitorMenuEntries) {
+      await executor(
+        `INSERT INTO sys_menu (id, parent_id, name, path, component, redirect, type, permission, icon, sort, visible, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NULL, 2, NULL, $6, $7, TRUE, 1, NOW(), NOW())`,
+        [menu.id, monitorDirId, menu.name, menu.path, menu.component, menu.icon, menu.sort],
+      );
+      allMenuIds.push(menu.id);
+
+      const buttons = buttonPermissions[menu.name];
+      if (buttons) {
+        for (const btn of buttons) {
+          const btnId = generateUUID();
           await executor(
             `INSERT INTO sys_menu (id, parent_id, name, path, component, redirect, type, permission, icon, sort, visible, status, created_at, updated_at)
              VALUES ($1, $2, $3, NULL, NULL, NULL, 3, $4, NULL, $5, TRUE, 1, NOW(), NOW())`,

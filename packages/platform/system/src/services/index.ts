@@ -114,3 +114,7 @@ export type {
   RouteMeta,
   MenuTreeBuilder,
 } from "./menu-tree-builder";
+
+// PasswordPolicy
+export { validatePassword } from "./password-policy";
+export type { PasswordComplexity, PasswordPolicyOptions, PasswordValidationResult } from "./password-policy";

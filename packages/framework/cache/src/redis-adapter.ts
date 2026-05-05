@@ -8,23 +8,23 @@ import type { CacheAdapter } from "./cache";
 
 /**
  * Redis 缓存客户端最小接口
- * 基于 Bun Redis 设计
+ * 基于 Bun.RedisClient 设计
  */
 export interface RedisCacheClientLike {
   /** 获取键值 */
   get(key: string): Promise<string | null>;
   /** 设置键值 */
   set(key: string, value: string): Promise<unknown>;
-  /** 设置键的过期时间（秒） */
+  /** 设置键的过期时间（秒），返回是否设置成功 */
   expire(key: string, seconds: number): Promise<number>;
   /** 删除键 */
   del(key: string): Promise<number>;
-  /** 判断键是否存在（返回 1/0） */
-  exists(key: string): Promise<number>;
-  /** 清空当前数据库 */
-  flushdb(): Promise<unknown>;
+  /** 判断键是否存在 */
+  exists(key: string): Promise<boolean>;
   /** 按模式匹配键 */
   keys(pattern: string): Promise<string[]>;
+  /** 发送原始 Redis 命令，用于 FLUSHDB 等非标准方法 */
+  send(command: string, args: string[]): Promise<unknown>;
 }
 
 /** Redis 适配器选项 */
@@ -43,8 +43,9 @@ export interface RedisAdapterOptions {
  * @example
  * ```typescript
  * import { createCache, createRedisAdapter } from "@ventostack/cache";
+ * import { RedisClient } from "bun";
  *
- * const redis = new Bun.Redis("redis://localhost:6379");
+ * const redis = new RedisClient("redis://localhost:6379");
  * const cache = createCache(createRedisAdapter({ client: redis, keyPrefix: "app:" }));
  * ```
  */
@@ -72,12 +73,11 @@ export function createRedisAdapter(options: RedisAdapterOptions): CacheAdapter {
   }
 
   async function has(key: string): Promise<boolean> {
-    const result = await client.exists(prefixed(key));
-    return result > 0;
+    return client.exists(prefixed(key));
   }
 
   async function flush(): Promise<void> {
-    await client.flushdb();
+    await client.send("FLUSHDB", []);
   }
 
   async function keys(pattern: string): Promise<string[]> {

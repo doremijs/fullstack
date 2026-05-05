@@ -103,8 +103,9 @@ router.post("/auth/logout", async (ctx) => {
 
 ```typescript
 import { createSessionManager, createRedisSessionStore } from "@ventostack/auth";
+import { RedisClient } from "bun";
 
-const redis = new Bun.Redis("redis://localhost:6379");
+const redis = new RedisClient("redis://localhost:6379");
 const store = createRedisSessionStore({ client: redis, keyPrefix: "app:session:" });
 const session = createSessionManager(store, { ttl: 86400 });
 ```
@@ -236,6 +237,12 @@ interface RedisSessionClientLike {
   set(key: string, value: string): Promise<unknown>;
   expire(key: string, seconds: number): Promise<number>;
   del(key: string): Promise<number>;
+  /** 向集合添加成员（可选，用于 userId→sessionId 索引） */
+  sadd?(key: string, ...members: string[]): Promise<number>;
+  /** 从集合移除成员（可选） */
+  srem?(key: string, ...members: string[]): Promise<number>;
+  /** 获取集合所有成员（可选） */
+  smembers?(key: string): Promise<string[]>;
 }
 
 /** Redis Session 存储选项 */

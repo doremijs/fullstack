@@ -26,8 +26,8 @@ export function okPage(list: unknown[], total: number, page: number, pageSize: n
 }
 
 /** 错误响应 */
-export function fail(message: string, code = 400, status = 400): Response {
-  return new Response(JSON.stringify({ code, message, data: null }), {
+export function fail(message: string, code = 400, status = 400, extra?: Record<string, unknown>): Response {
+  return new Response(JSON.stringify({ code, message, data: extra ?? null }), {
     status,
     headers: JSON_HEADERS,
   });

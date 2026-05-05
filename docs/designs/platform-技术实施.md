@@ -8,14 +8,14 @@
 
 > 在启动平台包之前，必须先完成框架层的安全修复。这些改动是对已有包的最小增强。
 
-### 0.1 Token 吊销持久化（`packages/auth/src/token-refresh.ts`）
+### 0.1 Token 吊销持久化（`packages/platform/auth/src/token-refresh.ts`）
 
 **问题**：`revokedJTIs` 是内存 `Set<string>`，进程重启/多实例部署时丢失。
 
 **方案**：抽取 `TokenRevocationStore` 接口，提供内存和 Redis 两种实现。
 
 ```typescript
-// packages/auth/src/token-revocation-store.ts（新增文件）
+// packages/platform/auth/src/token-revocation-store.ts（新增文件）
 
 interface TokenRevocationStore {
   add(jti: string, ttl: number): Promise<void>;
@@ -27,8 +27,9 @@ function createMemoryRevocationStore(): TokenRevocationStore
 
 // Redis 实现（生产环境）
 interface RedisRevocationClientLike {
-  set(key: string, value: string, px: number): Promise<unknown>;
-  exists(key: string): Promise<number>;
+  set(key: string, value: string): Promise<unknown>;
+  pexpire(key: string, milliseconds: number): Promise<number>;
+  exists(key: string): Promise<boolean>;
 }
 function createRedisRevocationStore(client: RedisRevocationClientLike, prefix?: string): TokenRevocationStore
 ```
@@ -43,7 +44,7 @@ function createTokenRefresh(
 ): TokenRefreshManager
 ```
 
-### 0.2 Session Store 批量销毁（`packages/auth/src/session.ts`）
+### 0.2 Session Store 批量销毁（`packages/platform/auth/src/session.ts`）
 
 **问题**：缺少按 userId 批量销毁 Session 的能力。
 
@@ -69,14 +70,14 @@ interface SessionManager {
 
 **Redis 实现**：Session 存储时额外维护 `session:user:{userId}` → `Set<sessionId>` 索引，`deleteByUser` 时批量删除。
 
-### 0.3 统一踢人链路（`packages/auth/src/auth-session.ts` 新增）
+### 0.3 统一踢人链路（`packages/platform/auth/src/auth-session.ts` 新增）
 
 **问题**：`multi-device.logoutAll()` 不联动 Token 吊销和 Session 销毁。
 
 **方案**：新增聚合管理器，将三层操作原子联动。
 
 ```typescript
-// packages/auth/src/auth-session.ts（新增文件）
+// packages/platform/auth/src/auth-session.ts（新增文件）
 
 interface AuthSessionManager {
   // 登录：创建 Session + 注册设备 + 签发 Token 对
@@ -121,7 +122,7 @@ function createAuthSessionManager(deps: {
    （或维护 user → jti 索引做批量吊销）
 ```
 
-### 0.4 TOTP 防重放（`packages/auth/src/totp.ts`）
+### 0.4 TOTP 防重放（`packages/platform/auth/src/totp.ts`）
 
 **问题**：同一 TOTP code 在时间窗口内可重复使用。
 
@@ -136,7 +137,7 @@ interface TOTPManager {
 }
 ```
 
-### 0.5 JWT verify 增加 typ 校验（`packages/auth/src/jwt.ts`）
+### 0.5 JWT verify 增加 typ 校验（`packages/platform/auth/src/jwt.ts`）
 
 ```typescript
 // verify 方法增加 typ 检查
@@ -202,14 +203,14 @@ function listTables(executor: SqlExecutor): Promise<string[]>
 
 | 文件 | 变更类型 | 说明 |
 |------|---------|------|
-| `packages/auth/src/token-revocation-store.ts` | 新增 | TokenRevocationStore 接口 + 内存/Redis 实现 |
-| `packages/auth/src/token-refresh.ts` | 修改 | 接受外部 revocationStore，默认兼容 |
-| `packages/auth/src/session.ts` | 修改 | SessionStore 增加 deleteByUser 可选方法 |
-| `packages/auth/src/redis-session-store.ts` | 修改 | 实现 deleteByUser + user→sessions 索引 |
-| `packages/auth/src/auth-session.ts` | 新增 | 统一踢人链路 AuthSessionManager |
-| `packages/auth/src/totp.ts` | 修改 | 增加 verifyAndConsume 防重放 |
-| `packages/auth/src/jwt.ts` | 修改 | verify 增加 typ 头部校验 |
-| `packages/auth/src/index.ts` | 修改 | 导出新增类型和函数 |
+| `packages/platform/auth/src/token-revocation-store.ts` | 新增 | TokenRevocationStore 接口 + 内存/Redis 实现 |
+| `packages/platform/auth/src/token-refresh.ts` | 修改 | 接受外部 revocationStore，默认兼容 |
+| `packages/platform/auth/src/session.ts` | 修改 | SessionStore 增加 deleteByUser 可选方法 |
+| `packages/platform/auth/src/redis-session-store.ts` | 修改 | 实现 deleteByUser + user→sessions 索引 |
+| `packages/platform/auth/src/auth-session.ts` | 新增 | 统一踢人链路 AuthSessionManager |
+| `packages/platform/auth/src/totp.ts` | 修改 | 增加 verifyAndConsume 防重放 |
+| `packages/platform/auth/src/jwt.ts` | 修改 | verify 增加 typ 头部校验 |
+| `packages/platform/auth/src/index.ts` | 修改 | 导出新增类型和函数 |
 | `packages/core/src/middlewares/tenant.ts` | 修改 | 增加 validateTenant Hook |
 | `packages/events/src/scheduler.ts` | 修改 | ScheduleOptions 增加执行 Hook |
 | `packages/database/src/schema-reader.ts` | 新增 | readTableSchema / listTables |
