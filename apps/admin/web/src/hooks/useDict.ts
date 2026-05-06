@@ -20,8 +20,8 @@ const TTL = 5 * 60 * 1000 // 5 minutes
 
 async function fetchDictData(typeCode: string): Promise<DictItem[]> {
   const { client } = await import('@/api')
-  const data = await client.get('/api/system/dict/types/:code/data', { params: { code: typeCode } })
-  return (data as unknown as DictItem[] | null) ?? []
+  const { data } = await client.get('/api/system/dict/types/:code/data', { params: { code: typeCode } } as any) as { data?: DictItem[]; error?: unknown }
+  return data ?? []
 }
 
 export function useDict(typeCode: string): {
