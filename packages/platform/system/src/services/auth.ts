@@ -91,6 +91,15 @@ const MFA_TOKEN_TTL = 300;
 /** 密码重置 token 有效期（秒） */
 const RESET_TOKEN_TTL = 1800;
 
+/** 查询用户角色代码列表 */
+async function getUserRoleCodes(executor: SqlExecutor, userId: string): Promise<string[]> {
+  const rows = await executor(
+    `SELECT r.code FROM sys_user_role ur JOIN sys_role r ON ur.role_id = r.id WHERE ur.user_id = $1`,
+    [userId],
+  );
+  return (rows as Array<{ code: string }>).map(r => r.code);
+}
+
 /**
  * 创建认证服务实例
  * @param deps 依赖项
@@ -345,6 +354,7 @@ export function createAuthService(deps: {
       }
 
       // 13. 调用统一会话管理器完成登录
+      const roleCodes = await getUserRoleCodes(executor, user.id);
       const sessionResult = await authSessionManager.login({
         userId: user.id,
         device: {
@@ -355,6 +365,7 @@ export function createAuthService(deps: {
         },
         tokenPayload: {
           username: user.username,
+          roles: roleCodes,
         },
       });
 
@@ -748,7 +759,7 @@ export function createAuthService(deps: {
           deviceType: deviceType ?? "web",
           deviceName: userAgent,
         },
-        tokenPayload: { username },
+        tokenPayload: { username, roles: await getUserRoleCodes(executor, userId) },
       });
 
       await auditStore.append({
@@ -792,7 +803,7 @@ export function createAuthService(deps: {
           deviceType: deviceType ?? "web",
           deviceName: userAgent,
         },
-        tokenPayload: { username },
+        tokenPayload: { username, roles: await getUserRoleCodes(executor, userId) },
       });
 
       await recordLoginLog({ userId, username, ip, userAgent, status: 1, message: "通行密钥登录成功", loginMethod: "passkey" });

@@ -14,6 +14,9 @@ export interface AuthUser {
   username: string;
 }
 
+/** 超级管理员角色代码，拥有所有权限 */
+const SUPER_ADMIN_ROLE = "admin";
+
 const JSON_HEADERS = { "Content-Type": "application/json" } as const;
 
 /**
@@ -68,6 +71,11 @@ export function createPermMiddleware(rbac: RBAC): (resource: string, action: str
           JSON.stringify({ code: 401, message: "Not authenticated" }),
           { status: 401, headers: JSON_HEADERS },
         );
+      }
+
+      // 超级管理员跳过权限检查
+      if (user.roles.includes(SUPER_ADMIN_ROLE)) {
+        return next();
       }
 
       const allowed = user.roles.some(
