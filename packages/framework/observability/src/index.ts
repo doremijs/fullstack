@@ -83,6 +83,14 @@ export type { OTelSpan, OTelConfig, SpanExporter, Tracer as OTelTracer } from ".
 export { createTraceExporter } from "./trace-exporter";
 export type { TraceExporterConfig } from "./trace-exporter";
 
+/** 创建请求追踪中间件 */
+export { createTracingMiddleware } from "./tracing-middleware";
+export type { TracingMiddlewareOptions } from "./tracing-middleware";
+
+/** SQL Executor 追踪包装器 */
+export { wrapExecutorWithTracing } from "./tracing-executor";
+export type { ExecutorTracingOptions, SqlExecutor as TraceableSqlExecutor } from "./tracing-executor";
+
 /** 创建 Grafana Dashboard JSON 模板 */
 export { createGrafanaDashboard, createHttpDashboard } from "./grafana";
 export type { GrafanaDashboard, GrafanaDashboardConfig, GrafanaPanelConfig } from "./grafana";

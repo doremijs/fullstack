@@ -26,7 +26,7 @@ export function createDatabaseConnection(): DatabaseContext {
   const pool = createSqlExecutor(env.DATABASE_URL, { max: env.DB_POOL_SIZE });
   const db = createDatabase({ executor: pool.executor });
 
-  // 迁移单连接 — 允许手动 BEGIN/COMMIT
+  // 迁移 单连接 — 允许手动 BEGIN/COMMIT
   const migration = createSqlExecutor(env.DATABASE_URL, { max: 1 });
 
   return {
