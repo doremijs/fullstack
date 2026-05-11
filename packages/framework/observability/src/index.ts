@@ -91,6 +91,14 @@ export type { TracingMiddlewareOptions } from "./tracing-middleware";
 export { wrapExecutorWithTracing } from "./tracing-executor";
 export type { ExecutorTracingOptions, SqlExecutor as TraceableSqlExecutor } from "./tracing-executor";
 
+/** Cache 追踪包装器 */
+export { wrapCacheWithTracing } from "./cache-tracing";
+export type { CacheTracingOptions } from "./cache-tracing";
+
+/** Redis Client 追踪包装器 */
+export { wrapRedisClientWithTracing } from "./redis-tracing";
+export type { RedisTracingOptions } from "./redis-tracing";
+
 /** 创建 Grafana Dashboard JSON 模板 */
 export { createGrafanaDashboard, createHttpDashboard } from "./grafana";
 export type { GrafanaDashboard, GrafanaDashboardConfig, GrafanaPanelConfig } from "./grafana";

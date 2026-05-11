@@ -9,7 +9,7 @@ import { createApp, createRouter, requestId, requestLogger, errorHandler, cors, 
 import type { Middleware, VentoStackApp } from "@ventostack/core";
 import { setupOpenAPI } from "@ventostack/openapi";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { createAuditLog, createDefaultHealthCheck, createMetrics, createTracer, createTracingMiddleware, wrapExecutorWithTracing } from "@ventostack/observability";
+import { createAuditLog, createDefaultHealthCheck, createMetrics, createTracer, createTracingMiddleware, wrapExecutorWithTracing, wrapCacheWithTracing, wrapRedisClientWithTracing } from "@ventostack/observability";
 import type { SpanContext } from "@ventostack/observability";
 import { createEventBus, createScheduler } from "@ventostack/events";
 import { readTableSchema, listTables, createDatabase } from "@ventostack/database";
@@ -55,8 +55,13 @@ export async function buildApp(): Promise<AppContext> {
   // 1d. 种子数据（使用原始 executor，启动阶段无请求上下文）
   await runSeeds(rawConn.executor);
 
-  // 1e. 缓存
+  // 1e. 缓存（包装 Redis client 和 Cache，使所有操作可追踪）
   const cacheInstance = await createCacheInstance();
+  const getSpanCtx = () => traceStore.getStore();
+  const tracedRedisClient = cacheInstance.redisClient
+    ? wrapRedisClientWithTracing(cacheInstance.redisClient, tracer, { getSpanContext: getSpanCtx })
+    : undefined;
+  const tracedCache = wrapCacheWithTracing(cacheInstance.cache, tracer, { getSpanContext: getSpanCtx });
 
   // 1f. 存储适配器
   const storage = createStorageAdapter();
@@ -68,7 +73,7 @@ export async function buildApp(): Promise<AppContext> {
   // 1h. 健康检查
   const healthCheck = createDefaultHealthCheck({
     sql: tracingExecutor,
-    ...(cacheInstance.redisClient ? { redis: cacheInstance.redisClient } : {}),
+    ...(tracedRedisClient ? { redis: tracedRedisClient } : {}),
   });
 
   // 1h. 事件总线 + 调度器
@@ -78,7 +83,7 @@ export async function buildApp(): Promise<AppContext> {
   // =============================================
   // 2. 认证引擎层
   // =============================================
-  const auth = assembleAuthEngines(cacheInstance.redisClient);
+  const auth = assembleAuthEngines(tracedRedisClient);
 
   // =============================================
   // 3. 平台模块聚合（使用 createPlatform）
@@ -88,7 +93,7 @@ export async function buildApp(): Promise<AppContext> {
     db: tracedDb,
     readTableSchema,
     listTables,
-    cache: cacheInstance.cache,
+    cache: tracedCache,
     jwt: auth.jwt,
     jwtSecret: auth.jwtSecret,
     passwordHasher: auth.passwordHasher,
